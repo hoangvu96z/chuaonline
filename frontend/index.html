@@ -53,31 +53,36 @@
         </div>
       </div>
 
-      <!-- Center: Global Chanting Banner / Room Sharding & Zone Camera -->
-      <div class="hud-center-controls">
+      <!-- Center: Global Chanting Banner / Room Sharding & Zone Camera + Compact Icon Controls -->
+      <div class="hud-center-controls" id="hud-top-bar">
         <div class="channel-pill" title="Phân kênh tự động 60 người/phòng (Auto Room Sharding)">
           <span class="status-dot online" id="socket-status-dot"></span>
           <span id="hud-room-name">Đạo Tràng 1</span>
           <span class="ccu-badge">(<span id="hud-room-count">1</span>/60)</span>
         </div>
 
-        <div class="zone-shortcuts" role="group" aria-label="Di chuyển nhanh">
-          <button type="button" class="zone-btn active" data-zone="CHANH_DIEN">🏯 Chánh Điện (Mõ)</button>
-          <button type="button" class="zone-btn" data-zone="DAI_QUAN_AM">🙏 Đài Quán Âm</button>
-          <button type="button" class="zone-btn" data-zone="SAN_CHUA">🔔 Sân Chùa (<span id="hud-leaf-count">0</span> lá)</button>
-          <button type="button" class="zone-btn" data-zone="HO_HOA_DANG">🪷 Hồ Hoa Đăng</button>
+        <div class="zone-shortcuts" id="zone-shortcuts-group" role="group" aria-label="Di chuyển nhanh">
+          <button type="button" class="zone-btn active" data-zone="CHANH_DIEN">🏯 Chánh Điện</button>
+          <button type="button" class="zone-btn" data-zone="DAI_QUAN_AM">🙏 Quán Âm</button>
+          <button type="button" class="zone-btn" data-zone="VUON_BO_DE">🌱 Vườn Bồ Đề</button>
+          <button type="button" class="zone-btn" data-zone="SAN_CHUA">🔔 Sân (<span id="hud-leaf-count">0</span>)</button>
+          <button type="button" class="zone-btn" data-zone="HO_HOA_DANG">🪷 Hồ Sen</button>
         </div>
 
-        <button type="button" class="control-pill-btn" id="btn-open-auth-top" title="Đổi Nhân Vật / Đăng Nhập Tài Khoản">
-          🧘 Đổi Nhân Vật / TK
-        </button>
-
-        <button type="button" class="control-pill-btn" id="btn-toggle-daynight" title="Đổi cảnh Ngày / Đêm">
-          🌙 Đêm Tịnh
-        </button>
-        <button type="button" class="control-pill-btn" id="btn-toggle-audio" title="Bật / Tắt Âm Thanh Pháp Khí">
-          🔊 Âm Thanh
-        </button>
+        <div class="hud-icon-group" role="group" aria-label="Công cụ nhanh">
+          <button type="button" class="hud-icon-btn" id="btn-open-auth-top" aria-label="Đổi Nhân Vật &amp; Tài Khoản" title="Đổi Nhân Vật / Đăng Nhập Tài Khoản">
+            🧘
+          </button>
+          <button type="button" class="hud-icon-btn" id="btn-toggle-daynight" aria-label="Đổi Ngày / Đêm" title="Đổi cảnh Ngày / Đêm">
+            🌙
+          </button>
+          <button type="button" class="hud-icon-btn" id="btn-toggle-audio" aria-label="Bật / Tắt Âm Thanh" title="Bật / Tắt Âm Thanh Pháp Khí">
+            🔊
+          </button>
+          <button type="button" class="hud-icon-btn" id="btn-toggle-top-hud" aria-expanded="true" aria-label="Thu gọn / Mở rộng thanh khu vực" title="Thu gọn / Mở rộng thanh khu vực">
+            ▾
+          </button>
+        </div>
       </div>
     </div>
 
@@ -112,6 +117,15 @@
             <input type="checkbox" id="chk-auto-chant" switch checked />
             <span>Tự động đọc &amp; gõ mõ</span>
           </label>
+          <select id="select-voice-profile" class="scroll-voice-select" aria-label="Chọn giọng đọc kinh" title="Đổi giọng đọc kinh">
+            <option value="SU_ONG_TRAM_AM">🎙️ Thầy Trụ Trì (Trầm Ấm)</option>
+            <option value="SU_CO_THANH_NHA">🎙️ Sư Cô (Thanh Nhã)</option>
+            <option value="CHU_TIEU_TRONG_TREO">🎙️ Chú Tiểu (Trong Trẻo)</option>
+            <option value="DAI_CHUNG_TRANG_NGHIEM">🎙️ Đại Chúng (Trang Nghiêm)</option>
+          </select>
+          <button type="button" class="scroll-btn" id="btn-pause-sutra" title="Tạm dừng / Tiếp tục tụng kinh">
+            ⏸️ Tạm Dừng
+          </button>
           <button type="button" class="scroll-btn" id="btn-change-sutra" command="show-modal" commandfor="dialog-sutra-library">
             Đổi Bài Kinh
           </button>
@@ -145,62 +159,116 @@
   <!-- Persistent Toast Stack Container (Modern Web Guidance popover="manual") -->
   <div id="toast-stack-container" class="toast-stack-container" aria-live="polite"></div>
 
-  <!-- Bottom Action Dock (9 Core Actions: Lạy Phật, Gõ Mõ, Tụng Kinh, Gõ Chuông...) -->
-  <nav class="hud-bottom-dock" aria-label="Thanh Pháp Khí &amp; Hành Động">
-    <button type="button" class="dock-btn highlight" id="dock-prostrate">
-      <span class="dock-icon">🙏</span>
-      <span class="dock-label">Lạy Phật</span>
-      <span class="dock-sub">+5 Công Đức</span>
-    </button>
+  <!-- Real-Time Multi-User Đạo Tràng Chat Widget (with Simultaneous 3D Speech Bubbles & Sensitive Filter) -->
+  <aside id="zen-chat-widget" class="zen-chat-widget" aria-label="Đạo Tràng Trò Chuyện Ái Ngữ">
+    <div class="chat-header-bar">
+      <button type="button" class="chat-toggle-pill" id="btn-toggle-chat" aria-expanded="true" title="Thu gọn / Mở rộng khung trò chuyện Đạo Tràng">
+        <span>💬 Đạo Tràng Ái Ngữ</span>
+        <span id="chat-toggle-icon">▾</span>
+      </button>
+      <button type="button" class="chat-hide-btn" id="btn-hide-chat" aria-label="Ẩn phòng chat" title="Ẩn phòng chat">✕</button>
+    </div>
+    <div id="zen-chat-body" class="zen-chat-body">
+      <div id="zen-chat-messages" class="zen-chat-messages" role="log" aria-live="polite">
+        <div class="chat-msg system-msg">🙏 Hoan hỷ giữ lời nói ái ngữ, thanh tịnh nơi cửa Thiền. Tin nhắn sẽ hiển thị cùng lúc trên đầu nhân vật 3D!</div>
+      </div>
+      <div class="chat-quick-chips">
+        <button type="button" class="chat-quick-btn" data-chat="Nam Mô A Di Đà Phật 🙏">🙏 A Di Đà Phật</button>
+        <button type="button" class="chat-quick-btn" data-chat="Chúc đại chúng thân tâm thường an lạc 🪷">🪷 Chúc an lạc</button>
+        <button type="button" class="chat-quick-btn" data-chat="Tùy hỷ công đức chư vị đạo hữu ☸️">☸️ Tùy hỷ công đức</button>
+      </div>
+      <form id="form-zen-chat" class="zen-chat-form" autocomplete="off">
+        <input
+          type="text"
+          id="input-zen-chat"
+          maxlength="140"
+          placeholder="Nhập lời ái ngữ đàm đạo..."
+          aria-label="Nội dung tin nhắn"
+        />
+        <button type="submit" class="chat-send-btn" title="Gửi tin nhắn">Gửi</button>
+      </form>
+    </div>
+  </aside>
 
-    <button type="button" class="dock-btn highlight" id="dock-wooden-fish" title="Ngồi trong Chánh Điện gõ Mõ tụng kinh (Phím Space khi ở trong Chánh Điện)">
-      <span class="dock-icon">🪵</span>
-      <span class="dock-label">Gõ Mõ</span>
-      <span class="dock-sub" id="dock-sub-mo">Trong Chánh Điện</span>
-    </button>
+  <!-- Bottom Action Dock Wrapper (Collapsible / Expandable + Minimal Icon Mode) -->
+  <div id="bottom-dock-wrapper" class="bottom-dock-wrapper">
+    <div class="dock-toolbar-pills">
+      <button type="button" class="dock-control-pill" id="btn-minimal-dock" title="Thu nhỏ dàn nút thành Icon gọn gàng / Mở đầy đủ chữ">
+        🔍 Gọn Icon
+      </button>
+      <button type="button" class="dock-control-pill" id="btn-collapse-dock" aria-expanded="true" title="Thu gọn / Mở rộng toàn bộ thanh Pháp Khí bên dưới">
+        ▾ Thu gọn Pháp Khí
+      </button>
+    </div>
 
-    <button type="button" class="dock-btn highlight" id="dock-chant-sutra" command="show-modal" commandfor="dialog-sutra-library">
-      <span class="dock-icon">📖</span>
-      <span class="dock-label">Tụng Kinh</span>
-      <span class="dock-sub">12 Bộ Kinh</span>
-    </button>
+    <nav class="hud-bottom-dock" id="hud-bottom-dock" aria-label="Thanh Pháp Khí &amp; Hành Động">
+      <button type="button" class="dock-btn highlight" id="dock-prostrate" title="Lạy Phật ở Chánh Điện hoặc Lạy Bồ Tát khi đứng ở Đài Quán Âm">
+        <span class="dock-icon">🙏</span>
+        <span class="dock-label" id="dock-label-prostrate">Lạy Phật</span>
+        <span class="dock-sub" id="dock-sub-prostrate">+5 Công Đức</span>
+      </button>
 
-    <button type="button" class="dock-btn" id="dock-ring-bell" title="Ra ngoài Sân Chùa thỉnh Chuông Chùa (Phím Space khi ở ngoài Sân Chùa)">
-      <span class="dock-icon">🔔</span>
-      <span class="dock-label">Gõ Chuông</span>
-      <span class="dock-sub" id="dock-sub-bell">Ngoài Sân Chùa</span>
-    </button>
+      <button type="button" class="dock-btn highlight" id="dock-wooden-fish" title="Ngồi trong Chánh Điện gõ Mõ tụng kinh (Phím Space khi ở trong Chánh Điện)">
+        <span class="dock-icon">🪵</span>
+        <span class="dock-label">Gõ Mõ</span>
+        <span class="dock-sub" id="dock-sub-mo">Trong Chánh Điện</span>
+      </button>
 
-    <button type="button" class="dock-btn" id="dock-sweep-leaves">
-      <span class="dock-icon">🧹</span>
-      <span class="dock-label">Quét Sân</span>
-      <span class="dock-sub">+5 Công Đức</span>
-    </button>
+      <button type="button" class="dock-btn highlight" id="dock-chant-sutra" command="show-modal" commandfor="dialog-sutra-library" title="Tụng Kinh (12 Bộ Kinh)">
+        <span class="dock-icon">📖</span>
+        <span class="dock-label">Tụng Kinh</span>
+        <span class="dock-sub">12 Bộ Kinh</span>
+      </button>
 
-    <button type="button" class="dock-btn" id="dock-offer-incense">
-      <span class="dock-icon">🪔</span>
-      <span class="dock-label">Dâng Hương</span>
-      <span class="dock-sub">+10 Công Đức</span>
-    </button>
+      <button type="button" class="dock-btn" id="dock-ring-bell" title="Ra ngoài Sân Chùa thỉnh Chuông Chùa (Phím Space khi ở ngoài Sân Chùa)">
+        <span class="dock-icon">🔔</span>
+        <span class="dock-label">Gõ Chuông</span>
+        <span class="dock-sub" id="dock-sub-bell">Ngoài Sân Chùa</span>
+      </button>
 
-    <button type="button" class="dock-btn" id="dock-release-lantern">
-      <span class="dock-icon">🪷</span>
-      <span class="dock-label">Thả Hoa Đăng</span>
-      <span class="dock-sub">+10 Công Đức</span>
-    </button>
+      <button type="button" class="dock-btn" id="dock-plant-tree" title="Trồng &amp; tưới nước Cây Bồ Đề tại Vườn Lâm Tỳ Ni (+8 Công Đức)">
+        <span class="dock-icon">🌱</span>
+        <span class="dock-label">Trồng Cây</span>
+        <span class="dock-sub">+8 Công Đức</span>
+      </button>
 
-    <button type="button" class="dock-btn" id="dock-draw-fortune">
-      <span class="dock-icon">🎋</span>
-      <span class="dock-label">Xin Xăm</span>
-      <span class="dock-sub">Quẻ Phật Giáo</span>
-    </button>
+      <button type="button" class="dock-btn" id="dock-feed-fish" title="Cho đàn Cá Chép Koi ăn tại Hồ Phóng Sinh (+6 Công Đức)">
+        <span class="dock-icon">🐟</span>
+        <span class="dock-label">Nuôi Cá</span>
+        <span class="dock-sub">+6 Công Đức</span>
+      </button>
 
-    <button type="button" class="dock-btn gold" id="dock-leaderboard" command="show-modal" commandfor="dialog-leaderboard">
-      <span class="dock-icon">🏆</span>
-      <span class="dock-label">Bảng Công Đức</span>
-      <span class="dock-sub">63 Tỉnh Thành</span>
-    </button>
-  </nav>
+      <button type="button" class="dock-btn" id="dock-sweep-leaves" title="Quét Lá Đa sân chùa (+5 Công Đức)">
+        <span class="dock-icon">🧹</span>
+        <span class="dock-label">Quét Sân</span>
+        <span class="dock-sub">+5 Công Đức</span>
+      </button>
+
+      <button type="button" class="dock-btn" id="dock-offer-incense" title="Dâng Hương Cầu Nguyện (+10 Công Đức)">
+        <span class="dock-icon">🪔</span>
+        <span class="dock-label">Dâng Hương</span>
+        <span class="dock-sub">+10 Công Đức</span>
+      </button>
+
+      <button type="button" class="dock-btn" id="dock-release-lantern" title="Thả Đèn Hoa Đăng trên Hồ Sen (+10 Công Đức)">
+        <span class="dock-icon">🪷</span>
+        <span class="dock-label">Thả Hoa Đăng</span>
+        <span class="dock-sub">+10 Công Đức</span>
+      </button>
+
+      <button type="button" class="dock-btn" id="dock-draw-fortune" title="Xin Xăm Quẻ Phật Giáo Đầu Ngày">
+        <span class="dock-icon">🎋</span>
+        <span class="dock-label">Xin Xăm</span>
+        <span class="dock-sub">Quẻ Phật Giáo</span>
+      </button>
+
+      <button type="button" class="dock-btn gold" id="dock-leaderboard" command="show-modal" commandfor="dialog-leaderboard" title="Bảng Vàng Công Đức 63 Tỉnh Thành">
+        <span class="dock-icon">🏆</span>
+        <span class="dock-label">Bảng Công Đức</span>
+        <span class="dock-sub">63 Tỉnh Thành</span>
+      </button>
+    </nav>
+  </div>
 
   <!-- =========================================================================
        MODAL DIALOGS (Native <dialog closedby="any"> per Modern Web Guidance)

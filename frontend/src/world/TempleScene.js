@@ -262,6 +262,11 @@ export class TempleScene {
       this.orbitDistance = 10.5;
       this.orbitPitch = 0.24;
       this.orbitAngle = -0.32;
+    } else if (zoneName === 'VUON_BO_DE') {
+      this.desiredCameraTarget.set(11.5, 1.8, 21.5);
+      this.orbitDistance = 10.2;
+      this.orbitPitch = 0.34;
+      this.orbitAngle = -0.38;
     } else if (zoneName === 'LAU_CHUONG') {
       this.desiredCameraTarget.set(7.8, 2.3, 5.2);
       this.orbitDistance = 9.5;
@@ -325,6 +330,47 @@ export class TempleScene {
         this.orbitDistance = Math.max(6, Math.min(36, this.orbitDistance + e.deltaY * 0.015));
       },
       { passive: false }
+    );
+
+    // Touch Pinch-to-Zoom support for Mobile Web (2-finger pinch)
+    this.lastPinchDist = null;
+    dom.addEventListener(
+      'touchstart',
+      (e) => {
+        if (e.touches.length === 2) {
+          this.isDragging = false;
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          this.lastPinchDist = Math.hypot(dx, dy);
+        }
+      },
+      { passive: true }
+    );
+
+    dom.addEventListener(
+      'touchmove',
+      (e) => {
+        if (e.touches.length === 2 && this.lastPinchDist !== null) {
+          e.preventDefault();
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          const dist = Math.hypot(dx, dy);
+          const delta = this.lastPinchDist - dist;
+          this.orbitDistance = Math.max(6, Math.min(36, this.orbitDistance + delta * 0.04));
+          this.lastPinchDist = dist;
+        }
+      },
+      { passive: false }
+    );
+
+    dom.addEventListener(
+      'touchend',
+      (e) => {
+        if (e.touches.length < 2) {
+          this.lastPinchDist = null;
+        }
+      },
+      { passive: true }
     );
   }
 

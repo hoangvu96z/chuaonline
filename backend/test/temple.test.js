@@ -12,6 +12,8 @@ import {
   getRealmInfo
 } from '../../frontend/src/data/sutras.js';
 import { SutraChanter } from '../../frontend/src/audio/SutraChanter.js';
+import { DharmaVoice, VOICE_PROFILES } from '../../frontend/src/audio/DharmaVoice.js';
+import { sanitizeSensitiveChat } from '../src/socketHandlers.js';
 
 // 2. Backend core modules
 import { MeritBatcher, REALM_THRESHOLDS, REALM_NAMES } from '../src/meritBatcher.js';
@@ -222,6 +224,64 @@ describe('Suite 1: Frontend Data & Audio Modules', () => {
     assert.ok(completedSutra, 'onComplete should be triggered');
     assert.strictEqual(completedSutra.id, sutra.id);
     assert.strictEqual(greatBellCount, 1, 'Great bell must ring upon completion');
+  });
+
+  it('1.6 should strip "(3 lần)" literal text and repeat the verse 3 full times, plus support pause/resume & voice profiles', () => {
+    const dv = new DharmaVoice();
+    assert.strictEqual(VOICE_PROFILES.length, 4, 'Must have 4 distinct voice profiles');
+    const selectedProfile = dv.setVoiceProfile('SU_CO_THANH_NHA');
+    assert.strictEqual(selectedProfile.id, 'SU_CO_THANH_NHA');
+    assert.strictEqual(dv.currentProfileId, 'SU_CO_THANH_NHA');
+
+    const rawVerse = 'Nam mô Bổn Sư Thích Ca Mâu Ni Phật. (3 lần)';
+    assert.strictEqual(DharmaVoice.parseRepeatCount(rawVerse), 3);
+    assert.strictEqual(
+      DharmaVoice.stripRepeatInstruction(rawVerse),
+      'Nam mô Bổn Sư Thích Ca Mâu Ni Phật.'
+    );
+
+    const spokenCalls = [];
+    const mockAudio = {
+      playMeditationBell: () => {},
+      playWoodenFish: () => {},
+      playGreatBell: () => {}
+    };
+    const mockVoice = {
+      speakVerse: (text, onEnd, onWord) => {
+        spokenCalls.push({ text, onEnd, onWord });
+      },
+      pause: () => {},
+      resume: () => {},
+      stop: () => {}
+    };
+
+    const chanter = new SutraChanter(mockAudio, mockVoice, () => {}, () => {});
+    const testSutra = {
+      id: 'test-3-lan',
+      title: 'Kinh Thử Nghiệm 3 Lần',
+      meritPerVerse: 3,
+      completionBonus: 30,
+      verses: [{ text: 'Nam mô A Di Đà Phật. (3 lần)', durationMs: 1000 }]
+    };
+
+    chanter.startSutra(testSutra, 0);
+    assert.strictEqual(spokenCalls.length, 1);
+    assert.strictEqual(spokenCalls[0].text, 'Nam mô A Di Đà Phật.');
+    assert.ok(!spokenCalls[0].text.includes('3 lần'), 'Must never read literal "(3 lần)"');
+    assert.strictEqual(chanter.repeatRound, 0);
+
+    // Trigger onEnd of Round 1 -> should advance repeatRound to 1 and remain on verseIndex 0
+    if (spokenCalls[0].onEnd) spokenCalls[0].onEnd();
+    assert.strictEqual(chanter.repeatRound, 1);
+    assert.strictEqual(chanter.verseIndex, 0);
+
+    // Test Pause / Resume
+    assert.strictEqual(chanter.togglePause(), true);
+    assert.strictEqual(chanter.isPaused, true);
+    assert.strictEqual(chanter.togglePause(), false);
+    assert.strictEqual(chanter.isPaused, false);
+
+    chanter.stop();
   });
 });
 
@@ -533,8 +593,8 @@ describe('Suite 4: Full End-to-End Socket.io & REST API Integration', () => {
   });
 
   after(async () => {
-    if (client1?.connected) client1.disconnect();
-    if (client2?.connected) client2.disconnect();
+    if (client1) client1.close();
+    if (client2) client2.close();
     if (serverInstance) await serverInstance.close();
   });
 
@@ -845,5 +905,48 @@ describe('Suite 4: Full End-to-End Socket.io & REST API Integration', () => {
     assert.strictEqual(loginJson.ok, true);
     assert.strictEqual(loginJson.user.recoveryCode, 'PHATTU-TEST-AUTH99');
     assert.strictEqual(loginJson.user.provinceCode, 'DN');
+  });
+
+  it('4.11 should filter sensitive words in send_chat and broadcast chat_message to room', async () => {
+    const unitCheck = sanitizeSensitiveChat('Chào đạo hữu đm nói chuyện fuck vcl nhé');
+    assert.strictEqual(unitCheck.flagged, true);
+    assert.ok(!unitCheck.cleaned.includes('đm'));
+    assert.ok(!unitCheck.cleaned.includes('fuck'));
+    assert.ok(!unitCheck.cleaned.includes('vcl'));
+    assert.ok(unitCheck.cleaned.includes('***'));
+
+    const chatPromise = waitForEvent(client2, 'chat_message');
+    client1.emit('send_chat', { text: 'Nam Mô A Di Đà Phật đm' });
+    const chatMsg = await chatPromise;
+
+    assert.strictEqual(chatMsg.dharmaName, 'Thích Trí Thiền');
+    assert.strictEqual(chatMsg.flagged, true);
+    assert.strictEqual(chatMsg.text, 'Nam Mô A Di Đà Phật ***');
+  });
+
+  it('4.12 should award +8 merit on plant_bodhi_tree and +6 merit on feed_koi_fish', async () => {
+    const meritTreePromise = waitForEvent(client1, 'merit_updated');
+    const plantedBroadcastPromise = waitForEvent(client2, 'bodhi_tree_planted');
+    client1.emit('plant_bodhi_tree', { wish: 'Cầu trí tuệ sáng suốt' });
+
+    const [treeMerit, treeBroadcast] = await Promise.all([
+      meritTreePromise,
+      plantedBroadcastPromise
+    ]);
+    assert.strictEqual(treeMerit.delta, 8);
+    assert.strictEqual(treeMerit.reason, 'PLANT_BODHI_TREE');
+    assert.strictEqual(treeBroadcast.dharmaName, 'Thích Trí Thiền');
+
+    const meritFishPromise = waitForEvent(client1, 'merit_updated');
+    const fishBroadcastPromise = waitForEvent(client2, 'koi_fish_fed');
+    client1.emit('feed_koi_fish');
+
+    const [fishMerit, fishBroadcast] = await Promise.all([
+      meritFishPromise,
+      fishBroadcastPromise
+    ]);
+    assert.strictEqual(fishMerit.delta, 6);
+    assert.strictEqual(fishMerit.reason, 'FEED_KOI_FISH');
+    assert.strictEqual(fishBroadcast.dharmaName, 'Thích Trí Thiền');
   });
 });

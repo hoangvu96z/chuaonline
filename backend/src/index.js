@@ -148,6 +148,7 @@ export async function createTempleServer(options = {}) {
         if (httpServer.listening) httpServer.close(resolve);
         else resolve();
       });
+      await db.close().catch(() => {});
     }
   };
 }

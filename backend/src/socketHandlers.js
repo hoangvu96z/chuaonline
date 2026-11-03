@@ -1,4 +1,27 @@
 // backend/src/socketHandlers.js
+
+// Bộ lọc từ ngữ nhạy cảm / tục tĩu (Tiếng Việt có dấu, không dấu, viết tắt & Tiếng Anh — dùng Unicode boundary cho tiếng Việt)
+const SENSITIVE_PATTERNS = [
+  /(^|[^\p{L}\p{N}])(đụ|địt|đéo|đĩ|đếch|lồn|buồi|cặc|dái|vãi\s*lồn|vãi\s*cặc|vcl|vl|vkl|đm|đkm|đcm|đmm|dkm|dcm|dmm|vcc|cc|clm|cl|sml)(?=[^\p{L}\p{N}]|$)/giu,
+  /(^|[^\p{L}\p{N}])(du\s*ma|dit\s*me|dit\s*con\s*me|deo\s*me|lon\s*me|con\s*di|thang\s*cho|do\s*ngu|oc\s*cho|óc\s*chó|ngu\s*ngốc|súc\s*vật|suc\s*vat|chó\s*đẻ|cho\s*de|mất\s*dạy|mat\s*day|khốn\s*nạn|khon\s*nan)(?=[^\p{L}\p{N}]|$)/giu,
+  /(^|[^\p{L}\p{N}])(fuck|fucking|fucker|shit|bitch|asshole|dick|pussy|bastard|cunt|whore|slut|porn|sex|xxx)(?=[^\p{L}\p{N}]|$)/giu,
+  /(^|[^\p{L}\p{N}])(cờ\s*bạc|cá\s*độ|nhà\s*cái|lô\s*đề|tài\s*xỉu|nổ\s*hũ|bắn\s*cá\s*đổi\s*thưởng|phản\s*động)(?=[^\p{L}\p{N}]|$)/giu
+];
+
+export function sanitizeSensitiveChat(rawText = '') {
+  let cleaned = String(rawText || '').trim().slice(0, 160);
+  let flagged = false;
+  for (const regex of SENSITIVE_PATTERNS) {
+    regex.lastIndex = 0;
+    if (regex.test(cleaned)) {
+      flagged = true;
+      regex.lastIndex = 0;
+      cleaned = cleaned.replace(regex, '$1***');
+    }
+  }
+  return { cleaned, flagged };
+}
+
 export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutraScheduler }) {
   let lastGreatBellRungAt = 0;
 
@@ -117,11 +140,19 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
           socketId: socket.id,
           userId: currentUser.id,
           dharmaName: currentUser.dharmaName,
-          bowNumber: payload.bowNumber || 1
+          bowNumber: payload.bowNumber || 1,
+          target: payload.target || 'BUDDHA',
+          rotY: typeof payload.rotY === 'number' ? payload.rotY : Math.PI
         });
       }
 
-      if (payload.bowNumber === 3) {
+      if (payload.target === 'QUAN_AM') {
+        io.emit('zen_ticker', {
+          type: 'PROSTRATION_QUAN_AM',
+          dharmaName: currentUser.dharmaName,
+          message: `🙏 Đạo hữu "${currentUser.dharmaName}" vừa thành tâm quỳ lạy trước Đài Quán Thế Âm Bồ Tát cầu gia đạo bình an (+${delta} Công Đức).`
+        });
+      } else if (payload.bowNumber === 3) {
         io.emit('zen_ticker', {
           type: 'PROSTRATION',
           dharmaName: currentUser.dharmaName,
@@ -323,6 +354,101 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
       };
       roomManager.syncUserStatsToPlayer(socket.id, currentUser);
       socket.emit('account_synced', { user: currentUser });
+    });
+
+    // 16. Real-Time Multi-User Chat with Sensitive Word Filtering & 3D Speech Bubbles
+    socket.on('send_chat', (payload = {}) => {
+      if (!currentUser) return;
+      const rawText = String(payload.text || '').trim();
+      if (!rawText) return;
+
+      const { cleaned, flagged } = sanitizeSensitiveChat(rawText);
+      const chatPayload = {
+        id: 'chat-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+        socketId: socket.id,
+        userId: currentUser.id,
+        dharmaName: currentUser.dharmaName,
+        provinceCode: currentUser.provinceCode || 'SG',
+        text: cleaned,
+        flagged,
+        timestamp: Date.now()
+      };
+
+      const room = roomManager.getPlayerRoom(socket.id);
+      if (room) {
+        io.to(room.id).emit('chat_message', chatPayload);
+      } else {
+        socket.emit('chat_message', chatPayload);
+      }
+    });
+
+    // 17. Plant & Water Sacred Bodhi Tree in Vườn Bồ Đề (+8 Công Đức)
+    socket.on('plant_bodhi_tree', (payload = {}) => {
+      if (!currentUser) return;
+      const delta = 8;
+      meritBatcher.addMerit(currentUser, delta);
+      roomManager.syncUserStatsToPlayer(socket.id, currentUser);
+
+      socket.emit('merit_updated', {
+        meritPoints: currentUser.meritPoints,
+        realmLevel: currentUser.realmLevel,
+        delta,
+        reason: 'PLANT_BODHI_TREE'
+      });
+
+      const treeData = {
+        socketId: socket.id,
+        dharmaName: currentUser.dharmaName,
+        provinceCode: currentUser.provinceCode || 'SG',
+        wish: String(payload.wish || 'Ươm mầm Bồ Đề, gieo duyên giác ngộ').slice(0, 80)
+      };
+
+      const room = roomManager.getPlayerRoom(socket.id);
+      if (room) {
+        io.to(room.id).emit('bodhi_tree_planted', treeData);
+      } else {
+        socket.emit('bodhi_tree_planted', treeData);
+      }
+
+      io.emit('zen_ticker', {
+        type: 'BODHI_TREE',
+        dharmaName: currentUser.dharmaName,
+        message: `🌱 Đạo hữu "${currentUser.dharmaName}" vừa trồng & tưới nước Cây Bồ Đề tại Vườn Lâm Tỳ Ni (+${delta} Công Đức).`
+      });
+    });
+
+    // 18. Feed Sacred Koi Fish in Lotus Pond (+6 Công Đức)
+    socket.on('feed_koi_fish', () => {
+      if (!currentUser) return;
+      const delta = 6;
+      meritBatcher.addMerit(currentUser, delta);
+      roomManager.syncUserStatsToPlayer(socket.id, currentUser);
+
+      socket.emit('merit_updated', {
+        meritPoints: currentUser.meritPoints,
+        realmLevel: currentUser.realmLevel,
+        delta,
+        reason: 'FEED_KOI_FISH'
+      });
+
+      const room = roomManager.getPlayerRoom(socket.id);
+      if (room) {
+        io.to(room.id).emit('koi_fish_fed', {
+          socketId: socket.id,
+          dharmaName: currentUser.dharmaName
+        });
+      } else {
+        socket.emit('koi_fish_fed', {
+          socketId: socket.id,
+          dharmaName: currentUser.dharmaName
+        });
+      }
+
+      io.emit('zen_ticker', {
+        type: 'KOI_FISH',
+        dharmaName: currentUser.dharmaName,
+        message: `🐟 Đạo hữu "${currentUser.dharmaName}" vừa rải thức ăn nuôi đàn Cá Chép Koi tại Hồ Phóng Sinh (+${delta} Công Đức).`
+      });
     });
 
     socket.on('disconnect', () => {

@@ -37,6 +37,12 @@ export class Environment {
     this.bellSwingAngle = 0;
     this.smokeParticles = [];
     this.waterMesh = null;
+    this.koiFishList = [];
+    this.fishFeedTimer = 0;
+    this.fishFeedTarget = new THREE.Vector3(4.5, 0.08, 33.5);
+    this.fishFeedGroup = null;
+    this.bodhiGardenGroup = null;
+    this.plantedBodhiTrees = [];
 
     this._buildGroundAndCourtyard();
     this._buildMainHall();
@@ -46,6 +52,7 @@ export class Environment {
     this._buildMeditationCushions();
     this._buildBanyanTree();
     this._buildQuanAmStatue();
+    this._buildBodhiGarden();
     this._buildLotusPondAndGate();
     this._buildStoneLanterns();
   }
@@ -898,7 +905,164 @@ export class Environment {
     quanAmGroup.add(smallBurner);
     this.interactiveMeshes.push(smallBurner);
 
+    // Bồ Đoàn Quỳ Lạy trước Đài Quán Thế Âm Bồ Tát (đạo hữu có thể click vào lạy Ngũ Thể Đầu Địa)
+    const qaCushionGroup = new THREE.Group();
+    qaCushionGroup.position.set(0, 0.08, 4.1);
+
+    const qaMatPad = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.76, 0.82, 0.18, 24),
+      new THREE.MeshStandardMaterial({ color: 0xa83232, roughness: 0.55 })
+    );
+    qaMatPad.position.y = 0.09;
+    qaMatPad.castShadow = true;
+    qaMatPad.receiveShadow = true;
+    qaMatPad.userData = {
+      type: 'QUAN_AM_STATUE',
+      label: 'Quỳ Lạy Đức Quán Thế Âm Bồ Tát (+5 Công Đức)'
+    };
+    qaCushionGroup.add(qaMatPad);
+    this.interactiveMeshes.push(qaMatPad);
+
+    const qaMatRim = new THREE.Mesh(new THREE.TorusGeometry(0.77, 0.045, 8, 24), goldMat);
+    qaMatRim.rotation.x = Math.PI / 2;
+    qaMatRim.position.y = 0.16;
+    qaCushionGroup.add(qaMatRim);
+
+    quanAmGroup.add(qaCushionGroup);
+
     this.group.add(quanAmGroup);
+  }
+
+  _buildBodhiGarden() {
+    // Vườn Cây Bồ Đề Công Đức (Phía Đông Sân Chùa: X = 11.5, Z = 21.5)
+    const gardenGroup = new THREE.Group();
+    gardenGroup.position.set(11.5, 0.02, 21.5);
+    this.bodhiGardenGroup = gardenGroup;
+
+    const stoneBorderMat = new THREE.MeshStandardMaterial({ color: 0x767b75, roughness: 0.8 });
+    const soilMat = new THREE.MeshStandardMaterial({ color: 0x4a3222, roughness: 0.95 });
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.7, roughness: 0.25 });
+
+    // Bồn đất Bát Giác Vườn Bồ Đề
+    const bedBorder = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.4, 0.36, 8), stoneBorderMat);
+    bedBorder.position.y = 0.18;
+    bedBorder.receiveShadow = true;
+    gardenGroup.add(bedBorder);
+
+    const soilBed = new THREE.Mesh(new THREE.CylinderGeometry(3.9, 3.9, 0.32, 16), soilMat);
+    soilBed.position.y = 0.22;
+    soilBed.receiveShadow = true;
+    soilBed.userData = {
+      type: 'BODHI_GARDEN',
+      label: '🌱 Vườn Bồ Đề: Trồng Cây & Tưới Nước (+8 Công Đức)'
+    };
+    gardenGroup.add(soilBed);
+    this.interactiveMeshes.push(soilBed);
+
+    // Biển gỗ khắc chữ Vườn Bồ Đề Công Đức
+    const signPost = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.5, 8), soilMat);
+    signPost.position.set(-3.2, 0.8, 2.2);
+    gardenGroup.add(signPost);
+
+    const signBoard = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.55, 0.1), goldMat);
+    signBoard.position.set(-3.2, 1.5, 2.2);
+    signBoard.rotation.y = 0.35;
+    signBoard.userData = {
+      type: 'BODHI_GARDEN',
+      label: '🌱 Vườn Bồ Đề: Trồng Cây & Tưới Nước (+8 Công Đức)'
+    };
+    gardenGroup.add(signBoard);
+    this.interactiveMeshes.push(signBoard);
+
+    this.group.add(gardenGroup);
+
+    // Gieo sẵn 3 cây Bồ Đề mẫu xanh tốt trong vườn
+    const seedTrees = [
+      { dharmaName: 'Minh Tâm', ox: -1.6, oz: -1.1, scale: 1.05 },
+      { dharmaName: 'An Nhiên', ox: 1.5, oz: -0.9, scale: 0.95 },
+      { dharmaName: 'Huệ Đăng', ox: 0.2, oz: 1.4, scale: 1.1 }
+    ];
+    for (const st of seedTrees) {
+      this.addPlantedTreeVisual(st);
+    }
+  }
+
+  addPlantedTreeVisual(treeInfo = {}) {
+    if (!this.bodhiGardenGroup) return;
+    const idx = this.plantedBodhiTrees.length;
+    const angle = idx * 2.39996; // Golden angle distribution inside the garden bed
+    const radius = Math.min(3.1, 0.85 + (idx % 7) * 0.36);
+    const ox = treeInfo.ox !== undefined ? treeInfo.ox : Math.cos(angle) * radius;
+    const oz = treeInfo.oz !== undefined ? treeInfo.oz : Math.sin(angle) * radius;
+
+    const saplingGroup = new THREE.Group();
+    saplingGroup.position.set(ox, 0.34, oz);
+
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c3d28, roughness: 0.88 });
+    const leafGreenMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.65 });
+    const leafGoldMat = new THREE.MeshStandardMaterial({
+      color: 0xffd54f,
+      roughness: 0.35,
+      metalness: 0.3,
+      emissive: 0x4a3500,
+      emissiveIntensity: 0.25
+    });
+
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.14, 1.25, 8), trunkMat);
+    trunk.position.y = 0.62;
+    trunk.castShadow = true;
+    trunk.userData = {
+      type: 'BODHI_GARDEN',
+      label: `🌱 Cây Bồ Đề của ${treeInfo.dharmaName || 'Đạo hữu'}`
+    };
+    saplingGroup.add(trunk);
+    this.interactiveMeshes.push(trunk);
+
+    const crownMain = new THREE.Mesh(new THREE.DodecahedronGeometry(0.62, 1), leafGreenMat);
+    crownMain.position.set(0, 1.38, 0);
+    crownMain.castShadow = true;
+    crownMain.userData = trunk.userData;
+    saplingGroup.add(crownMain);
+    this.interactiveMeshes.push(crownMain);
+
+    const crownTop = new THREE.Mesh(new THREE.DodecahedronGeometry(0.42, 1), leafGoldMat);
+    crownTop.position.set(0, 1.82, 0);
+    crownTop.userData = trunk.userData;
+    saplingGroup.add(crownTop);
+
+    // Nhãn tên Đạo Hữu trồng cây Bồ Đề
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 56;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = 'rgba(20, 32, 18, 0.82)';
+    ctx.strokeStyle = '#ffd54f';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(4, 4, 248, 48, 12);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#ffe58f';
+    ctx.font = 'bold 18px sans-serif';
+    ctx.textAlign = 'center';
+    const owner = String(treeInfo.dharmaName || 'Đạo hữu').slice(0, 16);
+    ctx.fillText(`🌱 Bồ Đề: ${owner}`, 128, 34);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+    sprite.position.set(0, 2.38, 0);
+    sprite.scale.set(1.75, 0.38, 1);
+    saplingGroup.add(sprite);
+
+    const targetScale = treeInfo.scale || 0.85 + Math.random() * 0.35;
+    saplingGroup.scale.setScalar(0.2);
+
+    this.bodhiGardenGroup.add(saplingGroup);
+    this.plantedBodhiTrees.push({
+      group: saplingGroup,
+      currentScale: 0.2,
+      targetScale
+    });
   }
 
   _buildLotusPondAndGate() {
@@ -960,6 +1124,89 @@ export class Environment {
       lily.position.set(lx, 0.11, lz);
       pondGroup.add(lily);
     }
+
+    // 12 Đàn Cá Chép Koi Vàng & Đỏ Trắng (Koi Fish Phóng Sinh bơi lội trong Hồ Sen)
+    const koiGoldMat = new THREE.MeshStandardMaterial({
+      color: 0xff9800,
+      roughness: 0.25,
+      metalness: 0.35,
+      emissive: 0x4d2600,
+      emissiveIntensity: 0.28
+    });
+    const koiRedWhiteMat = new THREE.MeshStandardMaterial({
+      color: 0xff3d00,
+      roughness: 0.25,
+      metalness: 0.25,
+      emissive: 0x4a0e00,
+      emissiveIntensity: 0.25
+    });
+    const koiTailMat = new THREE.MeshBasicMaterial({ color: 0xfff3e0, side: THREE.DoubleSide });
+
+    for (let i = 0; i < 12; i++) {
+      const side = i % 2 === 0 ? -1 : 1;
+      const centerX = side * (5.2 + (i % 3) * 2.1);
+      const centerZ = (i % 4 - 1.5) * 2.4;
+
+      const fishGroup = new THREE.Group();
+      fishGroup.position.set(centerX, 0.09, centerZ);
+
+      const mat = i % 2 === 0 ? koiGoldMat : koiRedWhiteMat;
+      const body = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.65, 8), mat);
+      body.rotation.x = Math.PI / 2;
+      body.scale.set(1.0, 1.0, 0.58);
+      body.userData = {
+        type: 'KOI_FISH',
+        label: '🐟 Cho Cá Koi Phóng Sinh Ăn (+6 Công Đức)'
+      };
+      fishGroup.add(body);
+      this.interactiveMeshes.push(body);
+
+      const tail = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.28, 3), koiTailMat);
+      tail.rotation.x = -Math.PI / 2;
+      tail.position.z = -0.38;
+      tail.scale.set(0.4, 1, 1);
+      fishGroup.add(tail);
+
+      pondGroup.add(fishGroup);
+      this.koiFishList.push({
+        group: fishGroup,
+        tail,
+        baseX: centerX,
+        baseZ: centerZ,
+        rx: 1.6 + (i % 3) * 0.65,
+        rz: 1.2 + (i % 2) * 0.55,
+        speed: 0.75 + (i % 4) * 0.18,
+        phase: (i / 12) * Math.PI * 2
+      });
+    }
+
+    // Hiệu ứng hạt thức ăn vàng & vòng sóng nước khi cho cá Koi ăn
+    const feedGroup = new THREE.Group();
+    feedGroup.position.set(4.5, 0.12, -1.0);
+    feedGroup.visible = false;
+    const rippleMesh = new THREE.Mesh(
+      new THREE.RingGeometry(0.3, 0.55, 24),
+      new THREE.MeshBasicMaterial({
+        color: 0xffeb3b,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.85
+      })
+    );
+    rippleMesh.rotation.x = -Math.PI / 2;
+    feedGroup.add(rippleMesh);
+
+    const pelletMat = new THREE.MeshBasicMaterial({ color: 0xffd54f });
+    for (let p = 0; p < 10; p++) {
+      const pellet = new THREE.Mesh(new THREE.SphereGeometry(0.055, 6, 6), pelletMat);
+      const pa = (p / 10) * Math.PI * 2;
+      const pr = 0.2 + (p % 3) * 0.25;
+      pellet.position.set(Math.cos(pa) * pr, 0.02, Math.sin(pa) * pr);
+      feedGroup.add(pellet);
+    }
+    pondGroup.add(feedGroup);
+    this.fishFeedGroup = feedGroup;
+    this.fishFeedRipple = rippleMesh;
 
     this.group.add(pondGroup);
 
@@ -1034,6 +1281,13 @@ export class Environment {
 
   knockWoodenFishAnimation() {
     this.woodenFishPulse = 1.0;
+  }
+
+  triggerFeedKoiAnimation() {
+    this.fishFeedTimer = 4.0;
+    if (this.fishFeedGroup) {
+      this.fishFeedGroup.visible = true;
+    }
   }
 
   addIncenseStickVisual() {
@@ -1114,6 +1368,50 @@ export class Environment {
         const rs = 1 + t * 2.8;
         this.woodenFishSoundRing.scale.set(rs, rs, 1);
         this.woodenFishSoundRing.material.opacity = this.woodenFishPulse * 0.85;
+      }
+    }
+
+    // 5. Animate 12 Koi Fish swimming in the Lotus Pond & gathering when fed
+    const isFeeding = this.fishFeedTimer > 0;
+    if (isFeeding) {
+      this.fishFeedTimer = Math.max(0, this.fishFeedTimer - dt);
+      if (this.fishFeedRipple) {
+        const rippleScale = 1 + ((4.0 - this.fishFeedTimer) % 1.2) * 2.5;
+        this.fishFeedRipple.scale.set(rippleScale, rippleScale, 1);
+      }
+      if (this.fishFeedTimer === 0 && this.fishFeedGroup) {
+        this.fishFeedGroup.visible = false;
+      }
+    }
+
+    for (const fish of this.koiFishList) {
+      const speedMult = isFeeding ? 2.4 : 1.0;
+      const t = elapsed * fish.speed * speedMult + fish.phase;
+      let targetX = fish.baseX + Math.cos(t) * fish.rx;
+      let targetZ = fish.baseZ + Math.sin(t * 1.3) * fish.rz;
+
+      if (isFeeding && fish.baseX > 0) {
+        targetX = THREE.MathUtils.lerp(targetX, 4.5 + Math.cos(t * 2) * 0.9, 0.65);
+        targetZ = THREE.MathUtils.lerp(targetZ, -1.0 + Math.sin(t * 2) * 0.9, 0.65);
+      }
+
+      const dx = targetX - fish.group.position.x;
+      const dz = targetZ - fish.group.position.z;
+      fish.group.position.x = targetX;
+      fish.group.position.z = targetZ;
+      if (Math.hypot(dx, dz) > 0.0005) {
+        fish.group.rotation.y = Math.atan2(dx, dz);
+      }
+      if (fish.tail) {
+        fish.tail.rotation.y = Math.sin(elapsed * 12 * speedMult + fish.phase) * 0.38;
+      }
+    }
+
+    // 6. Smoothly grow newly planted Bodhi trees in Vườn Bồ Đề Công Đức
+    for (const item of this.plantedBodhiTrees) {
+      if (item.currentScale < item.targetScale) {
+        item.currentScale = Math.min(item.targetScale, item.currentScale + dt * 0.9);
+        item.group.scale.setScalar(item.currentScale);
       }
     }
   }

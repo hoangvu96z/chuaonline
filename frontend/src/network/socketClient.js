@@ -115,6 +115,20 @@ export class SocketClient {
     this.socket.on('leaderboard_data', (data) => {
       if (this.handlers.onLeaderboardData) this.handlers.onLeaderboardData(data);
     });
+
+    // Real-time Multi-User Chat
+    this.socket.on('chat_message', (msg) => {
+      if (this.handlers.onChatMessage) this.handlers.onChatMessage(msg);
+    });
+
+    // Bodhi Tree planted & Koi Fish fed events
+    this.socket.on('bodhi_tree_planted', (data) => {
+      if (this.handlers.onBodhiTreePlanted) this.handlers.onBodhiTreePlanted(data);
+    });
+
+    this.socket.on('koi_fish_fed', (data) => {
+      if (this.handlers.onKoiFishFed) this.handlers.onKoiFishFed(data);
+    });
   }
 
   /**
@@ -160,9 +174,24 @@ export class SocketClient {
     this.socket.emit('knock_wooden_fish', { timestamp: Date.now() });
   }
 
-  prostrateBuddha(bowNumber = 1) {
+  prostrateBuddha(bowNumber = 1, target = 'BUDDHA', rotY = Math.PI) {
     if (!this.socket || !this.connected) return;
-    this.socket.emit('prostrate_buddha', { bowNumber, timestamp: Date.now() });
+    this.socket.emit('prostrate_buddha', { bowNumber, target, rotY, timestamp: Date.now() });
+  }
+
+  sendChat(text) {
+    if (!this.socket || !this.connected) return;
+    this.socket.emit('send_chat', { text });
+  }
+
+  plantBodhiTree(wish = 'Ươm mầm Bồ Đề, gieo duyên giác ngộ') {
+    if (!this.socket || !this.connected) return;
+    this.socket.emit('plant_bodhi_tree', { wish });
+  }
+
+  feedKoiFish() {
+    if (!this.socket || !this.connected) return;
+    this.socket.emit('feed_koi_fish', { timestamp: Date.now() });
   }
 
   chantVerse(sutraId, verseIndex, meritEarned = 3) {

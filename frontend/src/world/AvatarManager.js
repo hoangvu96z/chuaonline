@@ -151,6 +151,10 @@ export class AvatarManager {
     const entry = this.avatars.get(socketId);
     if (!entry) return;
     this.scene.remove(entry.root);
+    if (entry.chatBubbleEl) {
+      entry.chatBubbleEl.remove();
+      entry.chatBubbleEl = null;
+    }
     if (entry.nameplateTexture) entry.nameplateTexture.dispose();
     if (entry.nameplateMat) entry.nameplateMat.dispose();
     if (entry.robeMat) entry.robeMat.dispose();
@@ -371,6 +375,9 @@ export class AvatarManager {
       nameplateSprite,
       nameplateTexture: null,
       nameplateMat: null,
+      chatBubbleEl: null,
+      chatBubbleTimer: 0,
+      customSitRotY: null,
       targetPos: root.position.clone(),
       targetRotY: data.rotY || 0,
       bowTimer: 0,
@@ -430,8 +437,10 @@ export class AvatarManager {
     entry.chantPropsGroup.visible = isSitting;
 
     if (isSitting) {
-      // Face towards Golden Buddha in Main Hall (North: rotY = Math.PI)
-      entry.targetRotY = Math.PI;
+      // Face customSitRotY if prostrating/sitting at Đài Quán Âm, otherwise towards Golden Buddha in Main Hall (Math.PI)
+      entry.targetRotY = entry.customSitRotY !== null && entry.customSitRotY !== undefined ? entry.customSitRotY : Math.PI;
+    } else {
+      entry.customSitRotY = null;
     }
   }
 
@@ -493,14 +502,73 @@ export class AvatarManager {
   }
 
   /**
-   * Trigger full Five-Point Prostration (Ngũ Thể Đầu Địa - Lạy Phật sát đất) animation
+   * Trigger full Five-Point Prostration (Ngũ Thể Đầu Địa - Lạy Phật / Lạy Bồ Tát sát đất) animation
+   * @param {string} socketId
+   * @param {number|null} customRotY - Optional custom facing angle (e.g. facing Đài Quán Thế Âm Bồ Tát)
    */
-  triggerProstration(socketId) {
+  triggerProstration(socketId, customRotY = null) {
     const entry = this.avatars.get(socketId);
     if (!entry) return;
-    entry.targetRotY = Math.PI; // Hướng về Đức Phật Bổn Sư
+    entry.customSitRotY = customRotY !== null && customRotY !== undefined ? customRotY : Math.PI;
+    entry.targetRotY = entry.customSitRotY;
     this._applyAvatarState(entry, 'PROSTRATE');
     entry.prostrateTimer = 2.4;
+  }
+
+  /**
+   * Show a simultaneous 3D-projected floating speech bubble above a player's head in the 3D scene
+   */
+  showChatBubble(socketId, dharmaName, cleanText, durationSec = 7.5) {
+    const entry = this.avatars.get(socketId);
+    if (!entry) return;
+
+    const layer = document.getElementById('floating-merits-layer');
+    if (!layer) return;
+
+    if (!entry.chatBubbleEl) {
+      const el = document.createElement('div');
+      el.className = 'avatar-3d-chat-bubble';
+      layer.appendChild(el);
+      entry.chatBubbleEl = el;
+    }
+
+    const safeName = String(dharmaName || entry.dharmaName || 'Đạo hữu').slice(0, 24);
+    const safeMsg = String(cleanText || '').slice(0, 140);
+    entry.chatBubbleEl.innerHTML = `<strong class="bubble-author">🪷 ${safeName}:</strong> <span class="bubble-text"></span>`;
+    const textSpan = entry.chatBubbleEl.querySelector('.bubble-text');
+    if (textSpan) textSpan.textContent = safeMsg;
+    entry.chatBubbleEl.classList.remove('fading');
+    entry.chatBubbleTimer = durationSec;
+  }
+
+  updateChatBubblesProjection(camera, dt) {
+    if (!camera) return;
+    for (const entry of this.avatars.values()) {
+      if (!entry.chatBubbleEl) continue;
+      if (entry.chatBubbleTimer > 0) {
+        entry.chatBubbleTimer = Math.max(0, entry.chatBubbleTimer - dt);
+        if (entry.chatBubbleTimer < 1.0) {
+          entry.chatBubbleEl.classList.add('fading');
+        }
+        const worldPos = entry.root.position.clone();
+        const isSitting = entry.state === 'SIT' || entry.state === 'CHANT' || entry.state === 'PROSTRATE';
+        worldPos.y += isSitting ? 2.35 : 2.75;
+        worldPos.project(camera);
+
+        if (worldPos.z < 1) {
+          const sx = (worldPos.x * 0.5 + 0.5) * window.innerWidth;
+          const sy = (-(worldPos.y * 0.5) + 0.5) * window.innerHeight;
+          entry.chatBubbleEl.style.display = 'block';
+          entry.chatBubbleEl.style.left = `${sx}px`;
+          entry.chatBubbleEl.style.top = `${sy}px`;
+        } else {
+          entry.chatBubbleEl.style.display = 'none';
+        }
+      } else {
+        entry.chatBubbleEl.remove();
+        entry.chatBubbleEl = null;
+      }
+    }
   }
 
   setLocalTargetPosition(x, z, state = 'WALK', cushionIndex = null) {
