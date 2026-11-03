@@ -1,0 +1,98 @@
+name: Deploy Chùa Online 3D to VPS (chua.vunph.io.vn & api.vunph.io.vn)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - execute_full_development_plan
+  workflow_dispatch:
+
+env:
+  VPS_HOST: "103.232.122.144"
+  VPS_USER: "root"
+  VPS_PASS: "Y1vetHTZ"
+  VITE_BACKEND_URL: "https://api.vunph.io.vn"
+  DB_HOST: "onehost-cloudhn092403.000nethost.com"
+  DB_PORT: "3306"
+  DB_USER: "jkokiwsihosting_vunph"
+  DB_PASS: "Hoangvu@6496"
+  DB_NAME: "jkokiwsihosting_chuaonline"
+
+jobs:
+  test-build-and-deploy:
+    name: Test, Build & Deploy to VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 2. Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: 3. Install Dependencies (Backend & Frontend)
+        run: |
+          cd backend && npm install
+          cd ../frontend && npm install
+
+      - name: 4. Run Automated Backend & Frontend Tests
+        run: |
+          cd backend && npm test
+
+      - name: 5. Build Production Frontend (VITE_BACKEND_URL=https://api.vunph.io.vn)
+        run: |
+          cd frontend
+          VITE_BACKEND_URL=${{ env.VITE_BACKEND_URL }} npm run build
+
+      - name: 6. Package Deployment Archive
+        run: |
+          tar --exclude='backend/node_modules' --exclude='frontend/node_modules' \
+              -czf /tmp/chuaonline_deploy.tar.gz \
+              backend frontend/dist frontend/src/data/sutras.js
+
+      - name: 7. Upload & Deploy to VPS (103.232.122.144) via SSH
+        run: |
+          sudo apt-get update -y && sudo apt-get install -y sshpass
+
+          # Copy archive to VPS
+          sshpass -p "${{ env.VPS_PASS }}" scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            /tmp/chuaonline_deploy.tar.gz ${{ env.VPS_USER }}@${{ env.VPS_HOST }}:/tmp/chuaonline_deploy.tar.gz
+
+          # Execute remote deployment script
+          sshpass -p "${{ env.VPS_PASS }}" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            ${{ env.VPS_USER }}@${{ env.VPS_HOST }} << 'EOF'
+            set -e
+            export PATH=$PATH:/root/.nvm/versions/node/v24.19.0/bin:/usr/local/bin
+
+            mkdir -p /var/www/chuaonline /var/www/chua.vunph.io.vn
+            tar -xzf /tmp/chuaonline_deploy.tar.gz -C /var/www/chuaonline
+            cp -rf /var/www/chuaonline/frontend/dist/* /var/www/chua.vunph.io.vn/
+
+            cat > /var/www/chuaonline/backend/.env << 'ENVEOF'
+            PORT=3001
+            DB_HOST=onehost-cloudhn092403.000nethost.com
+            DB_PORT=3306
+            DB_USER=jkokiwsihosting_vunph
+            DB_PASS=Hoangvu@6496
+            DB_NAME=jkokiwsihosting_chuaonline
+            MAX_ROOM_CAPACITY=60
+            MERIT_FLUSH_INTERVAL_MS=15000
+            ENVEOF
+            sed -i 's/^[[:space:]]*//' /var/www/chuaonline/backend/.env
+
+            cd /var/www/chuaonline/backend
+            npm install --omit=dev
+
+            if pm2 describe chua-online-api >/dev/null 2>&1; then
+              pm2 restart chua-online-api --update-env
+            else
+              pm2 start src/index.js --name chua-online-api
+            fi
+            pm2 save
+
+            sleep 2
+            curl -fsS http://127.0.0.1:3001/api/health
+          EOF

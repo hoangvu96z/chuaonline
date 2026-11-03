@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <title>Chùa Online 3D — Không Gian Tịnh Độ &amp; Tụng Kinh Đại Chúng</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <!-- 3D WebGL Temple Viewport -->
+  <div id="temple-canvas-container" aria-label="Không gian Chùa Online 3D"></div>
+
+  <!-- Floating 3D Merit Popups Layer -->
+  <div id="floating-merits-layer" aria-hidden="true"></div>
+
+  <!-- Top HUD: Zen Silk Ticker + Player Profile & Room Sharding Bar -->
+  <header class="hud-top">
+    <!-- Top Zen Ticker (Thanh Lụa Thông Báo Toàn Server) -->
+    <div id="zen-ticker-ribbon" class="zen-ticker-ribbon" role="status" aria-live="polite">
+      <span class="ticker-lotus">🪷</span>
+      <div class="ticker-viewport">
+        <div id="zen-ticker-text" class="ticker-content">
+          Nam Mô Bổn Sư Thích Ca Mâu Ni Phật — Chào mừng quý đạo hữu thập phương về Chùa Online 3D lễ Phật, tụng kinh, gieo duyên lành!
+        </div>
+      </div>
+      <button type="button" class="banner-dismiss-btn" id="btn-close-ticker" aria-label="Tắt thanh thông báo" title="Ẩn thanh thông báo">✕</button>
+    </div>
+
+    <!-- Status Bar: User Card + Room Channel Selector + Quick Zone Camera + Day/Night + Audio -->
+    <div class="hud-status-row">
+      <!-- Player Merit & Realm Card -->
+      <div class="user-buddhist-card" id="user-profile-card">
+        <div class="avatar-badge" id="hud-avatar-color" title="Đổi Nhân Vật, Pháp Danh &amp; Màu Áo">🙏</div>
+        <div class="user-meta">
+          <div class="user-name-line">
+            <strong id="hud-dharma-name">Thiện Tâm</strong>
+            <span class="province-pill" id="hud-province-code">SG</span>
+            <button type="button" class="icon-mini-btn" id="btn-open-profile" title="Đổi Nhân Vật, Pháp Danh &amp; Tài Khoản">🧘 Nhân Vật</button>
+          </div>
+          <div class="realm-line">
+            <span id="hud-realm-badge" class="realm-badge">Tầng 1: Sơ Tâm Nhập Đạo</span>
+          </div>
+          <div class="merit-progress-bar" title="Tiến trình tu tập đột phá Cảnh Giới">
+            <div id="hud-realm-fill" class="merit-progress-fill" style="width: 12%"></div>
+          </div>
+        </div>
+        <div class="merit-counter-box">
+          <span class="merit-label">CÔNG ĐỨC</span>
+          <strong id="hud-merit-points" class="merit-value">0</strong>
+        </div>
+      </div>
+
+      <!-- Center: Global Chanting Banner / Room Sharding & Zone Camera -->
+      <div class="hud-center-controls">
+        <div class="channel-pill" title="Phân kênh tự động 60 người/phòng (Auto Room Sharding)">
+          <span class="status-dot online" id="socket-status-dot"></span>
+          <span id="hud-room-name">Đạo Tràng 1</span>
+          <span class="ccu-badge">(<span id="hud-room-count">1</span>/60)</span>
+        </div>
+
+        <div class="zone-shortcuts" role="group" aria-label="Di chuyển nhanh">
+          <button type="button" class="zone-btn active" data-zone="CHANH_DIEN">🏯 Chánh Điện (Mõ)</button>
+          <button type="button" class="zone-btn" data-zone="DAI_QUAN_AM">🙏 Đài Quán Âm</button>
+          <button type="button" class="zone-btn" data-zone="SAN_CHUA">🔔 Sân Chùa (<span id="hud-leaf-count">0</span> lá)</button>
+          <button type="button" class="zone-btn" data-zone="HO_HOA_DANG">🪷 Hồ Hoa Đăng</button>
+        </div>
+
+        <button type="button" class="control-pill-btn" id="btn-open-auth-top" title="Đổi Nhân Vật / Đăng Nhập Tài Khoản">
+          🧘 Đổi Nhân Vật / TK
+        </button>
+
+        <button type="button" class="control-pill-btn" id="btn-toggle-daynight" title="Đổi cảnh Ngày / Đêm">
+          🌙 Đêm Tịnh
+        </button>
+        <button type="button" class="control-pill-btn" id="btn-toggle-audio" title="Bật / Tắt Âm Thanh Pháp Khí">
+          🔊 Âm Thanh
+        </button>
+      </div>
+    </div>
+
+    <!-- Server-Synced Global Chanting Banner (Thời Khóa Đại Chúng x2 Công Đức) -->
+    <div id="global-sutra-banner" class="global-sutra-banner" hidden>
+      <div class="global-banner-left">
+        <span class="pulse-halo">☸️</span>
+        <div>
+          <strong>THỜI KHÓA ĐẠI CHÚNG ĐỒNG VỌNG (x2 Công Đức)</strong>
+          <p id="global-sutra-desc">Đang trì tụng: Bát Nhã Ba La Mật Đa Tâm Kinh — Hãy ngồi lên Bồ Đoàn trong Chánh Điện!</p>
+        </div>
+      </div>
+      <div class="global-banner-actions">
+        <button type="button" class="gold-cta-btn" id="btn-join-global-chant">Ngồi Bồ Đoàn &amp; Đồng Tụng</button>
+        <button type="button" class="banner-dismiss-btn" id="btn-close-global-banner" aria-label="Đóng thông báo thời khóa" title="Đóng thông báo này">✕</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Floating Golden Sutra Scroll UI (Cuộn Kinh Văn Vàng Karaoke) -->
+  <section id="sutra-scroll-panel" class="sutra-scroll-panel" aria-label="Cuộn Kinh Văn Karaoke" hidden>
+    <div class="scroll-roller scroll-roller-left"></div>
+    <div class="scroll-silk-body">
+      <div class="scroll-header">
+        <div class="scroll-title-group">
+          <span class="scroll-tag" id="scroll-mode-badge">📖 Tụng Kinh Cá Nhân</span>
+          <h2 id="scroll-sutra-title">Bát Nhã Ba La Mật Đa Tâm Kinh</h2>
+          <span id="scroll-verse-counter" class="verse-counter">Câu 1/13</span>
+        </div>
+        <div class="scroll-actions">
+          <label class="zen-switch-label" title="Tự động đọc kinh và gõ mõ theo nhịp">
+            <input type="checkbox" id="chk-auto-chant" switch checked />
+            <span>Tự động đọc &amp; gõ mõ</span>
+          </label>
+          <button type="button" class="scroll-btn" id="btn-change-sutra" command="show-modal" commandfor="dialog-sutra-library">
+            Đổi Bài Kinh
+          </button>
+          <button type="button" class="scroll-close-btn" id="btn-stop-sutra" aria-label="Đóng cuộn kinh">✕</button>
+        </div>
+      </div>
+
+      <!-- Karaoke Verse Display -->
+      <div class="karaoke-verse-box" id="karaoke-verse-box">
+        <p id="karaoke-verse-text" class="karaoke-verse-text">
+          Quán Tự Tại Bồ Tát hành thâm Bát Nhã Ba La Mật Đa thời,
+        </p>
+      </div>
+
+      <!-- Sutra Progress & Manual Wooden Fish Tap Hint -->
+      <div class="scroll-footer">
+        <div class="sutra-progress-track">
+          <div id="sutra-progress-bar" class="sutra-progress-bar" style="width: 8%"></div>
+        </div>
+        <div class="scroll-footer-meta">
+          <span id="sutra-hint-text">🎙️ Giọng đọc Pháp Âm kết hợp tiếng Mõ &amp; Chuông Gia Trì tự động</span>
+          <button type="button" class="manual-knock-btn" id="btn-scroll-knock">
+            🪵 Gõ Mõ Tụng Câu Này (+3 Công Đức)
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="scroll-roller scroll-roller-right"></div>
+  </section>
+
+  <!-- Persistent Toast Stack Container (Modern Web Guidance popover="manual") -->
+  <div id="toast-stack-container" class="toast-stack-container" aria-live="polite"></div>
+
+  <!-- Bottom Action Dock (9 Core Actions: Lạy Phật, Gõ Mõ, Tụng Kinh, Gõ Chuông...) -->
+  <nav class="hud-bottom-dock" aria-label="Thanh Pháp Khí &amp; Hành Động">
+    <button type="button" class="dock-btn highlight" id="dock-prostrate">
+      <span class="dock-icon">🙏</span>
+      <span class="dock-label">Lạy Phật</span>
+      <span class="dock-sub">+5 Công Đức</span>
+    </button>
+
+    <button type="button" class="dock-btn highlight" id="dock-wooden-fish" title="Ngồi trong Chánh Điện gõ Mõ tụng kinh (Phím Space khi ở trong Chánh Điện)">
+      <span class="dock-icon">🪵</span>
+      <span class="dock-label">Gõ Mõ</span>
+      <span class="dock-sub" id="dock-sub-mo">Trong Chánh Điện</span>
+    </button>
+
+    <button type="button" class="dock-btn highlight" id="dock-chant-sutra" command="show-modal" commandfor="dialog-sutra-library">
+      <span class="dock-icon">📖</span>
+      <span class="dock-label">Tụng Kinh</span>
+      <span class="dock-sub">12 Bộ Kinh</span>
+    </button>
+
+    <button type="button" class="dock-btn" id="dock-ring-bell" title="Ra ngoài Sân Chùa thỉnh Chuông Chùa (Phím Space khi ở ngoài Sân Chùa)">
+      <span class="dock-icon">🔔</span>
+      <span class="dock-label">Gõ Chuông</span>
+      <span class="dock-sub" id="dock-sub-bell">Ngoài Sân Chùa</span>
+    </button>
+
+    <button type="button" class="dock-btn" id="dock-sweep-leaves">
+      <span class="dock-icon">🧹</span>
+      <span class="dock-label">Quét Sân</span>
+      <span class="dock-sub">+5 Công Đức</span>
+    </button>
+
+    <button type="button" class="dock-btn" id="dock-offer-incense">
+      <span class="dock-icon">🪔</span>
+      <span class="dock-label">Dâng Hương</span>
+      <span class="dock-sub">+10 Công Đức</span>
+    </button>
+
+    <button type="button" class="dock-btn" id="dock-release-lantern">
+      <span class="dock-icon">🪷</span>
+      <span class="dock-label">Thả Hoa Đăng</span>
+      <span class="dock-sub">+10 Công Đức</span>
+    </button>
+
+    <button type="button" class="dock-btn" id="dock-draw-fortune">
+      <span class="dock-icon">🎋</span>
+      <span class="dock-label">Xin Xăm</span>
+      <span class="dock-sub">Quẻ Phật Giáo</span>
+    </button>
+
+    <button type="button" class="dock-btn gold" id="dock-leaderboard" command="show-modal" commandfor="dialog-leaderboard">
+      <span class="dock-icon">🏆</span>
+      <span class="dock-label">Bảng Công Đức</span>
+      <span class="dock-sub">63 Tỉnh Thành</span>
+    </button>
+  </nav>
+
+  <!-- =========================================================================
+       MODAL DIALOGS (Native <dialog closedby="any"> per Modern Web Guidance)
+       ========================================================================= -->
+
+  <!-- 1. Sutra Library Modal (Kho Tàng Kinh Điển Phật Giáo) -->
+  <dialog id="dialog-sutra-library" class="zen-dialog" closedby="any" aria-labelledby="title-sutra-library">
+    <div class="dialog-header">
+      <div>
+        <span class="dialog-eyebrow">TAM TẠNG KINH ĐIỂN</span>
+        <h2 id="title-sutra-library">📖 Chọn Bài Kinh Trì Tụng</h2>
+      </div>
+      <form method="dialog">
+        <button type="submit" class="dialog-close-btn" aria-label="Đóng">✕</button>
+      </form>
+    </div>
+
+    <p class="dialog-desc">
+      Khi trì tụng, hệ thống sẽ tự động thỉnh Chuông Gia Trì, gõ Mõ theo nhịp và đọc từng câu kinh kèm chữ Karaoke vàng kim. Ngồi trên <strong>Bồ Đoàn trong Chánh Điện</strong> trong giờ Thời Khóa Đại Chúng sẽ được <strong>nhân đôi (x2) Công Đức</strong>.
+    </p>
+
+    <div id="sutra-cards-list" class="sutra-cards-grid"></div>
+
+    <div class="dialog-footer">
+      <button type="button" class="secondary-zen-btn" id="btn-trigger-global-sutra">
+        ☸️ Khởi Xướng Thời Khóa Đại Chúng Toàn Phòng (x2 Công Đức)
+      </button>
+      <form method="dialog">
+        <button type="submit" class="primary-zen-btn" autofocus>Đóng</button>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- 2. Wish Modal (Dâng Hương Cầu Nguyện & Thả Hoa Đăng) -->
+  <dialog id="dialog-make-wish" class="zen-dialog" closedby="any" aria-labelledby="title-make-wish">
+    <div class="dialog-header">
+      <div>
+        <span class="dialog-eyebrow" id="wish-modal-eyebrow">TÂM THÀNH DÂNG PHẬT</span>
+        <h2 id="title-make-wish">🪔 Dâng Nén Tâm Hương Cầu Nguyện</h2>
+      </div>
+      <form method="dialog">
+        <button type="submit" class="dialog-close-btn" aria-label="Đóng">✕</button>
+      </form>
+    </div>
+
+    <form id="form-make-wish" class="wish-form">
+      <div class="wish-type-tabs" role="radiogroup" aria-label="Loại cầu nguyện">
+        <label class="wish-tab active" id="tab-wish-incense">
+          <input type="radio" name="wishType" value="INCENSE" checked />
+          <span>🪔 Dâng Hương Chánh Điện</span>
+        </label>
+        <label class="wish-tab" id="tab-wish-lantern">
+          <input type="radio" name="wishType" value="LANTERN" />
+          <span>🪷 Thả Hoa Đăng Hồ Sen</span>
+        </label>
+      </div>
+
+      <label for="input-wish-content" class="field-label">Lời nguyện cầu chân thành của đạo hữu (tối đa 200 ký tự):</label>
+      <textarea
+        id="input-wish-content"
+        name="content"
+        rows="3"
+        maxlength="200"
+        required
+        autofocus
+        placeholder="Nguyện cầu gia đạo bình an, cha mẹ mạnh khỏe, chúng sanh離 khổ đắc lạc..."
+      ></textarea>
+
+      <div class="quick-wish-chips">
+        <button type="button" class="wish-chip" data-wish="Nguyện cầu gia đình bình an, cha mẹ trường thọ, vạn sự cát tường.">🙏 Cầu gia đạo bình an</button>
+        <button type="button" class="wish-chip" data-wish="Nguyện tâm luôn thanh tịnh, trí tuệ sáng suốt, công việc hanh thông.">🪷 Cầu trí tuệ &amp; hanh thông</button>
+        <button type="button" class="wish-chip" data-wish="Nguyện quốc thái dân an, mưa thuận gió hòa, muôn loài an lạc.">☸️ Cầu quốc thái dân an</button>
+      </div>
+
+      <div class="dialog-footer">
+        <button type="button" class="secondary-zen-btn" id="btn-cancel-wish">Hủy</button>
+        <button type="submit" class="gold-cta-btn">✨ Thành Tâm Dâng Lên (+10 Công Đức)</button>
+      </div>
+    </form>
+
+    <!-- Recent Wishes Wall -->
+    <div class="wishes-wall-section">
+      <h3>🕯️ Bức Tường Tâm Nguyện &amp; Hoa Đăng Đang Sáng</h3>
+      <div id="wishes-wall-list" class="wishes-wall-list"></div>
+    </div>
+  </dialog>
+
+  <!-- 3. Daily Buddhist Fortune Modal (Xin Xăm Quẻ Phật Giáo) -->
+  <dialog id="dialog-fortune" class="zen-dialog fortune-dialog" closedby="any" aria-labelledby="title-fortune">
+    <div class="dialog-header">
+      <div>
+        <span class="dialog-eyebrow">GIEO DUYÊN THIỀN ĐỊNH</span>
+        <h2 id="title-fortune">🎋 Xin Xăm Quẻ Phật Giáo Đầu Ngày</h2>
+      </div>
+      <form method="dialog">
+        <button type="submit" class="dialog-close-btn" aria-label="Đóng">✕</button>
+      </form>
+    </div>
+
+    <div id="fortune-shaker-stage" class="fortune-shaker-stage">
+      <div class="fortune-cylinder-wrapper">
+        <div id="fortune-cylinder" class="fortune-cylinder">
+          <div class="fortune-sticks-bundle">
+            <span class="f-stick s1"></span>
+            <span class="f-stick s2"></span>
+            <span class="f-stick s3"></span>
+            <span class="f-stick s4"></span>
+            <span class="f-stick s5"></span>
+          </div>
+          <div class="cylinder-body">🎋 ỐNG XĂM</div>
+        </div>
+        <div id="flying-fortune-stick" class="flying-fortune-stick" hidden>📜 Quẻ Thượng Cát</div>
+      </div>
+      <p id="fortune-stage-status">Chắp tay tĩnh tâm hướng về Tam Bảo và bấm nút bên dưới để lắc ống xăm thỉnh quẻ chỉ lối.</p>
+      <button type="button" class="gold-cta-btn" id="btn-shake-fortune" autofocus>
+        🎋 Lắc Ống Xăm Thỉnh Quẻ
+      </button>
+    </div>
+
+    <article id="fortune-result-card" class="fortune-result-card" hidden>
+      <div class="fortune-rank" id="fortune-rank-title">Thượng Thượng Cát - Hoa Khai Kiến Phật</div>
+      <blockquote class="fortune-poem" id="fortune-poem-text"></blockquote>
+      <div class="fortune-interpretation-box">
+        <h4>💡 Lời Giải Chánh Pháp:</h4>
+        <p id="fortune-interpretation-text"></p>
+      </div>
+      <div class="fortune-actions">
+        <button type="button" class="secondary-zen-btn" id="btn-speak-fortune">🔊 Nghe Sư Thầy Đọc Giải Quẻ</button>
+        <button type="button" class="gold-cta-btn" id="btn-redraw-fortune">🎋 Xin Quẻ Khác</button>
+      </div>
+    </article>
+  </dialog>
+
+  <!-- 4. Golden Merit Leaderboard Modal (Bảng Vàng Công Đức 63 Tỉnh Thành & Cá Nhân) -->
+  <dialog id="dialog-leaderboard" class="zen-dialog leaderboard-dialog" closedby="any" aria-labelledby="title-leaderboard">
+    <div class="dialog-header">
+      <div>
+        <span class="dialog-eyebrow">BẢNG VÀNG CÔNG ĐỨC TOÀN SERVER</span>
+        <h2 id="title-leaderboard">🏆 Bảng Xếp Hạng Công Đức 63 Tỉnh Thành &amp; Đạo Hữu</h2>
+      </div>
+      <form method="dialog">
+        <button type="submit" class="dialog-close-btn" aria-label="Đóng" autofocus>✕</button>
+      </form>
+    </div>
+
+    <div class="leaderboard-tabs">
+      <button type="button" class="lb-tab active" data-tab="provinces" id="tab-btn-provinces">
+        🇻🇳 Top 63 Tỉnh Thành
+      </button>
+      <button type="button" class="lb-tab" data-tab="users" id="tab-btn-users">
+        🧘 Top Phật Tử Tinh Tấn
+      </button>
+    </div>
+
+    <!-- Tab 1: 63 Provinces Leaderboard (Modern Web Guidance responsive-table) -->
+    <div id="lb-panel-provinces" class="lb-panel">
+      <div tabindex="0" role="region" aria-labelledby="caption-provinces-lb" class="table-wrapper">
+        <table class="zen-responsive-table" style="--label-1: 'Hạng'; --label-2: 'Mã Tỉnh'; --label-3: 'Tổng Công Đức';">
+          <caption id="caption-provinces-lb" class="sr-only">Bảng xếp hạng công đức 63 tỉnh thành Việt Nam</caption>
+          <thead>
+            <tr>
+              <th scope="col">Tỉnh / Thành Phố</th>
+              <th scope="col">Hạng</th>
+              <th scope="col">Mã Tỉnh</th>
+              <th scope="col">Tổng Công Đức</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-provinces-lb"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 2: Individual Users Leaderboard -->
+    <div id="lb-panel-users" class="lb-panel" hidden>
+      <div tabindex="0" role="region" aria-labelledby="caption-users-lb" class="table-wrapper">
+        <table class="zen-responsive-table" style="--label-1: 'Hạng'; --label-2: 'Tỉnh'; --label-3: 'Cảnh Giới'; --label-4: 'Kinh Đã Tụng'; --label-5: 'Công Đức';">
+          <caption id="caption-users-lb" class="sr-only">Bảng xếp hạng cá nhân Phật tử có công đức cao nhất</caption>
+          <thead>
+            <tr>
+              <th scope="col">Pháp Danh</th>
+              <th scope="col">Hạng</th>
+              <th scope="col">Tỉnh</th>
+              <th scope="col">Cảnh Giới</th>
+              <th scope="col">Kinh Đã Tụng</th>
+              <th scope="col">Công Đức</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-users-lb"></tbody>
+        </table>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- 5. Profile, Registration & Login Modal (Tài Khoản, Pháp Danh & Đăng Nhập Khôi Phục Công Đức) -->
+  <dialog id="dialog-profile" class="zen-dialog" closedby="any" aria-labelledby="title-profile">
+    <div class="dialog-header">
+      <div>
+        <span class="dialog-eyebrow">THẺ ĐẠO HỮU TAM BẢO &amp; ĐỒNG BỘ ĐA THIẾT BỊ</span>
+        <h2 id="title-profile">🔑 Tài Khoản Pháp Danh &amp; Đăng Nhập</h2>
+      </div>
+      <form method="dialog">
+        <button type="submit" class="dialog-close-btn" aria-label="Đóng">✕</button>
+      </form>
+    </div>
+
+    <div class="leaderboard-tabs" role="tablist">
+      <button type="button" class="lb-tab active" id="tab-btn-auth-profile" role="tab" aria-selected="true">
+        📝 Hồ Sơ &amp; Đăng Ký Bảo Hộ
+      </button>
+      <button type="button" class="lb-tab" id="tab-btn-auth-login" role="tab" aria-selected="false">
+        🔑 Đăng Nhập / Khôi Phục Tài Khoản
+      </button>
+    </div>
+
+    <!-- Panel 1: Hồ Sơ & Đăng Ký Mật Khẩu Bảo Hộ -->
+    <form id="form-profile" class="wish-form">
+      <div class="auth-status-banner" id="auth-status-banner">
+        🟢 Trạng thái: <strong>Đang lưu tự động trên thiết bị này</strong> — Hãy đặt Mật Khẩu bên dưới để đăng nhập trên mọi máy!
+      </div>
+
+      <label for="input-dharma-name" class="field-label">Pháp Danh hiển thị trên đỉnh đầu 3D (Dùng để đăng nhập):</label>
+      <input
+        type="text"
+        id="input-dharma-name"
+        name="dharmaName"
+        maxlength="40"
+        required
+        autofocus
+        placeholder="VD: Minh Tâm, An Nhiên, Thiện Đức..."
+      />
+
+      <label for="input-register-password" class="field-label">Mật Khẩu Bảo Hộ Tài Khoản (Tùy chọn, tối thiểu 4 ký tự để đăng nhập máy khác):</label>
+      <input
+        type="password"
+        id="input-register-password"
+        name="password"
+        maxlength="64"
+        autocomplete="new-password"
+        placeholder="Nhập mật khẩu bảo vệ Pháp Danh &amp; Công Đức..."
+      />
+
+      <label for="select-province" class="field-label">Tỉnh / Thành Phố đóng góp Công Đức:</label>
+      <select id="select-province" name="provinceCode"></select>
+
+      <label class="field-label">Hình Tướng Nhân Vật 3D (Chọn Đổi Ngay):</label>
+      <div id="avatar-style-picker" class="avatar-style-picker" role="radiogroup" aria-label="Chọn kiểu nhân vật 3D"></div>
+
+      <label class="field-label">Màu Áo Tu Tập:</label>
+      <div id="robe-color-picker" class="robe-color-picker"></div>
+
+      <div class="recovery-code-box">
+        <div>
+          <span>Mã Pháp Danh Khôi Phục (Recovery Code):</span>
+          <code id="profile-recovery-code">---</code>
+        </div>
+        <button type="button" class="secondary-zen-btn" id="btn-copy-recovery-code">📋 Sao Chép Mã</button>
+      </div>
+
+      <div class="dialog-footer">
+        <button type="button" class="secondary-zen-btn" id="btn-switch-to-login">🔑 Đã có tài khoản? Đăng nhập</button>
+        <button type="submit" class="gold-cta-btn">💾 Lưu &amp; Bảo Hộ Tài Khoản</button>
+      </div>
+    </form>
+
+    <!-- Panel 2: Đăng Nhập bằng Pháp Danh + Mật Khẩu hoặc Mã Khôi Phục -->
+    <form id="form-auth-login" class="wish-form" hidden>
+      <p class="dialog-desc" style="margin: 0 0 8px 0;">
+        Nhập <strong>Pháp Danh + Mật Khẩu</strong> đã đăng ký, hoặc dán <strong>Mã Pháp Danh Khôi Phục (VD: PHATTU-XXXX-XXXX)</strong> để đồng bộ toàn bộ Điểm Công Đức, Cảnh Giới Tu Tập và số bộ kinh đã tụng về thiết bị này.
+      </p>
+
+      <label for="input-login-identifier" class="field-label">Pháp Danh hoặc Mã Khôi Phục (Recovery Code):</label>
+      <input
+        type="text"
+        id="input-login-identifier"
+        name="identifier"
+        maxlength="64"
+        required
+        placeholder="VD: Minh Tâm hoặc PHATTU-ABCD-1234"
+      />
+
+      <label for="input-login-password" class="field-label">Mật Khẩu (Để trống nếu đăng nhập bằng Mã Khôi Phục chưa đặt mật khẩu):</label>
+      <input
+        type="password"
+        id="input-login-password"
+        name="password"
+        maxlength="64"
+        autocomplete="current-password"
+        placeholder="Nhập mật khẩu tài khoản..."
+      />
+
+      <p id="auth-login-error" class="auth-error-msg" hidden></p>
+
+      <div class="dialog-footer">
+        <button type="button" class="secondary-zen-btn" id="btn-back-to-profile">← Quay Lại Hồ Sơ</button>
+        <button type="submit" class="gold-cta-btn" id="btn-submit-login">🔑 Đăng Nhập &amp; Đồng Bộ Công Đức</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

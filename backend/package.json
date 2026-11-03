@@ -1,0 +1,22 @@
+{
+  "name": "chua-online-backend",
+  "version": "1.0.0",
+  "description": "High-CCU 3D Online Temple Backend (Socket.io + Express + MySQL2 Write-Behind Batching)",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mysql2": "^3.11.0",
+    "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.7.5"
+  }
+}
