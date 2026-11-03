@@ -23,10 +23,29 @@ export function sanitizeSensitiveChat(rawText = '') {
 }
 
 export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutraScheduler }) {
-  let lastGreatBellRungAt = 0;
+  const globalTickerTimestamps = new Map();
+
+  function emitThrottledGlobalTicker(category, cooldownMs, payload) {
+    const now = Date.now();
+    const last = globalTickerTimestamps.get(category) || 0;
+    if (now - last >= cooldownMs) {
+      globalTickerTimestamps.set(category, now);
+      io.emit('zen_ticker', payload);
+    }
+  }
 
   io.on('connection', (socket) => {
     let currentUser = null;
+    const socketActionTimestamps = new Map();
+
+    function checkActionCooldown(actionKey, minIntervalMs) {
+      if (minIntervalMs <= 0) return true;
+      const now = Date.now();
+      const prev = socketActionTimestamps.get(actionKey) || 0;
+      if (now - prev < minIntervalMs) return false;
+      socketActionTimestamps.set(actionKey, now);
+      return true;
+    }
 
     // 1. Join Temple & Assign Sharded Room (Max 60 players/room)
     socket.on('join_temple', async (payload = {}) => {
@@ -37,6 +56,9 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
           robeColor: payload.robeColor,
           provinceCode: payload.provinceCode
         });
+        if (payload.avatarStyle) {
+          currentUser.avatarStyle = String(payload.avatarStyle).slice(0, 32);
+        }
 
         const joinResult = roomManager.joinRoom(socket, currentUser, payload.preferredRoomId);
         const wishes = await db.getActiveWishes(25);
@@ -48,6 +70,8 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
           player: joinResult.player,
           players: joinResult.players,
           leaves: joinResult.leaves,
+          plantedTrees: joinResult.plantedTrees || [],
+          chatHistory: joinResult.chatHistory || [],
           wishes,
           globalSutra
         });
@@ -116,7 +140,9 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
     socket.on('prostrate_buddha', (payload = {}) => {
       if (!currentUser) return;
       const pState = roomManager.getPlayerState(socket.id);
+      const isShrine = payload.target && payload.target !== 'BUDDHA';
       const isGlobal =
+        !isShrine &&
         sutraScheduler.isGlobalSessionActive() &&
         pState &&
         pState.cushionIndex !== null &&
@@ -124,7 +150,7 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
 
       const delta = isGlobal ? 10 : 5;
       meritBatcher.addMerit(currentUser, delta);
-      roomManager.updatePlayerState(socket.id, 'PROSTRATE', pState?.cushionIndex ?? 2);
+      roomManager.updatePlayerState(socket.id, 'PROSTRATE', isShrine ? null : (pState?.cushionIndex ?? 2));
       roomManager.syncUserStatsToPlayer(socket.id, currentUser);
 
       socket.emit('merit_updated', {
@@ -146,14 +172,33 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
         });
       }
 
-      if (payload.target === 'QUAN_AM') {
-        io.emit('zen_ticker', {
+      const target = payload.target || 'BUDDHA';
+      if (target === 'QUAN_AM') {
+        emitThrottledGlobalTicker('PROSTRATION_QUAN_AM', 1500, {
           type: 'PROSTRATION_QUAN_AM',
           dharmaName: currentUser.dharmaName,
           message: `🙏 Đạo hữu "${currentUser.dharmaName}" vừa thành tâm quỳ lạy trước Đài Quán Thế Âm Bồ Tát cầu gia đạo bình an (+${delta} Công Đức).`
         });
+      } else if (target === 'DI_LAC') {
+        emitThrottledGlobalTicker('PROSTRATION_DI_LAC', 1500, {
+          type: 'PROSTRATION_DI_LAC',
+          dharmaName: currentUser.dharmaName,
+          message: `😄 Đạo hữu "${currentUser.dharmaName}" vừa thành tâm đảnh lễ Đức Phật Di Lặc cầu hoan hỷ phúc lộc (+${delta} Công Đức).`
+        });
+      } else if (target === 'DIA_TANG') {
+        emitThrottledGlobalTicker('PROSTRATION_DIA_TANG', 1500, {
+          type: 'PROSTRATION_DIA_TANG',
+          dharmaName: currentUser.dharmaName,
+          message: `🙏 Đạo hữu "${currentUser.dharmaName}" vừa thành tâm đảnh lễ Đức Địa Tạng Vương Bồ Tát (+${delta} Công Đức).`
+        });
+      } else if (target === 'BAO_THAP') {
+        emitThrottledGlobalTicker('PROSTRATION_BAO_THAP', 1500, {
+          type: 'PROSTRATION_BAO_THAP',
+          dharmaName: currentUser.dharmaName,
+          message: `☸️ Đạo hữu "${currentUser.dharmaName}" vừa chiêm bái & đảnh lễ Bảo Tháp Xá Lợi 7 Tầng (+${delta} Công Đức).`
+        });
       } else if (payload.bowNumber === 3) {
-        io.emit('zen_ticker', {
+        emitThrottledGlobalTicker('PROSTRATION_BUDDHA', 800, {
           type: 'PROSTRATION',
           dharmaName: currentUser.dharmaName,
           message: `🙏 Đạo hữu "${currentUser.dharmaName}" vừa thành tâm Tam Bái Đảnh Lễ Tam Bảo trước Chánh Điện (+${delta * 3} Công Đức).`
@@ -291,14 +336,11 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
         });
       }
 
-      if (now - lastGreatBellRungAt > 4000) {
-        lastGreatBellRungAt = now;
-        io.emit('zen_ticker', {
-          type: 'GREAT_BELL',
-          dharmaName: currentUser.dharmaName,
-          message: `🔔 Đạo hữu "${currentUser.dharmaName}" vừa thỉnh Đại Hồng Chung cầu quốc thái dân an.`
-        });
-      }
+      emitThrottledGlobalTicker('GREAT_BELL', 4000, {
+        type: 'GREAT_BELL',
+        dharmaName: currentUser.dharmaName,
+        message: `🔔 Đạo hữu "${currentUser.dharmaName}" vừa thỉnh Đại Hồng Chung cầu quốc thái dân an.`
+      });
     });
 
     // 11. Draw Daily Buddhist Fortune (Xin Xăm)
@@ -311,11 +353,12 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
       }
     });
 
-    // 12. Update Profile (Pháp Danh, Tỉnh Thành, Màu Áo Lam)
+    // 12. Update Profile (Pháp Danh, Tỉnh Thành, Màu Áo Lam, Kiểu Nhân Vật)
     socket.on('update_profile', async (payload = {}) => {
       if (!currentUser) return;
       if (payload.dharmaName) currentUser.dharmaName = String(payload.dharmaName).slice(0, 50);
       if (payload.robeColor) currentUser.robeColor = String(payload.robeColor).slice(0, 16);
+      if (payload.avatarStyle) currentUser.avatarStyle = String(payload.avatarStyle).slice(0, 32);
       if (payload.provinceCode) currentUser.provinceCode = String(payload.provinceCode).slice(0, 10);
 
       await db.updateUserProfile(currentUser.id, {
@@ -335,7 +378,9 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
         roomId: joinResult.roomId,
         player: joinResult.player,
         players: joinResult.players,
-        leaves: joinResult.leaves
+        leaves: joinResult.leaves,
+        plantedTrees: joinResult.plantedTrees || [],
+        chatHistory: joinResult.chatHistory || []
       });
     });
 
@@ -359,6 +404,7 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
     // 16. Real-Time Multi-User Chat with Sensitive Word Filtering & 3D Speech Bubbles
     socket.on('send_chat', (payload = {}) => {
       if (!currentUser) return;
+      if (!checkActionCooldown('send_chat', 150)) return;
       const rawText = String(payload.text || '').trim();
       if (!rawText) return;
 
@@ -374,6 +420,7 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
         timestamp: Date.now()
       };
 
+      roomManager.recordRoomChat(socket.id, chatPayload);
       const room = roomManager.getPlayerRoom(socket.id);
       if (room) {
         io.to(room.id).emit('chat_message', chatPayload);
@@ -403,6 +450,7 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
         wish: String(payload.wish || 'Ươm mầm Bồ Đề, gieo duyên giác ngộ').slice(0, 80)
       };
 
+      roomManager.recordPlantedTree(socket.id, treeData);
       const room = roomManager.getPlayerRoom(socket.id);
       if (room) {
         io.to(room.id).emit('bodhi_tree_planted', treeData);
@@ -410,7 +458,7 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
         socket.emit('bodhi_tree_planted', treeData);
       }
 
-      io.emit('zen_ticker', {
+      emitThrottledGlobalTicker('BODHI_TREE', 1500, {
         type: 'BODHI_TREE',
         dharmaName: currentUser.dharmaName,
         message: `🌱 Đạo hữu "${currentUser.dharmaName}" vừa trồng & tưới nước Cây Bồ Đề tại Vườn Lâm Tỳ Ni (+${delta} Công Đức).`
@@ -444,7 +492,7 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
         });
       }
 
-      io.emit('zen_ticker', {
+      emitThrottledGlobalTicker('KOI_FISH', 1500, {
         type: 'KOI_FISH',
         dharmaName: currentUser.dharmaName,
         message: `🐟 Đạo hữu "${currentUser.dharmaName}" vừa rải thức ăn nuôi đàn Cá Chép Koi tại Hồ Phóng Sinh (+${delta} Công Đức).`

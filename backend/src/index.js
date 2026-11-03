@@ -27,7 +27,11 @@ export async function createTempleServer(options = {}) {
     cors: {
       origin: '*',
       methods: ['GET', 'POST']
-    }
+    },
+    pingInterval: 20000,
+    pingTimeout: 20000,
+    maxHttpBufferSize: 1e5, // 100 KB max payload per message for high-CCU safety
+    perMessageDeflate: false // Disable per-message compression to save CPU & RAM under high concurrency
   });
 
   if (options.forceMemory) {

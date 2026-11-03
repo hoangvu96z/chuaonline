@@ -266,6 +266,20 @@ class ChuaOnlineApp {
           this._renderWishesWall(data.wishes);
         }
 
+        if (Array.isArray(data.plantedTrees) && !this._hasSyncedInitialRoomTrees) {
+          this._hasSyncedInitialRoomTrees = true;
+          for (const tree of data.plantedTrees) {
+            this.environment.addPlantedTreeVisual(tree);
+          }
+        }
+
+        if (Array.isArray(data.chatHistory) && !this._hasSyncedInitialChatHistory) {
+          this._hasSyncedInitialChatHistory = true;
+          for (const msg of data.chatHistory) {
+            this._handleIncomingChatMessage({ ...msg, skipBubble: true });
+          }
+        }
+
         if (data.globalSutra && data.globalSutra.active) {
           this._showGlobalSutraBanner(data.globalSutra);
         }
@@ -402,7 +416,8 @@ class ChuaOnlineApp {
       recoveryCode: this.profile.recoveryCode,
       dharmaName: this.profile.dharmaName,
       provinceCode: this.profile.provinceCode,
-      robeColor: this.profile.robeColor
+      robeColor: this.profile.robeColor,
+      avatarStyle: this.profile.avatarStyle || 'CU_SI_AO_LAM'
     });
   }
 
@@ -1217,7 +1232,9 @@ class ChuaOnlineApp {
     }
 
     // 2. Simultaneously project 3D Floating Speech Bubble above the speaking player's head in 3D space!
-    this.avatarManager.showChatBubble(targetSocketId, author, cleaned, 7.5);
+    if (!msg.skipBubble) {
+      this.avatarManager.showChatBubble(targetSocketId, author, cleaned, 7.5);
+    }
   }
 
   _syncPercussionLocationUI(inMainHall) {

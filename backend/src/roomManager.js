@@ -32,6 +32,8 @@ export class RoomManager {
         id: roomId,
         players: new Map(),
         leaves: new Map(),
+        plantedTrees: [], // Bounded up to 24 trees per room
+        chatHistory: [],  // Bounded up to 25 recent messages per room
         dirty: false
       };
       this._spawnLeavesInRoom(room, INITIAL_LEAVES_COUNT);
@@ -112,6 +114,7 @@ export class RoomManager {
       userId: user.id,
       dharmaName: user.dharmaName,
       robeColor: user.robeColor || '#5c6b73',
+      avatarStyle: user.avatarStyle || 'CU_SI_AO_LAM',
       provinceCode: user.provinceCode || 'SG',
       meritPoints: user.meritPoints || 0,
       realmLevel: user.realmLevel || 1,
@@ -140,7 +143,9 @@ export class RoomManager {
       roomId: room.id,
       player: this._serializePlayer(playerState),
       players: Array.from(room.players.values()).map((p) => this._serializePlayer(p)),
-      leaves: Array.from(room.leaves.values())
+      leaves: Array.from(room.leaves.values()),
+      plantedTrees: room.plantedTrees || [],
+      chatHistory: room.chatHistory || []
     };
   }
 
@@ -173,10 +178,10 @@ export class RoomManager {
     if (!player) return null;
 
     if (typeof x === 'number' && !Number.isNaN(x)) {
-      player.x = Math.max(-30, Math.min(30, Number(x.toFixed(2))));
+      player.x = Math.max(-35, Math.min(35, Number(x.toFixed(2))));
     }
     if (typeof z === 'number' && !Number.isNaN(z)) {
-      player.z = Math.max(-20, Math.min(45, Number(z.toFixed(2))));
+      player.z = Math.max(-22, Math.min(46, Number(z.toFixed(2))));
     }
     if (typeof rotY === 'number' && !Number.isNaN(rotY)) {
       player.rotY = Number(rotY.toFixed(3));
@@ -212,10 +217,29 @@ export class RoomManager {
 
     player.dharmaName = user.dharmaName;
     player.robeColor = user.robeColor;
+    if (user.avatarStyle) player.avatarStyle = user.avatarStyle;
     player.provinceCode = user.provinceCode;
     player.meritPoints = user.meritPoints;
     player.realmLevel = user.realmLevel;
     room.dirty = true;
+  }
+
+  recordRoomChat(socketId, chatPayload) {
+    const room = this.getPlayerRoom(socketId);
+    if (!room) return;
+    room.chatHistory.push(chatPayload);
+    if (room.chatHistory.length > 25) {
+      room.chatHistory.shift();
+    }
+  }
+
+  recordPlantedTree(socketId, treeData) {
+    const room = this.getPlayerRoom(socketId);
+    if (!room) return;
+    room.plantedTrees.push(treeData);
+    if (room.plantedTrees.length > 24) {
+      room.plantedTrees.shift();
+    }
   }
 
   /**
@@ -314,6 +338,7 @@ export class RoomManager {
       userId: p.userId,
       dharmaName: p.dharmaName,
       robeColor: p.robeColor,
+      avatarStyle: p.avatarStyle || 'CU_SI_AO_LAM',
       provinceCode: p.provinceCode,
       meritPoints: p.meritPoints,
       realmLevel: p.realmLevel,

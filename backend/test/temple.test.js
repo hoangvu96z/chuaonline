@@ -13,6 +13,7 @@ import {
 } from '../../frontend/src/data/sutras.js';
 import { SutraChanter } from '../../frontend/src/audio/SutraChanter.js';
 import { DharmaVoice, VOICE_PROFILES } from '../../frontend/src/audio/DharmaVoice.js';
+import { ZenMusicPlayer, ZEN_MUSIC_TRACKS } from '../../frontend/src/audio/ZenMusicPlayer.js';
 import { sanitizeSensitiveChat } from '../src/socketHandlers.js';
 
 // 2. Backend core modules
@@ -282,6 +283,22 @@ describe('Suite 1: Frontend Data & Audio Modules', () => {
     assert.strictEqual(chanter.isPaused, false);
 
     chanter.stop();
+  });
+
+  it('1.7 should verify ZenMusicPlayer tracks and YouTube ID extraction', () => {
+    assert.strictEqual(ZEN_MUSIC_TRACKS.length, 5, 'ZEN_MUSIC_TRACKS must have 5 tracks');
+    assert.strictEqual(
+      ZenMusicPlayer.extractYoutubeId('https://www.youtube.com/watch?v=77ZozI0rw7w'),
+      '77ZozI0rw7w'
+    );
+    assert.strictEqual(
+      ZenMusicPlayer.extractYoutubeId('https://youtu.be/lFcSrYw-ARY'),
+      'lFcSrYw-ARY'
+    );
+    assert.strictEqual(
+      ZenMusicPlayer.extractYoutubeId('1ZYbU82GVz4'),
+      '1ZYbU82GVz4'
+    );
   });
 });
 
@@ -948,5 +965,121 @@ describe('Suite 4: Full End-to-End Socket.io & REST API Integration', () => {
     assert.strictEqual(fishMerit.delta, 6);
     assert.strictEqual(fishMerit.reason, 'FEED_KOI_FISH');
     assert.strictEqual(fishBroadcast.dharmaName, 'Thích Trí Thiền');
+  });
+
+  it('4.13 should handle high-concurrency multi-user auto-sharding and new shrine prostrations', async () => {
+    // 1. Simulate 75 concurrent users joining roomManager
+    const mockBatcher = {
+      addMerit: (u, amt) => {
+        u.meritPoints = (u.meritPoints || 0) + amt;
+        return { meritPoints: u.meritPoints, amount: amt };
+      }
+    };
+    const ccuRoomMgr = new RoomManager(null, mockBatcher, 60);
+
+    for (let i = 1; i <= 75; i++) {
+      const mockSock = {
+        id: `ccu-sock-${i}`,
+        join: () => {},
+        leave: () => {},
+        to: () => ({ emit: () => {} })
+      };
+      const user = {
+        id: 3000 + i,
+        dharmaName: `Phật Tử #${i}`,
+        robeColor: '#5c6b73',
+        avatarStyle: i % 2 === 0 ? 'SU_THAY_AO_NAU' : 'CU_SI_AO_LAM',
+        provinceCode: 'SG',
+        meritPoints: 0,
+        realmLevel: 1
+      };
+      const joinRes = ccuRoomMgr.joinRoom(mockSock, user);
+      if (i <= 60) {
+        assert.strictEqual(joinRes.roomId, 'chanh-dien-1', `User #${i} must join chanh-dien-1`);
+      } else {
+        assert.strictEqual(joinRes.roomId, 'chanh-dien-2', `User #${i} must shard into chanh-dien-2`);
+      }
+      assert.strictEqual(joinRes.player.avatarStyle, user.avatarStyle);
+    }
+
+    const ccuStats = ccuRoomMgr.getStats();
+    assert.strictEqual(ccuStats.channels.find((c) => c.roomId === 'chanh-dien-1').playersCount, 60);
+    assert.strictEqual(ccuStats.channels.find((c) => c.roomId === 'chanh-dien-2').playersCount, 15);
+
+    // Verify expanded courtyard movement bounds (x = -28, z = 14.5)
+    const moved = ccuRoomMgr.updatePlayerMove('ccu-sock-1', { x: -28, z: 14.5 });
+    assert.strictEqual(moved.x, -28);
+    assert.strictEqual(moved.z, 14.5);
+    ccuRoomMgr.stop();
+
+    // 2. Prostration to new shrines: DI_LAC, DIA_TANG, BAO_THAP (+5 merit each outside cushion)
+    client1.emit('change_state', { state: 'IDLE', cushionIndex: null });
+
+    // 2a. DI_LAC shrine
+    const meritDiLacPromise = waitForEvent(client1, 'merit_updated');
+    const prostrateDiLacPromise = waitForEvent(client2, 'player_prostrated');
+    client1.emit('prostrate_buddha', { target: 'DI_LAC', bowNumber: 1 });
+    const [mDiLac, pDiLac] = await Promise.all([meritDiLacPromise, prostrateDiLacPromise]);
+    assert.strictEqual(mDiLac.delta, 5);
+    assert.strictEqual(mDiLac.reason, 'PROSTRATE_BUDDHA');
+    assert.strictEqual(pDiLac.target, 'DI_LAC');
+    assert.strictEqual(pDiLac.dharmaName, 'Thích Trí Thiền');
+
+    // 2b. DIA_TANG shrine
+    const meritDiaTangPromise = waitForEvent(client1, 'merit_updated');
+    const prostrateDiaTangPromise = waitForEvent(client2, 'player_prostrated');
+    client1.emit('prostrate_buddha', { target: 'DIA_TANG', bowNumber: 1 });
+    const [mDiaTang, pDiaTang] = await Promise.all([meritDiaTangPromise, prostrateDiaTangPromise]);
+    assert.strictEqual(mDiaTang.delta, 5);
+    assert.strictEqual(mDiaTang.reason, 'PROSTRATE_BUDDHA');
+    assert.strictEqual(pDiaTang.target, 'DIA_TANG');
+
+    // 2c. BAO_THAP shrine
+    const meritBaoThapPromise = waitForEvent(client1, 'merit_updated');
+    const prostrateBaoThapPromise = waitForEvent(client2, 'player_prostrated');
+    client1.emit('prostrate_buddha', { target: 'BAO_THAP', bowNumber: 1 });
+    const [mBaoThap, pBaoThap] = await Promise.all([meritBaoThapPromise, prostrateBaoThapPromise]);
+    assert.strictEqual(mBaoThap.delta, 5);
+    assert.strictEqual(mBaoThap.reason, 'PROSTRATE_BUDDHA');
+    assert.strictEqual(pBaoThap.target, 'BAO_THAP');
+
+    // 3. Plant Bodhi tree and send chat, then verify newly joining client receives them
+    const testWish = `Ươm mầm Bồ Đề #${Date.now()}`;
+    const plantTreePromise = waitForEvent(client1, 'merit_updated');
+    client1.emit('plant_bodhi_tree', { wish: testWish });
+    await plantTreePromise;
+
+    // Wait 200ms to clear send_chat anti-spam cooldown (150ms)
+    await new Promise((r) => setTimeout(r, 200));
+
+    const testChat = `A Di Đà Phật từ bi #${Date.now()}`;
+    const chatPromise = waitForEvent(client2, 'chat_message');
+    client1.emit('send_chat', { text: testChat });
+    await chatPromise;
+
+    // Connect real client3 to verify plantedTrees and chatHistory in temple_joined
+    const client3 = ioClient(baseUrl, { transports: ['websocket'], forceNew: true });
+    await waitForEvent(client3, 'connect');
+    const joinPromise3 = waitForEvent(client3, 'temple_joined');
+    client3.emit('join_temple', {
+      dharmaName: 'Thích Huệ Minh',
+      provinceCode: 'CT',
+      avatarStyle: 'NHA_SU_AO_VANG'
+    });
+    const joinData3 = await joinPromise3;
+
+    assert.ok(Array.isArray(joinData3.plantedTrees), 'plantedTrees must be an array');
+    assert.ok(
+      joinData3.plantedTrees.some((t) => t.wish === testWish),
+      'Newly joined client must receive the planted tree in plantedTrees'
+    );
+
+    assert.ok(Array.isArray(joinData3.chatHistory), 'chatHistory must be an array');
+    assert.ok(
+      joinData3.chatHistory.some((c) => c.text === testChat),
+      'Newly joined client must receive recent chat message in chatHistory'
+    );
+
+    client3.disconnect();
   });
 });
