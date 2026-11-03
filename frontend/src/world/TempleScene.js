@@ -263,25 +263,25 @@ export class TempleScene {
       this.orbitPitch = 0.24;
       this.orbitAngle = -0.32;
     } else if (zoneName === 'DAI_DI_LAC') {
-      this.desiredCameraTarget.set(-17.5, 2.5, 14.5);
-      this.orbitDistance = 11.5;
-      this.orbitPitch = 0.28;
-      this.orbitAngle = 0.32;
+      this.desiredCameraTarget.set(-23.0, 2.55, 14.8);
+      this.orbitDistance = 9.5;
+      this.orbitPitch = 0.24;
+      this.orbitAngle = 0.16;
     } else if (zoneName === 'DAI_DIA_TANG') {
-      this.desiredCameraTarget.set(-18.5, 2.6, 5.0);
-      this.orbitDistance = 10.8;
+      this.desiredCameraTarget.set(-23.0, 2.6, 4.8);
+      this.orbitDistance = 10.5;
       this.orbitPitch = 0.26;
-      this.orbitAngle = 0.36;
+      this.orbitAngle = 0.28;
     } else if (zoneName === 'BAO_THAP') {
       this.desiredCameraTarget.set(20.5, 4.5, 6.0);
       this.orbitDistance = 16.5;
       this.orbitPitch = 0.28;
       this.orbitAngle = -0.38;
     } else if (zoneName === 'VUON_BO_DE') {
-      this.desiredCameraTarget.set(11.5, 1.8, 21.5);
-      this.orbitDistance = 10.2;
-      this.orbitPitch = 0.34;
-      this.orbitAngle = -0.38;
+      this.desiredCameraTarget.set(19.5, 1.6, 21.0);
+      this.orbitDistance = 10.8;
+      this.orbitPitch = 0.38;
+      this.orbitAngle = -0.28;
     } else if (zoneName === 'LAU_CHUONG') {
       this.desiredCameraTarget.set(7.8, 2.3, 5.2);
       this.orbitDistance = 9.5;

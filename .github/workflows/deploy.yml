@@ -71,17 +71,16 @@ jobs:
             tar -xzf /tmp/chuaonline_deploy.tar.gz -C /var/www/chuaonline
             cp -rf /var/www/chuaonline/frontend/dist/* /var/www/chua.vunph.io.vn/
 
-            cat > /var/www/chuaonline/backend/.env << 'ENVEOF'
-            PORT=3001
-            DB_HOST=onehost-cloudhn092403.000nethost.com
-            DB_PORT=3306
-            DB_USER=jkokiwsihosting_vunph
-            DB_PASS=Hoangvu@6496
-            DB_NAME=jkokiwsihosting_chuaonline
-            MAX_ROOM_CAPACITY=60
-            MERIT_FLUSH_INTERVAL_MS=15000
-            ENVEOF
-            sed -i 's/^[[:space:]]*//' /var/www/chuaonline/backend/.env
+            printf "%s\n" \
+              "PORT=3001" \
+              "DB_HOST=onehost-cloudhn092403.000nethost.com" \
+              "DB_PORT=3306" \
+              "DB_USER=jkokiwsihosting_vunph" \
+              "DB_PASS=Hoangvu@6496" \
+              "DB_NAME=jkokiwsihosting_chuaonline" \
+              "MAX_ROOM_CAPACITY=60" \
+              "MERIT_FLUSH_INTERVAL_MS=15000" \
+              > /var/www/chuaonline/backend/.env
 
             cd /var/www/chuaonline/backend
             npm install --omit=dev

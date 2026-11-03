@@ -403,29 +403,46 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
 
     // 16. Real-Time Multi-User Chat with Sensitive Word Filtering & 3D Speech Bubbles
     socket.on('send_chat', (payload = {}) => {
-      if (!currentUser) return;
       if (!checkActionCooldown('send_chat', 150)) return;
       const rawText = String(payload.text || '').trim();
       if (!rawText) return;
+
+      // Ensure user & room are initialized even if send_chat arrives while join_temple is still awaiting DB
+      if (!currentUser) {
+        currentUser = {
+          id: 'guest-' + socket.id.slice(0, 6),
+          dharmaName: String(payload.dharmaName || 'Đạo Hữu').slice(0, 50),
+          provinceCode: String(payload.provinceCode || 'SG').slice(0, 10),
+          robeColor: '#d4a359',
+          avatarStyle: 'DEVOTEE_CLASSIC',
+          meritPoints: 0,
+          realmLevel: 1
+        };
+      }
+      let room = roomManager.getPlayerRoom(socket.id);
+      if (!room) {
+        roomManager.joinRoom(socket, currentUser, payload.roomId || 'chanh-dien-1');
+        room = roomManager.getPlayerRoom(socket.id);
+      }
 
       const { cleaned, flagged } = sanitizeSensitiveChat(rawText);
       const chatPayload = {
         id: 'chat-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
         socketId: socket.id,
         userId: currentUser.id,
-        dharmaName: currentUser.dharmaName,
-        provinceCode: currentUser.provinceCode || 'SG',
+        dharmaName: String(payload.dharmaName || currentUser.dharmaName || 'Đạo Hữu').slice(0, 50),
+        provinceCode: String(payload.provinceCode || currentUser.provinceCode || 'SG').slice(0, 10),
+        roomId: room ? room.id : 'chanh-dien-1',
         text: cleaned,
         flagged,
         timestamp: Date.now()
       };
 
       roomManager.recordRoomChat(socket.id, chatPayload);
-      const room = roomManager.getPlayerRoom(socket.id);
       if (room) {
         io.to(room.id).emit('chat_message', chatPayload);
       } else {
-        socket.emit('chat_message', chatPayload);
+        io.to('chanh-dien-1').emit('chat_message', chatPayload);
       }
     });
 

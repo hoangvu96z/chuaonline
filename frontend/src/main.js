@@ -504,6 +504,12 @@ class ChuaOnlineApp {
     // Zone camera quick buttons
     for (const btn of document.querySelectorAll('.zone-btn')) {
       btn.addEventListener('click', () => {
+        this.globalBannerDismissed = true;
+        const gBanner = document.getElementById('global-sutra-banner');
+        if (gBanner) {
+          gBanner.setAttribute('hidden', '');
+          gBanner.style.display = 'none';
+        }
         document.querySelectorAll('.zone-btn').forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
         const zone = btn.getAttribute('data-zone');
@@ -517,7 +523,7 @@ class ChuaOnlineApp {
           this._syncProstrateButtonUI('QUAN_AM');
           this.showToast('🙏 Đã đến Đài Quán Thế Âm Bồ Tát — Nhấn phím [L] hoặc nút Lạy Quán Âm để đảnh lễ.');
         } else if (zone === 'DAI_DI_LAC') {
-          this._handleMoveToGroundPoint(-17.5, 18.6, false);
+          this._handleMoveToGroundPoint(-23.0, 19.0, false);
           this.templeScene.focusZone('DAI_DI_LAC');
           this._syncProstrateButtonUI('DI_LAC');
           this.showToast('😄 Đã đến Đài Phật Di Lặc — Nhấn phím [L] hoặc click vào Tượng/Bồ Đoàn để cầu hoan hỷ phúc lộc.');
@@ -527,10 +533,10 @@ class ChuaOnlineApp {
           this._syncProstrateButtonUI('BAO_THAP');
           this.showToast('☸️ Đã đến Bảo Tháp Xá Lợi 7 Tầng — Nhấn phím [L] hoặc click vào Bảo Tháp để chiêm bái.');
         } else if (zone === 'VUON_BO_DE') {
-          this._handleMoveToGroundPoint(8.8, 21.5, false);
+          this._handleMoveToGroundPoint(14.5, 21.0, false);
           this.templeScene.focusZone('VUON_BO_DE');
           this._syncProstrateButtonUI(false);
-          this.showToast('🌱 Đã đến Vườn Cây Bồ Đề Công Đức — Nhấn phím [T] hoặc nút Trồng Cây để gieo mầm giác ngộ.');
+          this.showToast('🌱 Đã đến Vườn Cây Bồ Đề Công Đức (Nền Đất Vuông) — Nhấn phím [T] hoặc nút Trồng Cây để gieo mầm giác ngộ.');
         } else if (zone === 'SAN_CHUA') {
           this._handleMoveToGroundPoint(4.5, 9.5, false);
           this.templeScene.focusZone('SAN_CHUA');
@@ -1126,8 +1132,8 @@ class ChuaOnlineApp {
     const x = local.root.position.x;
     const z = local.root.position.z;
     if (Math.hypot(x - 9.5, z - 14.5) <= 6.5) return 'QUAN_AM';
-    if (Math.hypot(x - -17.5, z - 14.5) <= 7.0) return 'DI_LAC';
-    if (Math.hypot(x - -18.5, z - 5.0) <= 6.5) return 'DIA_TANG';
+    if (Math.hypot(x - -23.0, z - 14.8) <= 7.5) return 'DI_LAC';
+    if (Math.hypot(x - -23.0, z - 4.8) <= 6.8) return 'DIA_TANG';
     if (Math.hypot(x - 20.5, z - 6.0) <= 7.0) return 'BAO_THAP';
     return null;
   }
@@ -1192,8 +1198,12 @@ class ChuaOnlineApp {
       isLocalImmediate: true
     });
 
-    if (this.socketClient && this.socketClient.connected) {
-      this.socketClient.sendChat(cleaned);
+    if (this.socketClient) {
+      this.socketClient.sendChat(cleaned, {
+        dharmaName: this.profile.dharmaName,
+        provinceCode: this.profile.provinceCode,
+        roomId: this.currentRoomId
+      });
     }
   }
 
@@ -1212,6 +1222,32 @@ class ChuaOnlineApp {
     const author = msg.dharmaName || 'Đạo hữu';
     const prov = msg.provinceCode || 'SG';
     const { cleaned } = filterSensitiveChatText(msg.text || '');
+
+    // If a remote user in the room sends a live message, ensure their avatar exists in 3D space so their bubble appears
+    if (!msg.skipBubble && msg.socketId && msg.socketId !== this.localSocketId) {
+      if (!this.avatarManager.avatars.has(msg.socketId)) {
+        this.avatarManager.upsertPlayer({
+          socketId: msg.socketId,
+          userId: msg.userId || msg.socketId,
+          dharmaName: author,
+          provinceCode: prov,
+          robeColor: '#d4a359',
+          avatarStyle: 'DEVOTEE_CLASSIC',
+          meritPoints: 10,
+          realmLevel: 1,
+          x: 0,
+          z: 8,
+          rotY: Math.PI,
+          state: 'IDLE'
+        });
+      }
+      // Also auto-expand the chat panel if collapsed so the user sees incoming room messages
+      const chatWidget = document.getElementById('zen-chat-widget');
+      chatWidget?.classList.remove('collapsed');
+      document.getElementById('btn-toggle-chat')?.setAttribute('aria-expanded', 'true');
+      const toggleChatIcon = document.getElementById('chat-toggle-icon');
+      if (toggleChatIcon) toggleChatIcon.textContent = '▾';
+    }
 
     // 1. Append to Chat Log Panel
     const list = document.getElementById('zen-chat-messages');
@@ -1319,12 +1355,11 @@ class ChuaOnlineApp {
   }
 
   _handlePrayDiLac() {
-    // Di chuyển đạo hữu đến Bồ Đoàn trước Đài Phật Di Lặc (-17.5, 18.6) & Lạy Ngũ Thể Đầu Địa
-    const matX = -17.5;
-    const matZ = 18.6;
-    const rotFacing = Math.PI; // Hướng thẳng về tôn tượng Phật Di Lặc (-17.5, 14.5)
+    // Di chuyển đạo hữu đến Bồ Đoàn trước Đài Phật Di Lặc (-23.0, 19.0) & Lạy Ngũ Thể Đầu Địa
+    const matX = -23.0;
+    const matZ = 19.0;
+    const rotFacing = Math.PI; // Hướng thẳng về tôn tượng Phật Di Lặc (-23.0, 14.8)
 
-    this.templeScene.focusZone('DAI_DI_LAC');
     this._syncProstrateButtonUI('DI_LAC');
     this._syncPercussionLocationUI(false);
 
@@ -1332,7 +1367,7 @@ class ChuaOnlineApp {
     if (local) local.customSitRotY = rotFacing;
     this.avatarManager.setLocalTargetPosition(matX, matZ, 'PROSTRATE', null);
     this.avatarManager.triggerProstration(this.localSocketId, rotFacing);
-    this.templeScene.setFollowTarget(matX, 0.2, matZ);
+    this.templeScene.focusZone('DAI_DI_LAC');
 
     this.zenAudio.playMeditationBell(0.85);
     setTimeout(() => this.zenAudio.playWoodenFish(0.6), 350);
@@ -1351,12 +1386,11 @@ class ChuaOnlineApp {
   }
 
   _handlePrayDiaTang() {
-    // Di chuyển đạo hữu đến Bồ Đoàn trước Đài Địa Tạng Vương Bồ Tát (-18.5, 8.6)
-    const matX = -18.5;
-    const matZ = 8.6;
+    // Di chuyển đạo hữu đến Bồ Đoàn trước Đài Địa Tạng Vương Bồ Tát (-23.0, 8.4)
+    const matX = -23.0;
+    const matZ = 8.4;
     const rotFacing = Math.PI;
 
-    this.templeScene.focusZone('DAI_DIA_TANG');
     this._syncProstrateButtonUI('DIA_TANG');
     this._syncPercussionLocationUI(false);
 
@@ -1364,7 +1398,7 @@ class ChuaOnlineApp {
     if (local) local.customSitRotY = rotFacing;
     this.avatarManager.setLocalTargetPosition(matX, matZ, 'PROSTRATE', null);
     this.avatarManager.triggerProstration(this.localSocketId, rotFacing);
-    this.templeScene.setFollowTarget(matX, 0.2, matZ);
+    this.templeScene.focusZone('DAI_DIA_TANG');
 
     this.zenAudio.playMeditationBell(0.85);
     setTimeout(() => this.zenAudio.playWoodenFish(0.6), 350);
@@ -1388,7 +1422,6 @@ class ChuaOnlineApp {
     const matZ = 10.4;
     const rotFacing = Math.PI;
 
-    this.templeScene.focusZone('BAO_THAP');
     this._syncProstrateButtonUI('BAO_THAP');
     this._syncPercussionLocationUI(false);
 
@@ -1396,7 +1429,7 @@ class ChuaOnlineApp {
     if (local) local.customSitRotY = rotFacing;
     this.avatarManager.setLocalTargetPosition(matX, matZ, 'PROSTRATE', null);
     this.avatarManager.triggerProstration(this.localSocketId, rotFacing);
-    this.templeScene.setFollowTarget(matX, 0.2, matZ);
+    this.templeScene.focusZone('BAO_THAP');
 
     this.zenAudio.playMeditationBell(0.85);
     setTimeout(() => this.zenAudio.playWoodenFish(0.6), 350);
@@ -1415,8 +1448,8 @@ class ChuaOnlineApp {
   }
 
   _handlePlantBodhiTree() {
-    // Di chuyển đến Vườn Cây Bồ Đề Công Đức (8.8, 21.5) & trồng thêm cây Bồ Đề mới
-    this._handleMoveToGroundPoint(8.8, 21.5, false);
+    // Di chuyển đến Vườn Cây Bồ Đề Công Đức (Nền Đất Vuông tại X = 19.5, Z = 21.0) & trồng thêm cây Bồ Đề mới
+    this._handleMoveToGroundPoint(14.5, 21.0, false);
     this.templeScene.focusZone('VUON_BO_DE');
     document.querySelectorAll('.zone-btn').forEach((b) => {
       b.classList.toggle('active', b.getAttribute('data-zone') === 'VUON_BO_DE');

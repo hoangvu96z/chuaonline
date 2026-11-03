@@ -179,9 +179,14 @@ export class SocketClient {
     this.socket.emit('prostrate_buddha', { bowNumber, target, rotY, timestamp: Date.now() });
   }
 
-  sendChat(text) {
-    if (!this.socket || !this.connected) return;
-    this.socket.emit('send_chat', { text });
+  sendChat(text, meta = {}) {
+    if (!this.socket) return;
+    this.socket.emit('send_chat', {
+      text,
+      dharmaName: meta.dharmaName,
+      provinceCode: meta.provinceCode,
+      roomId: meta.roomId
+    });
   }
 
   plantBodhiTree(wish = 'Ươm mầm Bồ Đề, gieo duyên giác ngộ') {
