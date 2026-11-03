@@ -64,6 +64,8 @@
         <div class="zone-shortcuts" id="zone-shortcuts-group" role="group" aria-label="Di chuyển nhanh">
           <button type="button" class="zone-btn active" data-zone="CHANH_DIEN">🏯 Chánh Điện</button>
           <button type="button" class="zone-btn" data-zone="DAI_QUAN_AM">🙏 Quán Âm</button>
+          <button type="button" class="zone-btn" data-zone="DAI_DI_LAC">😄 Di Lặc</button>
+          <button type="button" class="zone-btn" data-zone="BAO_THAP">☸️ Bảo Tháp</button>
           <button type="button" class="zone-btn" data-zone="VUON_BO_DE">🌱 Vườn Bồ Đề</button>
           <button type="button" class="zone-btn" data-zone="SAN_CHUA">🔔 Sân (<span id="hud-leaf-count">0</span>)</button>
           <button type="button" class="zone-btn" data-zone="HO_HOA_DANG">🪷 Hồ Sen</button>
@@ -72,6 +74,9 @@
         <div class="hud-icon-group" role="group" aria-label="Công cụ nhanh">
           <button type="button" class="hud-icon-btn" id="btn-open-auth-top" aria-label="Đổi Nhân Vật &amp; Tài Khoản" title="Đổi Nhân Vật / Đăng Nhập Tài Khoản">
             🧘
+          </button>
+          <button type="button" class="hud-icon-btn" id="btn-toggle-music" aria-label="Đài Nhạc Thiền &amp; YouTube (Phím P)" title="Mở Đài Nhạc Thiền &amp; Phát Nhạc YouTube Tịnh Tâm (Phím P)">
+            🎵
           </button>
           <button type="button" class="hud-icon-btn" id="btn-toggle-daynight" aria-label="Đổi Ngày / Đêm" title="Đổi cảnh Ngày / Đêm">
             🌙
@@ -190,7 +195,62 @@
     </div>
   </aside>
 
-  <!-- Bottom Action Dock Wrapper (Collapsible / Expandable + Minimal Icon Mode) -->
+  <!-- Floating Zen Music & YouTube Meditation Player Widget -->
+  <aside id="zen-music-widget" class="zen-music-widget" aria-label="Đài Nhạc Thiền &amp; YouTube Tịnh Tâm" hidden>
+    <div class="music-widget-header">
+      <div class="music-header-title">
+        <span class="music-disc-icon" id="music-disc-icon">🎵</span>
+        <div>
+          <strong>Nhạc Thiền &amp; YouTube</strong>
+          <small id="music-now-playing">Chọn bản nhạc tịnh tâm hoặc dán link YouTube</small>
+        </div>
+      </div>
+      <button type="button" class="chat-hide-btn" id="btn-close-music" aria-label="Thu gọn bảng nhạc" title="Thu gọn bảng nhạc (nhạc vẫn phát nền)">✕</button>
+    </div>
+
+    <div class="music-widget-body">
+      <!-- Built-in Temple Zen Music Selector & Controls -->
+      <div class="music-section-label">🪷 Nhạc Thiền Nội Tại (Không Quảng Cáo)</div>
+      <select id="select-zen-track" class="music-track-select" aria-label="Chọn bài nhạc thiền trong chùa">
+        <option value="0">🪷 Cổ Cầm &amp; Tiếng Suối Tịnh Tâm</option>
+        <option value="1">🥣 Chuông Xoay Tây Tạng 432Hz</option>
+        <option value="2">🎋 Sáo Trúc &amp; Mưa Rơi Hiên Chùa</option>
+        <option value="3">📿 Giai Điệu Tịnh Độ A Di Đà</option>
+        <option value="4">🔔 Chuông Gió &amp; Rừng Trúc Thanh Lương</option>
+      </select>
+
+      <div class="music-transport-row">
+        <button type="button" class="music-ctrl-btn" id="btn-music-prev" title="Bài trước">⏮️</button>
+        <button type="button" class="music-ctrl-btn primary" id="btn-music-play" title="Phát / Tạm dừng nhạc thiền">▶️ Phát Nhạc Thiền</button>
+        <button type="button" class="music-ctrl-btn" id="btn-music-next" title="Bài tiếp theo">⏭️</button>
+      </div>
+
+      <div class="music-volume-row">
+        <span>🔉 Âm lượng</span>
+        <input type="range" id="range-music-volume" min="0" max="100" value="55" aria-label="Âm lượng nhạc thiền" />
+      </div>
+
+      <!-- YouTube Custom Link & Curated Streams -->
+      <div class="music-section-label">🎬 Phát Nhạc YouTube Tịnh Tâm</div>
+      <div class="youtube-preset-chips">
+        <button type="button" class="yt-preset-chip" data-yt="lFcSrYw-ARY" data-title="🎬 Nhạc Thiền Phật Giáo Tịnh Tâm">🎬 Thiền Tịnh Tâm</button>
+        <button type="button" class="yt-preset-chip" data-yt="77ZozI0rw7w" data-title="🎬 Cổ Cầm &amp; Nước Chảy An Nhiên">🎬 Cổ Cầm Suối Chảy</button>
+        <button type="button" class="yt-preset-chip" data-yt="1ZYbU82GVz4" data-title="🎬 Chuông Xoay Chữa Lành 432Hz">🎬 Chuông Xoay</button>
+      </div>
+      <form id="form-youtube-music" class="youtube-input-row" autocomplete="off">
+        <input
+          type="text"
+          id="input-youtube-url"
+          placeholder="Dán link YouTube hoặc Video ID..."
+          aria-label="Link YouTube"
+        />
+        <button type="submit" class="yt-play-btn">Phát YT</button>
+      </form>
+      <div id="youtube-embed-box" class="youtube-embed-box" hidden></div>
+    </div>
+  </aside>
+
+  <!-- Bottom Action Dock Wrapper (Collapsible / Expandable + Minimal Icon Mode + Keyboard Shortcuts) -->
   <div id="bottom-dock-wrapper" class="bottom-dock-wrapper">
     <div class="dock-toolbar-pills">
       <button type="button" class="dock-control-pill" id="btn-minimal-dock" title="Thu nhỏ dàn nút thành Icon gọn gàng / Mở đầy đủ chữ">
@@ -202,67 +262,85 @@
     </div>
 
     <nav class="hud-bottom-dock" id="hud-bottom-dock" aria-label="Thanh Pháp Khí &amp; Hành Động">
-      <button type="button" class="dock-btn highlight" id="dock-prostrate" title="Lạy Phật ở Chánh Điện hoặc Lạy Bồ Tát khi đứng ở Đài Quán Âm">
+      <button type="button" class="dock-btn highlight" id="dock-prostrate" data-shortcut="L" title="Lạy Phật / Bồ Tát (Phím tắt: L)">
+        <kbd class="dock-kbd">L</kbd>
         <span class="dock-icon">🙏</span>
         <span class="dock-label" id="dock-label-prostrate">Lạy Phật</span>
         <span class="dock-sub" id="dock-sub-prostrate">+5 Công Đức</span>
       </button>
 
-      <button type="button" class="dock-btn highlight" id="dock-wooden-fish" title="Ngồi trong Chánh Điện gõ Mõ tụng kinh (Phím Space khi ở trong Chánh Điện)">
+      <button type="button" class="dock-btn highlight" id="dock-wooden-fish" data-shortcut="M" title="Ngồi trong Chánh Điện gõ Mõ tụng kinh (Phím tắt: M hoặc Space)">
+        <kbd class="dock-kbd">M</kbd>
         <span class="dock-icon">🪵</span>
         <span class="dock-label">Gõ Mõ</span>
         <span class="dock-sub" id="dock-sub-mo">Trong Chánh Điện</span>
       </button>
 
-      <button type="button" class="dock-btn highlight" id="dock-chant-sutra" command="show-modal" commandfor="dialog-sutra-library" title="Tụng Kinh (12 Bộ Kinh)">
+      <button type="button" class="dock-btn highlight" id="dock-chant-sutra" data-shortcut="K" command="show-modal" commandfor="dialog-sutra-library" title="Tụng Kinh 12 Bộ Kinh (Phím tắt: K)">
+        <kbd class="dock-kbd">K</kbd>
         <span class="dock-icon">📖</span>
         <span class="dock-label">Tụng Kinh</span>
         <span class="dock-sub">12 Bộ Kinh</span>
       </button>
 
-      <button type="button" class="dock-btn" id="dock-ring-bell" title="Ra ngoài Sân Chùa thỉnh Chuông Chùa (Phím Space khi ở ngoài Sân Chùa)">
+      <button type="button" class="dock-btn" id="dock-ring-bell" data-shortcut="C" title="Thỉnh Đại Hồng Chung ngoài Sân Chùa (Phím tắt: C)">
+        <kbd class="dock-kbd">C</kbd>
         <span class="dock-icon">🔔</span>
         <span class="dock-label">Gõ Chuông</span>
         <span class="dock-sub" id="dock-sub-bell">Ngoài Sân Chùa</span>
       </button>
 
-      <button type="button" class="dock-btn" id="dock-plant-tree" title="Trồng &amp; tưới nước Cây Bồ Đề tại Vườn Lâm Tỳ Ni (+8 Công Đức)">
+      <button type="button" class="dock-btn" id="dock-plant-tree" data-shortcut="T" title="Trồng &amp; tưới nước Cây Bồ Đề tại Vườn Lâm Tỳ Ni (Phím tắt: T)">
+        <kbd class="dock-kbd">T</kbd>
         <span class="dock-icon">🌱</span>
         <span class="dock-label">Trồng Cây</span>
         <span class="dock-sub">+8 Công Đức</span>
       </button>
 
-      <button type="button" class="dock-btn" id="dock-feed-fish" title="Cho đàn Cá Chép Koi ăn tại Hồ Phóng Sinh (+6 Công Đức)">
+      <button type="button" class="dock-btn" id="dock-feed-fish" data-shortcut="N" title="Cho đàn Cá Chép Koi ăn tại Hồ Phóng Sinh (Phím tắt: N)">
+        <kbd class="dock-kbd">N</kbd>
         <span class="dock-icon">🐟</span>
         <span class="dock-label">Nuôi Cá</span>
         <span class="dock-sub">+6 Công Đức</span>
       </button>
 
-      <button type="button" class="dock-btn" id="dock-sweep-leaves" title="Quét Lá Đa sân chùa (+5 Công Đức)">
+      <button type="button" class="dock-btn" id="dock-sweep-leaves" data-shortcut="Q" title="Quét Lá Đa sân chùa (Phím tắt: Q)">
+        <kbd class="dock-kbd">Q</kbd>
         <span class="dock-icon">🧹</span>
         <span class="dock-label">Quét Sân</span>
         <span class="dock-sub">+5 Công Đức</span>
       </button>
 
-      <button type="button" class="dock-btn" id="dock-offer-incense" title="Dâng Hương Cầu Nguyện (+10 Công Đức)">
+      <button type="button" class="dock-btn" id="dock-offer-incense" data-shortcut="H" title="Dâng Hương Cầu Nguyện (Phím tắt: H)">
+        <kbd class="dock-kbd">H</kbd>
         <span class="dock-icon">🪔</span>
         <span class="dock-label">Dâng Hương</span>
         <span class="dock-sub">+10 Công Đức</span>
       </button>
 
-      <button type="button" class="dock-btn" id="dock-release-lantern" title="Thả Đèn Hoa Đăng trên Hồ Sen (+10 Công Đức)">
+      <button type="button" class="dock-btn" id="dock-release-lantern" data-shortcut="D" title="Thả Đèn Hoa Đăng trên Hồ Sen (Phím tắt: D)">
+        <kbd class="dock-kbd">D</kbd>
         <span class="dock-icon">🪷</span>
         <span class="dock-label">Thả Hoa Đăng</span>
         <span class="dock-sub">+10 Công Đức</span>
       </button>
 
-      <button type="button" class="dock-btn" id="dock-draw-fortune" title="Xin Xăm Quẻ Phật Giáo Đầu Ngày">
+      <button type="button" class="dock-btn" id="dock-draw-fortune" data-shortcut="X" title="Xin Xăm Quẻ Phật Giáo Đầu Ngày (Phím tắt: X)">
+        <kbd class="dock-kbd">X</kbd>
         <span class="dock-icon">🎋</span>
         <span class="dock-label">Xin Xăm</span>
         <span class="dock-sub">Quẻ Phật Giáo</span>
       </button>
 
-      <button type="button" class="dock-btn gold" id="dock-leaderboard" command="show-modal" commandfor="dialog-leaderboard" title="Bảng Vàng Công Đức 63 Tỉnh Thành">
+      <button type="button" class="dock-btn" id="dock-music-player" data-shortcut="P" title="Đài Nhạc Thiền &amp; Phát Nhạc YouTube Tịnh Tâm (Phím tắt: P)">
+        <kbd class="dock-kbd">P</kbd>
+        <span class="dock-icon">🎵</span>
+        <span class="dock-label">Nhạc Thiền</span>
+        <span class="dock-sub" id="dock-sub-music">Tịnh Tâm / YT</span>
+      </button>
+
+      <button type="button" class="dock-btn gold" id="dock-leaderboard" data-shortcut="B" command="show-modal" commandfor="dialog-leaderboard" title="Bảng Vàng Công Đức 63 Tỉnh Thành (Phím tắt: B)">
+        <kbd class="dock-kbd">B</kbd>
         <span class="dock-icon">🏆</span>
         <span class="dock-label">Bảng Công Đức</span>
         <span class="dock-sub">63 Tỉnh Thành</span>

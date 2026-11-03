@@ -8,6 +8,7 @@ import {
 } from './data/sutras.js';
 import * as sutrasModule from './data/sutras.js';
 import { ZenAudio } from './audio/ZenAudio.js';
+import { ZenMusicPlayer } from './audio/ZenMusicPlayer.js';
 import { DharmaVoice, VOICE_PROFILES } from './audio/DharmaVoice.js';
 import { SutraChanter } from './audio/SutraChanter.js';
 
@@ -134,8 +135,9 @@ class ChuaOnlineApp {
     this.lastFortune = null;
     this.prostrationCount = 0;
 
-    // Initialize Audio & Voice Engines
+    // Initialize Audio, Music & Voice Engines
     this.zenAudio = new ZenAudio();
+    this.zenMusicPlayer = new ZenMusicPlayer(this.zenAudio);
     this.dharmaVoice = new DharmaVoice();
     this.sutraChanter = new SutraChanter(
       this.zenAudio,
@@ -423,6 +425,12 @@ class ChuaOnlineApp {
         this._handleProstrateBuddha();
       } else if (hit.type === 'QUAN_AM_STATUE') {
         this._handlePrayQuanAm();
+      } else if (hit.type === 'DI_LAC_STATUE') {
+        this._handlePrayDiLac();
+      } else if (hit.type === 'DIA_TANG_STATUE') {
+        this._handlePrayDiaTang();
+      } else if (hit.type === 'BAO_THAP') {
+        this._handlePrayBaoThap();
       } else if (hit.type === 'BODHI_GARDEN') {
         this._handlePlantBodhiTree();
       } else if (hit.type === 'KOI_FISH') {
@@ -491,13 +499,23 @@ class ChuaOnlineApp {
         } else if (zone === 'DAI_QUAN_AM') {
           this._handleMoveToGroundPoint(7.8, 18.2, false);
           this.templeScene.focusZone('DAI_QUAN_AM');
-          this._syncProstrateButtonUI(true);
-          this.showToast('🙏 Đã đến Đài Quán Thế Âm Bồ Tát — Nhấn vào Tượng/Bồ Đoàn hoặc nút Lạy Quán Âm để đảnh lễ.');
+          this._syncProstrateButtonUI('QUAN_AM');
+          this.showToast('🙏 Đã đến Đài Quán Thế Âm Bồ Tát — Nhấn phím [L] hoặc nút Lạy Quán Âm để đảnh lễ.');
+        } else if (zone === 'DAI_DI_LAC') {
+          this._handleMoveToGroundPoint(-17.5, 18.6, false);
+          this.templeScene.focusZone('DAI_DI_LAC');
+          this._syncProstrateButtonUI('DI_LAC');
+          this.showToast('😄 Đã đến Đài Phật Di Lặc — Nhấn phím [L] hoặc click vào Tượng/Bồ Đoàn để cầu hoan hỷ phúc lộc.');
+        } else if (zone === 'BAO_THAP') {
+          this._handleMoveToGroundPoint(20.5, 10.4, false);
+          this.templeScene.focusZone('BAO_THAP');
+          this._syncProstrateButtonUI('BAO_THAP');
+          this.showToast('☸️ Đã đến Bảo Tháp Xá Lợi 7 Tầng — Nhấn phím [L] hoặc click vào Bảo Tháp để chiêm bái.');
         } else if (zone === 'VUON_BO_DE') {
           this._handleMoveToGroundPoint(8.8, 21.5, false);
           this.templeScene.focusZone('VUON_BO_DE');
           this._syncProstrateButtonUI(false);
-          this.showToast('🌱 Đã đến Vườn Cây Bồ Đề Công Đức — Nhấn vào Vườn hoặc nút Trồng Cây để gieo mầm giác ngộ.');
+          this.showToast('🌱 Đã đến Vườn Cây Bồ Đề Công Đức — Nhấn phím [T] hoặc nút Trồng Cây để gieo mầm giác ngộ.');
         } else if (zone === 'SAN_CHUA') {
           this._handleMoveToGroundPoint(4.5, 9.5, false);
           this.templeScene.focusZone('SAN_CHUA');
@@ -506,7 +524,7 @@ class ChuaOnlineApp {
           this._handleMoveToGroundPoint(0, 29.0, false);
           this.templeScene.focusZone('HO_HOA_DANG');
           this._syncProstrateButtonUI(false);
-          this.showToast('🪷 Đã đến Hồ Sen Phóng Sinh — Có thể Thả Hoa Đăng hoặc cho đàn Cá Chép Koi ăn.');
+          this.showToast('🪷 Đã đến Hồ Sen Phóng Sinh — Nhấn [D] Thả Hoa Đăng hoặc [N] Nuôi Cá Koi.');
         }
         if (zone === 'CHANH_DIEN') {
           this._syncProstrateButtonUI(false);
@@ -557,11 +575,137 @@ class ChuaOnlineApp {
     btnCollapseDock?.addEventListener('click', () => {
       const isCollapsed = dockWrapper?.classList.toggle('dock-collapsed');
       btnCollapseDock.setAttribute('aria-expanded', String(!isCollapsed));
-      btnCollapseDock.textContent = isCollapsed ? '▴ Mở Pháp Khí (11)' : '▾ Thu gọn Pháp Khí';
+      btnCollapseDock.textContent = isCollapsed ? '▴ Mở Pháp Khí (12)' : '▾ Thu gọn Pháp Khí';
       if (btnMinimalDock) btnMinimalDock.style.display = isCollapsed ? 'none' : 'inline-flex';
     });
 
-    // Bottom Dock Buttons (9 Core Actions) — Auto-dismiss Global Sutra Banner when user clicks any action
+    // Zen Music & YouTube Player Widget Events
+    const musicWidget = document.getElementById('zen-music-widget');
+    const toggleMusicPanel = () => {
+      if (!musicWidget) return;
+      const isHidden = musicWidget.hasAttribute('hidden');
+      if (isHidden) {
+        musicWidget.removeAttribute('hidden');
+        // Auto-start soothing temple music on first open if nothing is playing yet
+        if (!this.zenMusicPlayer.isPlaying) {
+          this.zenMusicPlayer.playSynthTrack(0);
+        }
+      } else {
+        musicWidget.setAttribute('hidden', '');
+      }
+    };
+
+    document.getElementById('btn-toggle-music')?.addEventListener('click', toggleMusicPanel);
+    document.getElementById('dock-music-player')?.addEventListener('click', toggleMusicPanel);
+    document.getElementById('btn-close-music')?.addEventListener('click', () => {
+      musicWidget?.setAttribute('hidden', '');
+    });
+
+    const selectZenTrack = document.getElementById('select-zen-track');
+    selectZenTrack?.addEventListener('change', (e) => {
+      const idx = Number(e.target.value) || 0;
+      const ytBox = document.getElementById('youtube-embed-box');
+      if (ytBox) {
+        ytBox.innerHTML = '';
+        ytBox.setAttribute('hidden', '');
+      }
+      const track = this.zenMusicPlayer.playSynthTrack(idx);
+      this.showToast(`🎵 Đang phát nhạc thiền: ${track.title}`);
+    });
+
+    document.getElementById('btn-music-play')?.addEventListener('click', () => {
+      const playing = this.zenMusicPlayer.togglePlayPause();
+      if (!playing) {
+        const ytBox = document.getElementById('youtube-embed-box');
+        if (ytBox) {
+          ytBox.innerHTML = '';
+          ytBox.setAttribute('hidden', '');
+        }
+      }
+    });
+
+    document.getElementById('btn-music-prev')?.addEventListener('click', () => {
+      const ytBox = document.getElementById('youtube-embed-box');
+      if (ytBox) {
+        ytBox.innerHTML = '';
+        ytBox.setAttribute('hidden', '');
+      }
+      const track = this.zenMusicPlayer.prevTrack();
+      if (selectZenTrack) selectZenTrack.value = String(this.zenMusicPlayer.currentTrackIndex);
+      this.showToast(`🎵 Đang phát: ${track.title}`);
+    });
+
+    document.getElementById('btn-music-next')?.addEventListener('click', () => {
+      const ytBox = document.getElementById('youtube-embed-box');
+      if (ytBox) {
+        ytBox.innerHTML = '';
+        ytBox.setAttribute('hidden', '');
+      }
+      const track = this.zenMusicPlayer.nextTrack();
+      if (selectZenTrack) selectZenTrack.value = String(this.zenMusicPlayer.currentTrackIndex);
+      this.showToast(`🎵 Đang phát: ${track.title}`);
+    });
+
+    document.getElementById('range-music-volume')?.addEventListener('input', (e) => {
+      const val = Number(e.target.value) / 100;
+      this.zenMusicPlayer.setVolume(val);
+    });
+
+    const launchYoutubeEmbed = (urlOrId, customTitle = null) => {
+      const videoId = this.zenMusicPlayer.playYoutube(urlOrId, customTitle);
+      if (!videoId) {
+        this.showToast('⚠️ Link YouTube không hợp lệ. Vui lòng dán link youtube.com/watch?v=... hoặc youtu.be/...');
+        return;
+      }
+      const ytBox = document.getElementById('youtube-embed-box');
+      if (ytBox) {
+        ytBox.removeAttribute('hidden');
+        ytBox.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0" title="YouTube Zen Music Player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+      }
+      this.showToast(`🎬 Đang phát nhạc YouTube tịnh tâm: ${customTitle || videoId}`);
+    };
+
+    document.querySelectorAll('.yt-preset-chip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const vid = chip.getAttribute('data-yt');
+        const title = chip.getAttribute('data-title');
+        if (vid) launchYoutubeEmbed(vid, title);
+      });
+    });
+
+    document.getElementById('form-youtube-music')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = document.getElementById('input-youtube-url');
+      const raw = String(input?.value || '').trim();
+      if (!raw) return;
+      launchYoutubeEmbed(raw);
+    });
+
+    this.zenMusicPlayer.onStateChange = (state) => {
+      const nowPlayingEl = document.getElementById('music-now-playing');
+      const playBtn = document.getElementById('btn-music-play');
+      const discIcon = document.getElementById('music-disc-icon');
+      const dockSubMusic = document.getElementById('dock-sub-music');
+
+      if (discIcon) discIcon.classList.toggle('playing', state.isPlaying);
+      if (playBtn) {
+        playBtn.textContent = state.isPlaying ? '⏸️ Tạm Dừng Nhạc' : '▶️ Phát Nhạc Thiền';
+      }
+      if (nowPlayingEl) {
+        if (!state.isPlaying) {
+          nowPlayingEl.textContent = '⏸️ Đang tạm dừng nhạc thiền';
+        } else if (state.mode === 'YOUTUBE') {
+          nowPlayingEl.textContent = state.youtubeTitle || `🎬 YouTube (${state.youtubeId})`;
+        } else {
+          nowPlayingEl.textContent = `${state.track.title} — ${state.track.subtitle}`;
+        }
+      }
+      if (dockSubMusic) {
+        dockSubMusic.textContent = state.isPlaying ? 'Đang phát 🎶' : 'Tịnh Tâm / YT';
+      }
+    };
+
+    // Bottom Dock Buttons (12 Core Actions) — Auto-dismiss Global Sutra Banner when user clicks any action
     const autoDismissBanner = () => {
       this.globalBannerDismissed = true;
       const b = document.getElementById('global-sutra-banner');
@@ -573,8 +717,15 @@ class ChuaOnlineApp {
 
     document.getElementById('dock-prostrate')?.addEventListener('click', () => {
       autoDismissBanner();
-      if (this._isPlayerNearQuanAm()) {
+      const nearTarget = this._getNearestSacredTarget();
+      if (nearTarget === 'QUAN_AM') {
         this._handlePrayQuanAm();
+      } else if (nearTarget === 'DI_LAC') {
+        this._handlePrayDiLac();
+      } else if (nearTarget === 'DIA_TANG') {
+        this._handlePrayDiaTang();
+      } else if (nearTarget === 'BAO_THAP') {
+        this._handlePrayBaoThap();
       } else {
         this._handleProstrateBuddha();
       }
@@ -889,18 +1040,60 @@ class ChuaOnlineApp {
       document.getElementById('dialog-profile')?.showModal();
     });
 
-    // Keyboard shortcut: Spacebar — Ngồi trong Chánh Điện gõ Mõ, Ra ngoài Sân Chùa gõ Chuông!
+    // Keyboard Quick Actions:
+    // [L] Lạy Phật/Bồ Tát | [M] Gõ Mõ | [K] Tụng Kinh | [C] Gõ Chuông | [T] Trồng Cây | [N] Nuôi Cá
+    // [Q] Quét Sân | [H] Dâng Hương | [D] Thả Hoa Đăng | [X] Xin Xăm | [P] Nhạc Thiền/YouTube | [B] Bảng Công Đức
+    const flashDockButton = (btnId) => {
+      const btn = document.getElementById(btnId);
+      if (!btn) return;
+      btn.classList.add('kbd-flash');
+      setTimeout(() => btn.classList.remove('kbd-flash'), 240);
+    };
+
     window.addEventListener('keydown', (e) => {
-      if (e.code === 'Space' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      const activeTag = document.activeElement?.tagName;
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(activeTag) || document.activeElement?.isContentEditable) {
+        return;
+      }
+
+      if (e.code === 'Space') {
         e.preventDefault();
         if (this.sutraChanter.isChanting && !this.sutraChanter.isAuto) {
           this.sutraChanter.manualKnockVerse();
           this.avatarManager.triggerBowAndPulse(this.localSocketId);
         } else if (this._isPlayerInsideMainHall()) {
+          flashDockButton('dock-wooden-fish');
           this._handleKnockWoodenFish();
         } else {
+          flashDockButton('dock-ring-bell');
           this._handleRingGreatBell();
         }
+        return;
+      }
+
+      const key = String(e.key || '').toUpperCase();
+      const shortcutMap = {
+        L: 'dock-prostrate',
+        M: 'dock-wooden-fish',
+        K: 'dock-chant-sutra',
+        C: 'dock-ring-bell',
+        T: 'dock-plant-tree',
+        N: 'dock-feed-fish',
+        Q: 'dock-sweep-leaves',
+        H: 'dock-offer-incense',
+        D: 'dock-release-lantern',
+        X: 'dock-draw-fortune',
+        P: 'dock-music-player',
+        B: 'dock-leaderboard'
+      };
+
+      const targetBtnId = shortcutMap[key];
+      if (targetBtnId) {
+        e.preventDefault();
+        flashDockButton(targetBtnId);
+        const btnEl = document.getElementById(targetBtnId);
+        btnEl?.click();
       }
     });
   }
@@ -912,20 +1105,37 @@ class ChuaOnlineApp {
     return local.root.position.z <= 0.5;
   }
 
-  _isPlayerNearQuanAm() {
+  _getNearestSacredTarget() {
     const local = this.avatarManager.getLocalAvatar();
-    if (!local) return false;
-    const dx = local.root.position.x - 9.5;
-    const dz = local.root.position.z - 14.5;
-    return Math.hypot(dx, dz) <= 6.5;
+    if (!local) return null;
+    const x = local.root.position.x;
+    const z = local.root.position.z;
+    if (Math.hypot(x - 9.5, z - 14.5) <= 6.5) return 'QUAN_AM';
+    if (Math.hypot(x - -17.5, z - 14.5) <= 7.0) return 'DI_LAC';
+    if (Math.hypot(x - -18.5, z - 5.0) <= 6.5) return 'DIA_TANG';
+    if (Math.hypot(x - 20.5, z - 6.0) <= 7.0) return 'BAO_THAP';
+    return null;
   }
 
-  _syncProstrateButtonUI(nearQuanAm) {
+  _isPlayerNearQuanAm() {
+    return this._getNearestSacredTarget() === 'QUAN_AM';
+  }
+
+  _syncProstrateButtonUI(targetType) {
     const lbl = document.getElementById('dock-label-prostrate');
     const sub = document.getElementById('dock-sub-prostrate');
-    if (nearQuanAm) {
+    if (targetType === true || targetType === 'QUAN_AM') {
       if (lbl) lbl.textContent = 'Lạy Quán Âm';
       if (sub) sub.textContent = 'Đài Quán Âm +5';
+    } else if (targetType === 'DI_LAC') {
+      if (lbl) lbl.textContent = 'Lạy Di Lặc';
+      if (sub) sub.textContent = 'Cầu Hoan Hỷ +5';
+    } else if (targetType === 'DIA_TANG') {
+      if (lbl) lbl.textContent = 'Lạy Địa Tạng';
+      if (sub) sub.textContent = 'Đài Địa Tạng +5';
+    } else if (targetType === 'BAO_THAP') {
+      if (lbl) lbl.textContent = 'Lễ Bảo Tháp';
+      if (sub) sub.textContent = 'Tháp Xá Lợi +5';
     } else {
       if (lbl) lbl.textContent = 'Lạy Phật';
       if (sub) sub.textContent = '+5 Công Đức';
@@ -1089,6 +1299,102 @@ class ChuaOnlineApp {
     this.socketClient.sendMove(matX, matZ, rotFacingQuanAm, 'PROSTRATE', null);
     this.socketClient.prostrateBuddha(1, 'QUAN_AM', rotFacingQuanAm);
     this._addLocalOptimisticMerit(5, 'Lạy Quán Thế Âm Bồ Tát');
+  }
+
+  _handlePrayDiLac() {
+    // Di chuyển đạo hữu đến Bồ Đoàn trước Đài Phật Di Lặc (-17.5, 18.6) & Lạy Ngũ Thể Đầu Địa
+    const matX = -17.5;
+    const matZ = 18.6;
+    const rotFacing = Math.PI; // Hướng thẳng về tôn tượng Phật Di Lặc (-17.5, 14.5)
+
+    this.templeScene.focusZone('DAI_DI_LAC');
+    this._syncProstrateButtonUI('DI_LAC');
+    this._syncPercussionLocationUI(false);
+
+    const local = this.avatarManager.getLocalAvatar();
+    if (local) local.customSitRotY = rotFacing;
+    this.avatarManager.setLocalTargetPosition(matX, matZ, 'PROSTRATE', null);
+    this.avatarManager.triggerProstration(this.localSocketId, rotFacing);
+    this.templeScene.setFollowTarget(matX, 0.2, matZ);
+
+    this.zenAudio.playMeditationBell(0.85);
+    setTimeout(() => this.zenAudio.playWoodenFish(0.6), 350);
+
+    const vowText =
+      'Chí tâm đảnh lễ: Nam Mô Đương Lai Hạ Sanh Di Lặc Tôn Phật, nguyện cầu gia đạo hoan hỷ, tâm lượng bao dung, phước lộc viên mãn.';
+    this.dharmaVoice.speakVerse(vowText);
+    this._setZenTickerText(
+      `😄 Đạo hữu "${this.profile.dharmaName}" vừa thành tâm đảnh lễ Đức Phật Di Lặc cầu hoan hỷ phúc lộc (+5 Công Đức).`
+    );
+    this.showToast('😄 Nam Mô Di Lặc Tôn Phật — Đã thành tâm quỳ lạy cầu hoan hỷ & phúc lộc (+5 Công Đức)!');
+
+    this.socketClient.sendMove(matX, matZ, rotFacing, 'PROSTRATE', null);
+    this.socketClient.prostrateBuddha(1, 'DI_LAC', rotFacing);
+    this._addLocalOptimisticMerit(5, 'Đảnh Lễ Phật Di Lặc');
+  }
+
+  _handlePrayDiaTang() {
+    // Di chuyển đạo hữu đến Bồ Đoàn trước Đài Địa Tạng Vương Bồ Tát (-18.5, 8.6)
+    const matX = -18.5;
+    const matZ = 8.6;
+    const rotFacing = Math.PI;
+
+    this.templeScene.focusZone('DAI_DIA_TANG');
+    this._syncProstrateButtonUI('DIA_TANG');
+    this._syncPercussionLocationUI(false);
+
+    const local = this.avatarManager.getLocalAvatar();
+    if (local) local.customSitRotY = rotFacing;
+    this.avatarManager.setLocalTargetPosition(matX, matZ, 'PROSTRATE', null);
+    this.avatarManager.triggerProstration(this.localSocketId, rotFacing);
+    this.templeScene.setFollowTarget(matX, 0.2, matZ);
+
+    this.zenAudio.playMeditationBell(0.85);
+    setTimeout(() => this.zenAudio.playWoodenFish(0.6), 350);
+
+    const vowText =
+      'Chí tâm đảnh lễ: Nam Mô Đại Nguyện Địa Tạng Vương Bồ Tát, nguyện cầu cửu huyền thất tổ siêu thăng Tịnh Độ, cha mẹ hiện tiền tăng long phước thọ.';
+    this.dharmaVoice.speakVerse(vowText);
+    this._setZenTickerText(
+      `🙏 Đạo hữu "${this.profile.dharmaName}" vừa thành tâm đảnh lễ Đức Địa Tạng Vương Bồ Tát (+5 Công Đức).`
+    );
+    this.showToast('🙏 Nam Mô Đại Nguyện Địa Tạng Vương Bồ Tát — Đã thành tâm đảnh lễ (+5 Công Đức)!');
+
+    this.socketClient.sendMove(matX, matZ, rotFacing, 'PROSTRATE', null);
+    this.socketClient.prostrateBuddha(1, 'DIA_TANG', rotFacing);
+    this._addLocalOptimisticMerit(5, 'Đảnh Lễ Địa Tạng Bồ Tát');
+  }
+
+  _handlePrayBaoThap() {
+    // Di chuyển đạo hữu đến Bồ Đoàn trước Bảo Tháp Xá Lợi 7 Tầng (20.5, 10.4)
+    const matX = 20.5;
+    const matZ = 10.4;
+    const rotFacing = Math.PI;
+
+    this.templeScene.focusZone('BAO_THAP');
+    this._syncProstrateButtonUI('BAO_THAP');
+    this._syncPercussionLocationUI(false);
+
+    const local = this.avatarManager.getLocalAvatar();
+    if (local) local.customSitRotY = rotFacing;
+    this.avatarManager.setLocalTargetPosition(matX, matZ, 'PROSTRATE', null);
+    this.avatarManager.triggerProstration(this.localSocketId, rotFacing);
+    this.templeScene.setFollowTarget(matX, 0.2, matZ);
+
+    this.zenAudio.playMeditationBell(0.85);
+    setTimeout(() => this.zenAudio.playWoodenFish(0.6), 350);
+
+    const vowText =
+      'Chí tâm đảnh lễ Bảo Tháp Xá Lợi Thất Bảo Như Lai, nguyện ánh sáng trí tuệ từ bi soi đường cho muôn loài chúng sinh đồng thành Phật đạo.';
+    this.dharmaVoice.speakVerse(vowText);
+    this._setZenTickerText(
+      `☸️ Đạo hữu "${this.profile.dharmaName}" vừa chiêm bái & đảnh lễ Bảo Tháp Xá Lợi 7 Tầng (+5 Công Đức).`
+    );
+    this.showToast('☸️ Đã thành tâm chiêm bái & đảnh lễ Bảo Tháp Xá Lợi 7 Tầng (+5 Công Đức)!');
+
+    this.socketClient.sendMove(matX, matZ, rotFacing, 'PROSTRATE', null);
+    this.socketClient.prostrateBuddha(1, 'BAO_THAP', rotFacing);
+    this._addLocalOptimisticMerit(5, 'Chiêm Bái Bảo Tháp Xá Lợi');
   }
 
   _handlePlantBodhiTree() {
