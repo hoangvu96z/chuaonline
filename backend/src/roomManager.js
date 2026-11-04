@@ -33,7 +33,7 @@ export class RoomManager {
         players: new Map(),
         leaves: new Map(),
         plantedTrees: [], // Bounded up to 24 trees per room
-        chatHistory: [],  // Bounded up to 25 recent messages per room
+        chatHistory: [],  // Bounded up to 50 recent messages per room
         dirty: false
       };
       this._spawnLeavesInRoom(room, INITIAL_LEAVES_COUNT);
@@ -224,11 +224,26 @@ export class RoomManager {
     room.dirty = true;
   }
 
+  seedRoomChatHistory(roomId = 'chanh-dien-1', messages = []) {
+    if (!Array.isArray(messages) || messages.length === 0) return;
+    const room = this._getOrCreateRoom(roomId);
+    const existingIds = new Set(room.chatHistory.map((m) => m.id));
+    for (const msg of messages) {
+      if (msg && msg.text && (!msg.id || !existingIds.has(msg.id))) {
+        room.chatHistory.push(msg);
+        if (msg.id) existingIds.add(msg.id);
+      }
+    }
+    if (room.chatHistory.length > 50) {
+      room.chatHistory = room.chatHistory.slice(-50);
+    }
+  }
+
   recordRoomChat(socketId, chatPayload) {
-    const room = this.getPlayerRoom(socketId);
+    const room = this.getPlayerRoom(socketId) || this._getOrCreateRoom(chatPayload?.roomId || 'chanh-dien-1');
     if (!room) return;
     room.chatHistory.push(chatPayload);
-    if (room.chatHistory.length > 25) {
+    if (room.chatHistory.length > 50) {
       room.chatHistory.shift();
     }
   }

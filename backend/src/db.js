@@ -303,8 +303,68 @@ export class DatabaseManager {
     this.memProvinces = new Map();
     this.memFortunes = [...DEFAULT_FORTUNES];
     this.memSutras = [...DEFAULT_SUTRAS];
+    this.memChatMessages = []; // Bounded up to 200 recent messages across rooms
+    this.chatDiskPath = path.resolve(__dirname, '../data/persistent_chat_history.json');
 
     this._initMemoryDefaults();
+    this._loadDiskChatHistory();
+  }
+
+  _loadDiskChatHistory() {
+    try {
+      if (fs.existsSync(this.chatDiskPath)) {
+        const raw = fs.readFileSync(this.chatDiskPath, 'utf8');
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.memChatMessages = parsed.slice(-200);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('[DB] _loadDiskChatHistory warning:', err.message);
+    }
+
+    // Seed welcoming initial Dharma messages so the chat room is never blank
+    const now = Date.now();
+    this.memChatMessages = [
+      {
+        id: 'seed-chat-1',
+        userId: 0,
+        dharmaName: 'Thích Tâm Tịnh',
+        provinceCode: 'TTH',
+        roomId: 'chanh-dien-1',
+        text: '🙏 Nam Mô Bổn Sư Thích Ca Mâu Ni Phật. Chào mừng chư vị đạo hữu về Đạo Tràng Chánh Điện!',
+        flagged: false,
+        timestamp: now - 180000
+      },
+      {
+        id: 'seed-chat-2',
+        userId: 0,
+        dharmaName: 'Diệu Liên Hoa',
+        provinceCode: 'SG',
+        roomId: 'chanh-dien-1',
+        text: '🪷 Nguyện cầu quốc thái dân an,家 đạo bình an, muôn loài đồng sanh Cực Lạc.',
+        flagged: false,
+        timestamp: now - 60000
+      }
+    ];
+    this._saveDiskChatHistory();
+  }
+
+  _saveDiskChatHistory() {
+    try {
+      const dir = path.dirname(this.chatDiskPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(
+        this.chatDiskPath,
+        JSON.stringify(this.memChatMessages.slice(-200), null, 2),
+        'utf8'
+      );
+    } catch (err) {
+      // Non-fatal in read-only environments
+    }
   }
 
   _initMemoryDefaults() {
@@ -439,6 +499,23 @@ export class DatabaseManager {
         duration_sec INT NOT NULL,
         merit_reward INT NOT NULL,
         verses_json JSON NOT NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // 6. chat_messages table (persistent multi-user chat history across refreshes & restarts)
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        msg_id VARCHAR(64) NOT NULL,
+        room_id VARCHAR(32) DEFAULT 'chanh-dien-1',
+        user_id VARCHAR(64) DEFAULT '0',
+        dharma_name VARCHAR(50) NOT NULL,
+        province_code VARCHAR(10) DEFAULT 'SG',
+        content VARCHAR(200) NOT NULL,
+        flagged TINYINT(1) DEFAULT 0,
+        created_at_ms BIGINT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_room_time (room_id, id DESC)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
@@ -960,6 +1037,88 @@ export class DatabaseManager {
       .sort((a, b) => b.merit_points - a.merit_points)
       .slice(0, 30);
     return { provinces, users };
+  }
+
+  async saveChatMessage(chatPayload = {}) {
+    const entry = {
+      id: String(chatPayload.id || `chat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`),
+      socketId: chatPayload.socketId || '',
+      userId: chatPayload.userId ?? 0,
+      dharmaName: String(chatPayload.dharmaName || 'Đạo Hữu').slice(0, 50),
+      provinceCode: String(chatPayload.provinceCode || 'SG').slice(0, 10),
+      roomId: String(chatPayload.roomId || 'chanh-dien-1').slice(0, 32),
+      text: String(chatPayload.text || '').trim().slice(0, 180),
+      flagged: Boolean(chatPayload.flagged),
+      timestamp: Number(chatPayload.timestamp || Date.now())
+    };
+    if (!entry.text) return null;
+
+    // Always append to memory + disk cache so history is available immediately and survives restarts
+    this.memChatMessages.push(entry);
+    if (this.memChatMessages.length > 200) {
+      this.memChatMessages = this.memChatMessages.slice(-200);
+    }
+    this._saveDiskChatHistory();
+
+    if (!this.usingMemory && this.pool) {
+      try {
+        await this.pool.query(
+          `INSERT INTO chat_messages (msg_id, room_id, user_id, dharma_name, province_code, content, flagged, created_at_ms)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            entry.id,
+            entry.roomId,
+            String(entry.userId),
+            entry.dharmaName,
+            entry.provinceCode,
+            entry.text,
+            entry.flagged ? 1 : 0,
+            entry.timestamp
+          ]
+        );
+      } catch (err) {
+        console.warn('[DB] saveChatMessage MySQL warning:', err.message);
+      }
+    }
+
+    return entry;
+  }
+
+  async getRecentChatMessages(roomId = 'chanh-dien-1', limit = 40) {
+    const cleanRoom = String(roomId || 'chanh-dien-1').slice(0, 32);
+    const maxItems = Math.min(100, Math.max(5, Number(limit || 40)));
+
+    if (!this.usingMemory && this.pool) {
+      try {
+        const [rows] = await this.pool.query(
+          `SELECT msg_id, room_id, user_id, dharma_name, province_code, content, flagged, created_at_ms
+           FROM chat_messages
+           WHERE room_id = ?
+           ORDER BY id DESC
+           LIMIT ?`,
+          [cleanRoom, maxItems]
+        );
+        if (rows.length > 0) {
+          return rows.reverse().map((r) => ({
+            id: r.msg_id,
+            roomId: r.room_id,
+            userId: r.user_id,
+            dharmaName: r.dharma_name,
+            provinceCode: r.province_code,
+            text: r.content,
+            flagged: Boolean(r.flagged),
+            timestamp: Number(r.created_at_ms || Date.now())
+          }));
+        }
+      } catch (err) {
+        console.warn('[DB] getRecentChatMessages MySQL warning:', err.message);
+      }
+    }
+
+    const filtered = this.memChatMessages.filter(
+      (m) => !m.roomId || m.roomId === cleanRoom || cleanRoom === 'all'
+    );
+    return filtered.slice(-maxItems);
   }
 
   async close() {

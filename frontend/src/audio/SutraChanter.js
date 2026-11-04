@@ -17,12 +17,14 @@ export class SutraChanter {
     this.nextVerseTimer = null;
     this.manualWordIndex = 0;
     this.currentVerseWords = [];
+    this._chantSessionId = 0;
   }
 
   startSutra(sutra, startIndex = 0) {
     this.stop();
     if (!sutra || !Array.isArray(sutra.verses) || sutra.verses.length === 0) return;
 
+    this._chantSessionId++;
     this.isChanting = true;
     this.isPaused = false;
     this.currentSutra = sutra;
@@ -36,7 +38,7 @@ export class SutraChanter {
 
     if (this.isAuto) {
       this._startAutoWoodenFish(sutra.tempoMs || 680);
-      this._readNextVerse();
+      this._readNextVerse(0);
     } else {
       this._prepareManualVerse();
     }
@@ -49,6 +51,31 @@ export class SutraChanter {
         this.audio.playWoodenFish(0.45); // Âm lượng mõ nền vừa phải để rõ giọng đọc kinh
       }
     }, tempoMs);
+  }
+
+  /**
+   * Đổi giọng đọc ngay khi đang tụng kinh mà không làm lỗi câu hiện tại hoặc nhảy câu
+   */
+  changeVoiceProfile(profileId) {
+    const profile = this.voice?.setVoiceProfile?.(profileId);
+    if (!this.isChanting || !this.currentSutra) {
+      return profile;
+    }
+
+    // Hủy timer chuyển câu cũ (nếu đang trong khoảng nghỉ 450ms giữa 2 câu)
+    if (this.nextVerseTimer) {
+      clearTimeout(this.nextVerseTimer);
+      this.nextVerseTimer = null;
+    }
+
+    // Tăng session ID để mọi callback của giọng đọc cũ bị vô hiệu hóa hoàn toàn
+    this._chantSessionId++;
+
+    if (!this.isPaused && this.isAuto) {
+      const resumeWordIdx = Math.max(0, Number(this.voice?._currentWordIdx || 0));
+      this._readNextVerse(resumeWordIdx, true);
+    }
+    return profile;
   }
 
   togglePause() {
@@ -64,6 +91,7 @@ export class SutraChanter {
   pause() {
     if (!this.isChanting || this.isPaused) return;
     this.isPaused = true;
+    this._chantSessionId++;
     if (this.nextVerseTimer) {
       clearTimeout(this.nextVerseTimer);
       this.nextVerseTimer = null;
@@ -76,11 +104,18 @@ export class SutraChanter {
   resume() {
     if (!this.isChanting || !this.isPaused) return;
     this.isPaused = false;
+    this._chantSessionId++;
     if (this.isAuto) {
-      if (this.voice && this.voice.isPaused && typeof this.voice.resume === 'function') {
-        this.voice.resume();
+      if (
+        this.voice &&
+        this.voice.isPaused &&
+        this.voice._activeText &&
+        typeof this.voice.resume === 'function'
+      ) {
+        const resumeWordIdx = Math.max(0, Number(this.voice._currentWordIdx || 0));
+        this._readNextVerse(resumeWordIdx, true);
       } else {
-        this._readNextVerse();
+        this._readNextVerse(0);
       }
     }
   }
@@ -89,13 +124,14 @@ export class SutraChanter {
     const nextAuto = Boolean(isAuto);
     if (this.isAuto === nextAuto) return;
     this.isAuto = nextAuto;
+    this._chantSessionId++;
 
     if (!this.isChanting || !this.currentSutra) return;
 
     if (this.isAuto) {
       this._startAutoWoodenFish(this.currentSutra.tempoMs || 680);
       if (!this.isPaused) {
-        this._readNextVerse();
+        this._readNextVerse(0);
       }
     } else {
       if (this.woodenFishTimer) {
@@ -133,8 +169,14 @@ export class SutraChanter {
     };
   }
 
-  _readNextVerse() {
+  _readNextVerse(startWordIndex = 0, skipBell = false) {
     if (!this.isChanting || this.isPaused || !this.currentSutra) return;
+
+    const activeSessionId = ++this._chantSessionId;
+    if (this.nextVerseTimer) {
+      clearTimeout(this.nextVerseTimer);
+      this.nextVerseTimer = null;
+    }
 
     if (this.verseIndex >= this.currentSutra.verses.length) {
       // Kết thúc bài kinh: Thỉnh Đại Hồng Chung & Hồi hướng
@@ -149,7 +191,7 @@ export class SutraChanter {
     const totalVerses = this.currentSutra.verses.length;
 
     // Điểm chuông gia trì (khánh ngân) ở các câu có đánh dấu bell: true (hoặc lần đầu của câu lặp 3 lần)
-    if (verse.bell && this.repeatRound === 0 && this.audio) {
+    if (!skipBell && startWordIndex === 0 && verse.bell && this.repeatRound === 0 && this.audio) {
       this.audio.playMeditationBell();
     }
 
@@ -167,8 +209,9 @@ export class SutraChanter {
         repeatRound: this.repeatRound + 1,
         repeatTotal: verse.repeatTotal,
         displaySuffix,
-        wordIndex: 0,
+        wordIndex: startWordIndex,
         isVerseDone: false,
+        isPaused: this.isPaused,
         meritEarned: this.currentSutra.meritPerVerse || 3
       });
     }
@@ -177,7 +220,14 @@ export class SutraChanter {
     this.voice.speakVerse(
       verse.text,
       () => {
-        if (!this.isChanting || this.isPaused || !this.isAuto) return;
+        if (
+          activeSessionId !== this._chantSessionId ||
+          !this.isChanting ||
+          this.isPaused ||
+          !this.isAuto
+        ) {
+          return;
+        }
 
         // Báo hoàn thành 1 lượt đọc câu kinh để cộng Công Đức & nhân vật chắp tay cúi nhẹ
         if (this.onVerseChange) {
@@ -192,6 +242,7 @@ export class SutraChanter {
             displaySuffix,
             wordIndex: -1,
             isVerseDone: true,
+            isPaused: this.isPaused,
             meritEarned: this.currentSutra.meritPerVerse || 3
           });
         }
@@ -200,16 +251,31 @@ export class SutraChanter {
           // Đọc tiếp lần 2, lần 3 của câu kinh có ghi "(3 lần)"
           this.repeatRound++;
           if (this.audio) this.audio.playMeditationBell(0.45);
-          this.nextVerseTimer = setTimeout(() => this._readNextVerse(), 420);
+          this.nextVerseTimer = setTimeout(() => {
+            if (activeSessionId === this._chantSessionId && this.isChanting && !this.isPaused) {
+              this._readNextVerse(0);
+            }
+          }, 420);
         } else {
           // Đã đọc đủ số lần -> sang câu tiếp theo
           this.repeatRound = 0;
           this.verseIndex++;
-          this.nextVerseTimer = setTimeout(() => this._readNextVerse(), 450);
+          this.nextVerseTimer = setTimeout(() => {
+            if (activeSessionId === this._chantSessionId && this.isChanting && !this.isPaused) {
+              this._readNextVerse(0);
+            }
+          }, 450);
         }
       },
       ({ wordIndex }) => {
-        if (!this.isChanting || this.isPaused || !this.isAuto) return;
+        if (
+          activeSessionId !== this._chantSessionId ||
+          !this.isChanting ||
+          this.isPaused ||
+          !this.isAuto
+        ) {
+          return;
+        }
         if (this.onVerseChange) {
           this.onVerseChange({
             sutraId: this.currentSutra.id,
@@ -222,10 +288,12 @@ export class SutraChanter {
             displaySuffix,
             wordIndex,
             isVerseDone: false,
+            isPaused: this.isPaused,
             meritEarned: this.currentSutra.meritPerVerse || 3
           });
         }
-      }
+      },
+      startWordIndex
     );
   }
 
@@ -254,6 +322,7 @@ export class SutraChanter {
         displaySuffix,
         wordIndex: 0,
         isVerseDone: false,
+        isPaused: this.isPaused,
         meritEarned: this.currentSutra.meritPerVerse || 3
       });
     }
@@ -293,6 +362,7 @@ export class SutraChanter {
           displaySuffix,
           wordIndex: this.manualWordIndex,
           isVerseDone: false,
+          isPaused: this.isPaused,
           meritEarned: this.currentSutra.meritPerVerse || 3
         });
       }
@@ -310,6 +380,7 @@ export class SutraChanter {
           displaySuffix,
           wordIndex: this.currentVerseWords.length - 1,
           isVerseDone: true,
+          isPaused: this.isPaused,
           meritEarned: this.currentSutra.meritPerVerse || 3
         });
       }
@@ -333,6 +404,7 @@ export class SutraChanter {
   }
 
   stop() {
+    this._chantSessionId++;
     this.isChanting = false;
     this.isPaused = false;
     this.repeatRound = 0;
