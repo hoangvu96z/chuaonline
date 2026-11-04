@@ -232,4 +232,92 @@ INSERT IGNORE INTO sutras (id, title, category, duration_sec, merit_reward, vers
 ('kinh-phap-cu', 'Kinh Pháp Cú Thiện Ngôn (Dhammapada Tinh Hoa)', 'Từ Bi & Trí Tuệ', 160, 60,
 '[{"text":"Tâm dẫn đầu các pháp, Tâm làm chủ, tâm tạo. Nếu với tâm ô nhiễm, Nói năng hay hành động, Khổ não bước theo sau, Như xe theo dấu vật kéo.","bell":true},{"text":"Tâm dẫn đầu các pháp, Tâm làm chủ, tâm tạo. Nếu với tâm thanh tịnh, Nói năng hay hành động, An lạc bước theo sau, Như bóng không rời hình.","bell":false},{"text":"Hận thù diệt hận thù, Đời này không thể có; Từ bi diệt hận thù, Là định luật ngàn thu.","bell":true},{"text":"Chiến thắng vạn quân thù, Không bằng tự thắng mình; Thắng mình là chiến công, Oanh liệt và tối thượng.","bell":false},{"text":"Dầu sống đến trăm năm, Không thấy pháp sanh diệt; Chẳng bằng sống một ngày, Thấy rõ pháp sanh diệt.","bell":false},{"text":"Lấy không giận thắng giận, Lấy thiện thắng không thiện, Lấy thí thắng xan tham, Lấy chân thật thắng giả dối.","bell":true},{"text":"Chớ khinh điều ác nhỏ, Cho rằng chẳng họa lây; Từng giọt nước nhỏ nhoi, Lâu ngày đầy lu lớn.","bell":false},{"text":"Chớ khinh điều thiện nhỏ, Cho rằng không phúc báo; Từng giọt nước tràn đầy, Thiện lành tích thành đại hải.","bell":false},{"text":"Không làm mọi điều ác, Thành tựu các hạnh lành, Tâm ý giữ trong sạch, Chính lời chư Phật dạy.","bell":true},{"text":"Tinh cần đường bất tử, Phóng dật cửa tử vong. Người tinh cần không chết, Kẻ phóng dật như đã chết rồi.","bell":true}]');
 
+-- ====================================================================
+-- NHÀ THỜ CÔNG GIÁO ONLINE 3D - CATHOLIC TABLES & SEED DATA
+-- ====================================================================
+
+CREATE TABLE IF NOT EXISTS nhatho_users (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  recovery_code VARCHAR(64) UNIQUE NOT NULL,
+  christian_name VARCHAR(50) NOT NULL,
+  password_hash VARCHAR(128) DEFAULT NULL,
+  outfit_color VARCHAR(16) DEFAULT '#f5f0e6',
+  avatar_style VARCHAR(32) DEFAULT 'GIAO_DAN_AO_DAI',
+  diocese_code VARCHAR(10) DEFAULT 'SG',
+  grace_points BIGINT DEFAULT 0,
+  rosaries_completed INT DEFAULT 0,
+  garden_tended INT DEFAULT 0,
+  virtue_tier INT DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_grace_leaderboard (grace_points DESC),
+  INDEX idx_diocese (diocese_code, grace_points DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS prayer_intentions (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT NOT NULL,
+  christian_name VARCHAR(50) NOT NULL,
+  intention_type ENUM('CANDLE', 'ROSE') NOT NULL,
+  content VARCHAR(200) NOT NULL,
+  pos_x FLOAT DEFAULT 0,
+  pos_z FLOAT DEFAULT 0,
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_active_intentions (intention_type, expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS diocese_bouquets (
+  diocese_code VARCHAR(10) PRIMARY KEY,
+  diocese_name VARCHAR(60) NOT NULL,
+  ecclesiastical_province ENUM('BẮC', 'TRUNG', 'NAM') DEFAULT 'NAM',
+  total_grace BIGINT DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS daily_scriptures (
+  id INT PRIMARY KEY,
+  theme_title VARCHAR(80) NOT NULL,
+  bible_verse TEXT NOT NULL,
+  reference_book VARCHAR(50) NOT NULL,
+  reflection TEXT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS prayer_catalog (
+  id VARCHAR(40) PRIMARY KEY,
+  title VARCHAR(100) NOT NULL,
+  category VARCHAR(50) NOT NULL,
+  duration_sec INT NOT NULL,
+  grace_reward INT NOT NULL,
+  verses_json JSON NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO diocese_bouquets (diocese_code, diocese_name, ecclesiastical_province, total_grace) VALUES
+('HN', 'Tổng Giáo Phận Hà Nội', 'BẮC', 0),
+('BN', 'Giáo Phận Bắc Ninh', 'BẮC', 0),
+('BC', 'Giáo Phận Bùi Chu', 'BẮC', 0),
+('HP', 'Giáo Phận Hải Phòng', 'BẮC', 0),
+('HTI', 'Giáo Phận Hà Tĩnh', 'BẮC', 0),
+('HH', 'Giáo Phận Hưng Hóa', 'BẮC', 0),
+('LS', 'Giáo Phận Lạng Sơn - Cao Bằng', 'BẮC', 0),
+('PD', 'Giáo Phận Phát Diệm', 'BẮC', 0),
+('TB', 'Giáo Phận Thái Bình', 'BẮC', 0),
+('TH', 'Giáo Phận Thanh Hóa', 'BẮC', 0),
+('VI', 'Giáo Phận Vinh', 'BẮC', 0),
+('HUE', 'Tổng Giáo Phận Huế', 'TRUNG', 0),
+('BMT', 'Giáo Phận Ban Mê Thuột', 'TRUNG', 0),
+('DN', 'Giáo Phận Đà Nẵng', 'TRUNG', 0),
+('KT', 'Giáo Phận Kon Tum', 'TRUNG', 0),
+('NT', 'Giáo Phận Nha Trang', 'TRUNG', 0),
+('QN', 'Giáo Phận Quy Nhơn', 'TRUNG', 0),
+('SG', 'Tổng Giáo Phận TP. Hồ Chí Minh', 'NAM', 0),
+('BR', 'Giáo Phận Bà Rịa', 'NAM', 0),
+('CT', 'Giáo Phận Cần Thơ', 'NAM', 0),
+('DL', 'Giáo Phận Đà Lạt', 'NAM', 0),
+('LX', 'Giáo Phận Long Xuyên', 'NAM', 0),
+('MT', 'Giáo Phận Mỹ Tho', 'NAM', 0),
+('PT', 'Giáo Phận Phan Thiết', 'NAM', 0),
+('PC', 'Giáo Phận Phú Cường', 'NAM', 0),
+('VL', 'Giáo Phận Vĩnh Long', 'NAM', 0),
+('XL', 'Giáo Phận Xuân Lộc', 'NAM', 0);
+
 SET FOREIGN_KEY_CHECKS = 1;

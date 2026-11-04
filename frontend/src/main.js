@@ -38,6 +38,21 @@ import { Environment, CUSHION_COORDS } from './world/Environment.js';
 import { AvatarManager } from './world/AvatarManager.js';
 import { Interactables } from './world/Interactables.js';
 import { SocketClient } from './network/socketClient.js';
+import { NhaThoOnlineApp } from './nhathoApp.js';
+
+export function isCatholicChurchMode() {
+  if (typeof window === 'undefined') return false;
+  const host = (window.location.hostname || '').toLowerCase();
+  const path = (window.location.pathname || '').toLowerCase();
+  const params = new URLSearchParams(window.location.search || '');
+  const siteParam = (params.get('site') || params.get('mode') || '').toLowerCase();
+  return (
+    host.includes('nhatho') ||
+    path.startsWith('/nhatho') ||
+    siteParam === 'nhatho' ||
+    siteParam === 'church'
+  );
+}
 
 // ============================================================================
 // MODERN WEB GUIDANCE POLYFILLS & FALLBACKS (Feature-Detected Only)
@@ -2378,5 +2393,10 @@ class ChuaOnlineApp {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  window.chuaApp = new ChuaOnlineApp();
+  initModernWebFallbacks();
+  if (isCatholicChurchMode()) {
+    window.nhathoApp = new NhaThoOnlineApp();
+  } else {
+    window.chuaApp = new ChuaOnlineApp();
+  }
 });

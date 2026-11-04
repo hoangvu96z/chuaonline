@@ -1,4 +1,6 @@
 // backend/src/roomManager.js
+export { ChurchRoomManager } from './churchRoomManager.js';
+
 const DEFAULT_MAX_CAPACITY = Number(process.env.MAX_ROOM_CAPACITY || 60);
 const MAX_LEAVES_PER_ROOM = 25;
 const INITIAL_LEAVES_COUNT = 16;

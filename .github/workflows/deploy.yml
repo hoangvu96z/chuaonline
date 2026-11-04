@@ -1,4 +1,4 @@
-name: Deploy Chùa Online 3D to VPS (chua.vunph.io.vn & api.vunph.io.vn)
+name: Deploy Chùa Online 3D & Nhà Thờ Công Giáo Online 3D to VPS
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
       - main
       - master
       - execute_full_development_plan
+      - deploy_nhatho_online
   workflow_dispatch:
 
 env:
@@ -21,7 +22,7 @@ env:
 
 jobs:
   test-build-and-deploy:
-    name: Test, Build & Deploy to VPS
+    name: Test, Build & Deploy Both Sites to VPS
     runs-on: ubuntu-latest
 
     steps:
@@ -38,7 +39,7 @@ jobs:
           cd backend && npm install
           cd ../frontend && npm install
 
-      - name: 4. Run Automated Backend & Frontend Tests
+      - name: 4. Run Automated Backend & Frontend Tests (Chùa Online & Nhà Thờ Online)
         run: |
           cd backend && npm test
 
@@ -51,7 +52,7 @@ jobs:
         run: |
           tar --exclude='backend/node_modules' --exclude='frontend/node_modules' \
               -czf /tmp/chuaonline_deploy.tar.gz \
-              backend frontend/dist frontend/src/data/sutras.js
+              backend frontend/dist frontend/src/data/sutras.js frontend/src/data/prayers.js
 
       - name: 7. Upload & Deploy to VPS (103.232.122.144) via SSH
         run: |
@@ -67,9 +68,10 @@ jobs:
             set -e
             export PATH=$PATH:/root/.nvm/versions/node/v24.19.0/bin:/usr/local/bin
 
-            mkdir -p /var/www/chuaonline /var/www/chua.vunph.io.vn
+            mkdir -p /var/www/chuaonline /var/www/chua.vunph.io.vn /var/www/nhatho.vunph.io.vn
             tar -xzf /tmp/chuaonline_deploy.tar.gz -C /var/www/chuaonline
             cp -rf /var/www/chuaonline/frontend/dist/* /var/www/chua.vunph.io.vn/
+            cp -rf /var/www/chuaonline/frontend/dist/* /var/www/nhatho.vunph.io.vn/
 
             printf "%s\n" \
               "PORT=3001" \
@@ -94,4 +96,5 @@ jobs:
 
             sleep 2
             curl -fsS http://127.0.0.1:3001/api/health
+            curl -fsS http://127.0.0.1:3001/api/nhatho/health
           EOF

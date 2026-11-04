@@ -289,12 +289,202 @@ const DEFAULT_SUTRAS = [
   }
 ];
 
+export const DEFAULT_DIOCESES = [
+  ['HN', 'Tổng Giáo Phận Hà Nội', 'BẮC'],
+  ['BN', 'Giáo Phận Bắc Ninh', 'BẮC'],
+  ['BC', 'Giáo Phận Bùi Chu', 'BẮC'],
+  ['HP', 'Giáo Phận Hải Phòng', 'BẮC'],
+  ['HTI', 'Giáo Phận Hà Tĩnh', 'BẮC'],
+  ['HH', 'Giáo Phận Hưng Hóa', 'BẮC'],
+  ['LS', 'Giáo Phận Lạng Sơn - Cao Bằng', 'BẮC'],
+  ['PD', 'Giáo Phận Phát Diệm', 'BẮC'],
+  ['TB', 'Giáo Phận Thái Bình', 'BẮC'],
+  ['TH', 'Giáo Phận Thanh Hóa', 'BẮC'],
+  ['VI', 'Giáo Phận Vinh', 'BẮC'],
+  ['HUE', 'Tổng Giáo Phận Huế', 'TRUNG'],
+  ['BMT', 'Giáo Phận Ban Mê Thuột', 'TRUNG'],
+  ['DN', 'Giáo Phận Đà Nẵng', 'TRUNG'],
+  ['KT', 'Giáo Phận Kon Tum', 'TRUNG'],
+  ['NT', 'Giáo Phận Nha Trang', 'TRUNG'],
+  ['QN', 'Giáo Phận Quy Nhơn', 'TRUNG'],
+  ['SG', 'Tổng Giáo Phận TP. Hồ Chí Minh', 'NAM'],
+  ['BR', 'Giáo Phận Bà Rịa', 'NAM'],
+  ['CT', 'Giáo Phận Cần Thơ', 'NAM'],
+  ['DL', 'Giáo Phận Đà Lạt', 'NAM'],
+  ['LX', 'Giáo Phận Long Xuyên', 'NAM'],
+  ['MT', 'Giáo Phận Mỹ Tho', 'NAM'],
+  ['PT', 'Giáo Phận Phan Thiết', 'NAM'],
+  ['PC', 'Giáo Phận Phú Cường', 'NAM'],
+  ['VL', 'Giáo Phận Vĩnh Long', 'NAM'],
+  ['XL', 'Giáo Phận Xuân Lộc', 'NAM']
+];
+
+export const DEFAULT_SCRIPTURES = [
+  {
+    id: 1,
+    theme_title: 'Bình An Trong Tay Chúa',
+    bible_verse: 'Thầy để lại bình an cho anh em, Thầy ban cho anh em bình an của Thầy. Thầy ban cho anh em không theo kiểu thế gian. Lòng anh em đừng xao xuyến cũng đừng sợ hãi.',
+    reference_book: 'Gioan 14:27',
+    reflection: 'Hôm nay, hãy trao phó mọi nỗi lo âu, gánh nặng của công việc và gia đình cho Chúa. Ngài đang ở cùng bạn trong từng nhịp thở.'
+  },
+  {
+    id: 2,
+    theme_title: 'Ánh Sáng Soi Đường',
+    bible_verse: 'Lời Chúa là ngọn đèn soi cho con bước, là ánh sáng chỉ đường cho con đi.',
+    reference_book: 'Thánh Vịnh 119:105',
+    reflection: 'Khi đứng trước những quyết định khó khăn, hãy dành một phút thinh lặng cầu nguyện. Chúa Thánh Thần sẽ soi sáng giúp bạn chọn con đường ngay chính.'
+  },
+  {
+    id: 3,
+    theme_title: 'Tình Yêu Kiên Nhẫn & Nhân Hậu',
+    bible_verse: 'Đức mến thì nhẫn nhục, hiền hậu, không ghen tương, không vênh vang, không tự đắc, không làm điều bất chính, không tìm tư lợi.',
+    reference_book: '1 Côrintô 13:4-5',
+    reflection: 'Hãy bắt đầu ngày mới bằng một nụ cười hiền hòa và lời nói yêu thương với những người thân yêu quanh mình.'
+  },
+  {
+    id: 4,
+    theme_title: 'Trông Cậy Vào Hồng Ân',
+    bible_verse: 'Đức Chúa là mục tử chăn dắt tôi, tôi chẳng thiếu thốn gì. Trong đồng cỏ xanh tươi, Người cho tôi nằm nghỉ.',
+    reference_book: 'Thánh Vịnh 23:1-2',
+    reflection: 'Thiên Chúa luôn quan phòng và chăm sóc cuộc đời bạn. Đừng nản lòng trước thử thách tạm thời, vì ân sủng của Ngài luôn đủ cho bạn.'
+  },
+  {
+    id: 5,
+    theme_title: 'Sức Mạnh Của Lời Cầu Nguyện',
+    bible_verse: 'Anh em cứ xin thì sẽ được, cứ tìm thì sẽ thấy, cứ gõ cửa thì sẽ mở cho.',
+    reference_book: 'Mátthêu 7:7',
+    reflection: 'Không có lời cầu nguyện chân thành nào bị lãng quên trước nhan Chúa. Hãy kiên trì cầu xin với lòng tín thác trọn vẹn.'
+  },
+  {
+    id: 6,
+    theme_title: 'Đôi Cánh Phượng Hoàng',
+    bible_verse: 'Những ai cậy trông Đức Chúa thì được thêm sức mạnh. Họ sẽ tung cánh bay cao như phượng hoàng, chạy mà không mỏi mệt, đi mà không kiệt sức.',
+    reference_book: 'Isaia 40:31',
+    reflection: 'Dù thân xác hay tinh thần có lúc mỏi mệt, niềm cậy trông vào Chúa sẽ tiếp thêm nguồn sinh lực mới để bạn vượt qua mọi dốc cao.'
+  },
+  {
+    id: 7,
+    theme_title: 'Lòng Thương Xót Vô Biên',
+    bible_verse: 'Tình thương Đức Chúa đời đời không dứt, lòng thương xót của Người mãi mãi chẳng vơi; mỗi buổi mai lại thêm mới mẻ.',
+    reference_book: 'Ai Ca 3:22-23',
+    reflection: 'Mỗi bình minh thức dậy là một hồng ân mới mẻ. Hãy mở lòng đón nhận sự tha thứ và bình an của Chúa để làm mới cuộc đời mình.'
+  },
+  {
+    id: 8,
+    theme_title: 'Tất Cả Nhờ Đấng Ban Sức Mạnh',
+    bible_verse: 'Tôi có thể làm được mọi sự trong Đấng ban sức mạnh cho tôi.',
+    reference_book: 'Philípphê 4:13',
+    reflection: 'Khi bạn kết hợp mật thiết với Đức Kitô, không có thử thách nào là quá sức. Hãy vững vàng tiến bước với niềm tin sắt đá.'
+  },
+  {
+    id: 9,
+    theme_title: 'Chương Trình Bình An & Hy Vọng',
+    bible_verse: 'Vì chính Ta biết các kế hoạch Ta định làm cho các ngươi: kế hoạch thịnh vượng chứ không phải tai ương, để ban cho các ngươi một tương lai và một niềm hy vọng.',
+    reference_book: 'Giêrêmia 29:11',
+    reflection: 'Thiên Chúa luôn có một kế hoạch tốt đẹp cho cuộc đời bạn. Hãy kiên nhẫn và phó thác tương lai trong bàn tay yêu thương của Ngài.'
+  },
+  {
+    id: 10,
+    theme_title: 'Hãy Đến Với Trái Tim Chúa',
+    bible_verse: 'Tất cả những ai đang vất vả mang gánh nặng nề, hãy đến cùng tôi, tôi sẽ cho nghỉ ngơi bồi dưỡng.',
+    reference_book: 'Mátthêu 11:28',
+    reflection: 'Hãy quỳ gối trước Thánh Thể và đặt mọi gánh nặng xuống chân bàn thờ. Trái Tim Chúa Giêsu luôn rộng mở đón nhận và nâng đỡ bạn.'
+  }
+];
+
+export const DEFAULT_PRAYERS = [
+  {
+    id: 'nam-dau-thanh-kinh-sang',
+    title: 'Nghi Thức Đầu Thánh & Kinh Sáng',
+    category: 'Kinh Nguyện Hằng Ngày',
+    duration_sec: 150,
+    grace_reward: 48,
+    verses_json: JSON.stringify([
+      { text: 'Nhân danh Cha và Con và Thánh Thần. Amen.', chime: true, beadType: 'CROSS' },
+      { text: 'Lạy Chúa Thánh Thần, xin ngự đến, và từ trời cao xin chiếu tỏa ánh quang của Ngài.', chime: false, beadType: 'PATER' },
+      { text: 'Lạy Cha chúng con ở trên trời, chúng con nguyện danh Cha cả sáng, nước Cha trị đến, ý Cha thể hiện dưới đất cũng như trên trời.', chime: true, beadType: 'PATER' },
+      { text: 'Xin Cha cho chúng con hôm nay lương thực hằng ngày, và tha nợ chúng con như chúng con cũng tha kẻ có nợ chúng con.', chime: false, beadType: 'PATER' },
+      { text: 'Xin chớ để chúng con sa chước cám dỗ, nhưng cứu chúng con cho khỏi sự dữ. Amen.', chime: true, beadType: 'PATER' },
+      { text: 'Kính mừng Maria đầy ơn phúc, Đức Chúa Trời ở cùng Bà, Bà có phúc lạ hơn mọi người nữ, và Giêsu con lòng Bà gồm phúc lạ.', chime: false, beadType: 'AVE' },
+      { text: 'Thánh Maria Đức Mẹ Chúa Trời, cầu cho chúng con là kẻ có tội khi nay và trong giờ lâm tử. Amen.', chime: true, beadType: 'AVE' },
+      { text: 'Sáng danh Đức Chúa Cha và Đức Chúa Con và Đức Chúa Thánh Thần. Như đã có trước vô cùng và bây giờ và hằng có và đời đời chẳng cùng. Amen.', chime: true, beadType: 'GLORIA' }
+    ])
+  },
+  {
+    id: 'kinh-truyen-tin-angelus',
+    title: 'Kinh Truyền Tin (Angelus - Sáng / Trưa / Chiều)',
+    category: 'Kinh Truyền Tin',
+    duration_sec: 140,
+    grace_reward: 46,
+    verses_json: JSON.stringify([
+      { text: 'Đức Chúa Trời sai Thánh Thiên Thần truyền tin cho Rất Thánh Đức Bà Maria. Và Rất Thánh Đức Bà chịu thai bởi phép Đức Chúa Thánh Thần.', chime: true, beadType: 'ANGELUS' },
+      { text: 'Kính mừng Maria đầy ơn phúc, Đức Chúa Trời ở cùng Bà... Thánh Maria Đức Mẹ Chúa Trời, cầu cho chúng con là kẻ có tội khi nay và trong giờ lâm tử. Amen.', chime: false, beadType: 'AVE' },
+      { text: 'Này tôi là tôi tá Đức Chúa Trời. Tôi xin vâng như lời Thánh Thiên Thần truyền.', chime: true, beadType: 'ANGELUS' },
+      { text: 'Kính mừng Maria đầy ơn phúc, Đức Chúa Trời ở cùng Bà... Thánh Maria Đức Mẹ Chúa Trời, cầu cho chúng con là kẻ có tội khi nay và trong giờ lâm tử. Amen.', chime: false, beadType: 'AVE' },
+      { text: 'Chốc ấy Ngôi Thứ Hai xuống thế làm người. Và ở cùng chúng con.', chime: true, beadType: 'ANGELUS' },
+      { text: 'Kính mừng Maria đầy ơn phúc, Đức Chúa Trời ở cùng Bà... Thánh Maria Đức Mẹ Chúa Trời, cầu cho chúng con là kẻ có tội khi nay và trong giờ lâm tử. Amen.', chime: false, beadType: 'AVE' },
+      { text: 'Lạy Rất Thánh Đức Mẹ Chúa Trời, xin cầu cho chúng con. Đáng chịu lấy những sự Chúa Kitô đã hứa.', chime: true, beadType: 'GLORIA' },
+      { text: 'Chúng con lạy ơn Đức Chúa Trời, xin ban ơn xuống trong linh hồn chúng con, để nhờ sự thương khó và Thánh Giá Chúa Kitô, chúng con được sống lại hiển vinh. Amen.', chime: true, beadType: 'CROSS' }
+    ])
+  },
+  {
+    id: 'kinh-man-coi-nam-su-vui',
+    title: 'Chuỗi Mân Côi - Năm Sự Vui (Kính Đức Mẹ)',
+    category: 'Chuỗi Mân Côi',
+    duration_sec: 210,
+    grace_reward: 79,
+    verses_json: JSON.stringify([
+      { text: 'Thứ nhất thì ngắm: Thiên Thần truyền tin cho Đức Bà chịu thai. Ta hãy xin cho được ở khiêm nhường.', chime: true, beadType: 'MYSTERY' },
+      { text: 'Lạy Cha chúng con ở trên trời, chúng con nguyện danh Cha cả sáng... Xin cứu chúng con cho khỏi sự dữ. Amen.', chime: false, beadType: 'PATER' },
+      { text: 'Kính mừng Maria đầy ơn phúc, Đức Chúa Trời ở cùng Bà, Bà có phúc lạ hơn mọi người nữ và Giêsu con lòng Bà gồm phúc lạ. Thánh Maria Đức Mẹ Chúa Trời, cầu cho chúng con là kẻ có tội khi nay và trong giờ lâm tử. Amen.', chime: true, beadType: 'AVE' },
+      { text: 'Thứ hai thì ngắm: Đức Bà đi viếng Bà Thánh Isave. Ta hãy xin cho được lòng yêu người.', chime: true, beadType: 'MYSTERY' },
+      { text: 'Thứ ba thì ngắm: Đức Bà sinh Đức Chúa Giêsu nơi hang đá. Ta hãy xin cho được lòng khó khăn.', chime: true, beadType: 'MYSTERY' },
+      { text: 'Thứ tư thì ngắm: Đức Bà dâng Đức Chúa Giêsu trong Đền Thánh. Ta hãy xin cho được vâng lời chịu lụy.', chime: true, beadType: 'MYSTERY' },
+      { text: 'Thứ năm thì ngắm: Đức Bà tìm được Đức Chúa Giêsu trong Đền Thánh. Ta hãy xin cho được giữ nghĩa cùng Chúa luôn.', chime: true, beadType: 'MYSTERY' },
+      { text: 'Sáng danh Đức Chúa Cha và Đức Chúa Con và Đức Chúa Thánh Thần. Như đã có trước vô cùng và bây giờ và hằng có và đời đời chẳng cùng. Amen.', chime: true, beadType: 'GLORIA' },
+      { text: 'Lạy Chúa Giêsu, xin tha tội cho chúng con, xin cứu chúng con khỏi sa hỏa ngục, xin đem các linh hồn lên Thiên Đàng, nhất là những linh hồn cần đến lòng Chúa thương xót hơn. Amen.', chime: true, beadType: 'FATIMA' }
+    ])
+  },
+  {
+    id: 'chuoi-long-chua-thuong-xot',
+    title: 'Chuỗi Kinh Lòng Chúa Thương Xót (Giờ 3 Giờ Chiều)',
+    category: 'Lòng Chúa Thương Xót',
+    duration_sec: 180,
+    grace_reward: 61,
+    verses_json: JSON.stringify([
+      { text: 'Lạy Cha Hằng Hữu, con xin dâng lên Cha Mình và Máu, Linh Hồn và Thần Tính của Con Rất Yêu Dấu Cha là Đức Giêsu Kitô, Chúa chúng con, để đền vì tội lỗi chúng con và toàn thế giới.', chime: true, beadType: 'PATER' },
+      { text: 'Vì cuộc khổ nạn đau thương của Chúa Giêsu Kitô, xin Cha thương xót chúng con và toàn thế giới.', chime: false, beadType: 'AVE' },
+      { text: 'Vì cuộc khổ nạn đau thương của Chúa Giêsu Kitô, xin Cha thương xót gia đình chúng con và những người đang đau yếu.', chime: false, beadType: 'AVE' },
+      { text: 'Vì cuộc khổ nạn đau thương của Chúa Giêsu Kitô, xin Cha thương xót các linh hồn nơi Luyện Ngục và ban bình an cho thế giới.', chime: true, beadType: 'AVE' },
+      { text: 'Lạy Đấng Chí Thánh, là Thiên Chúa Toàn Năng Hằng Hữu, xin thương xót chúng con và toàn thế giới. (3 lần)', chime: true, beadType: 'GLORIA' },
+      { text: 'Lạy Chúa Giêsu, con tín thác vào Chúa! Lạy Máu và Nước tuôn trào từ Trái Tim Chúa Giêsu như thác nguồn thương xót chúng con, con tín thác vào Chúa!', chime: true, beadType: 'CROSS' }
+    ])
+  },
+  {
+    id: 'kinh-hoa-binh-thanh-phanxico',
+    title: 'Kinh Hòa Bình (Thánh Phanxicô Assisi) & Kinh Tối',
+    category: 'Kinh Hòa Bình & Tạ Ơn',
+    duration_sec: 150,
+    grace_reward: 48,
+    verses_json: JSON.stringify([
+      { text: 'Lạy Chúa từ nhân, xin cho con biết mến yêu và phụng sự Chúa trong mọi người.', chime: true, beadType: 'CROSS' },
+      { text: 'Lạy Chúa, xin hãy dùng con như khí cụ bình an của Chúa: Đem yêu thương vào nơi oán thù, đem thứ tha vào nơi lăng nhục.', chime: false, beadType: 'AVE' },
+      { text: 'Đem an hòa vào nơi tranh chấp, đem chân lý vào chốn lỗi lầm.', chime: false, beadType: 'AVE' },
+      { text: 'Đem tin kính vào nơi nghi nan, chiếu trông cậy vào nơi thất vọng.', chime: true, beadType: 'AVE' },
+      { text: 'Để con dọi ánh sáng vào nơi tối tăm, đem niềm vui đến chốn u sầu.', chime: false, beadType: 'AVE' },
+      { text: 'Lạy Chúa, xin hãy dạy con: Tìm an ủi người hơn được người ủi an, tìm hiểu biết người hơn được người hiểu biết, tìm yêu mến người hơn được người mến yêu.', chime: true, beadType: 'PATER' },
+      { text: 'Vì chính khi hiến thân là khi được nhận lãnh, chính lúc quên mình là lúc gặp lại bản thân.', chime: false, beadType: 'AVE' },
+      { text: 'Bởi chính khi thứ tha là khi được tha thứ, chính lúc chết đi là khi vui sống muôn đời. Amen.', chime: true, beadType: 'GLORIA' }
+    ])
+  }
+];
+
 export class DatabaseManager {
   constructor() {
     this.pool = null;
     this.usingMemory = false;
 
-    // In-memory fallback stores
+    // In-memory fallback stores (Chùa Online)
     this.memUsers = new Map(); // id -> user
     this.memUsersByRecovery = new Map(); // recovery_code -> id
     this.memNextUserId = 1;
@@ -303,6 +493,16 @@ export class DatabaseManager {
     this.memProvinces = new Map();
     this.memFortunes = [...DEFAULT_FORTUNES];
     this.memSutras = [...DEFAULT_SUTRAS];
+
+    // In-memory fallback stores (Nhà Thờ Công Giáo Online)
+    this.memChurchUsers = new Map(); // id -> user
+    this.memChurchUsersByRecovery = new Map(); // recovery_code -> id
+    this.memNextChurchUserId = 1;
+    this.memIntentions = [];
+    this.memNextIntentionId = 1;
+    this.memDioceses = new Map();
+    this.memScriptures = [...DEFAULT_SCRIPTURES];
+    this.memPrayers = [...DEFAULT_PRAYERS];
 
     this._initMemoryDefaults();
   }
@@ -313,6 +513,14 @@ export class DatabaseManager {
         province_code: code,
         province_name: name,
         total_merit: 0
+      });
+    }
+    for (const [code, name, province] of DEFAULT_DIOCESES) {
+      this.memDioceses.set(code, {
+        diocese_code: code,
+        diocese_name: name,
+        ecclesiastical_province: province,
+        total_grace: 0
       });
     }
   }
@@ -464,10 +672,101 @@ export class DatabaseManager {
         [s.id, s.title, s.category, s.duration_sec, s.merit_reward, s.verses_json]
       );
     }
+
+    // ------------------------------------------------------------------
+    // CATHOLIC TABLES (Nhà Thờ Công Giáo Online 3D)
+    // ------------------------------------------------------------------
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS nhatho_users (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        recovery_code VARCHAR(64) UNIQUE NOT NULL,
+        christian_name VARCHAR(50) NOT NULL,
+        password_hash VARCHAR(128) DEFAULT NULL,
+        outfit_color VARCHAR(16) DEFAULT '#f5f0e6',
+        avatar_style VARCHAR(32) DEFAULT 'GIAO_DAN_AO_DAI',
+        diocese_code VARCHAR(10) DEFAULT 'SG',
+        grace_points BIGINT DEFAULT 0,
+        rosaries_completed INT DEFAULT 0,
+        garden_tended INT DEFAULT 0,
+        virtue_tier INT DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_grace_leaderboard (grace_points DESC),
+        INDEX idx_diocese (diocese_code, grace_points DESC)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS prayer_intentions (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        user_id BIGINT NOT NULL,
+        christian_name VARCHAR(50) NOT NULL,
+        intention_type ENUM('CANDLE', 'ROSE') NOT NULL,
+        content VARCHAR(200) NOT NULL,
+        pos_x FLOAT DEFAULT 0,
+        pos_z FLOAT DEFAULT 0,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_active_intentions (intention_type, expires_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS diocese_bouquets (
+        diocese_code VARCHAR(10) PRIMARY KEY,
+        diocese_name VARCHAR(60) NOT NULL,
+        ecclesiastical_province ENUM('BẮC', 'TRUNG', 'NAM') DEFAULT 'NAM',
+        total_grace BIGINT DEFAULT 0
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS daily_scriptures (
+        id INT PRIMARY KEY,
+        theme_title VARCHAR(80) NOT NULL,
+        bible_verse TEXT NOT NULL,
+        reference_book VARCHAR(50) NOT NULL,
+        reflection TEXT NOT NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS prayer_catalog (
+        id VARCHAR(40) PRIMARY KEY,
+        title VARCHAR(100) NOT NULL,
+        category VARCHAR(50) NOT NULL,
+        duration_sec INT NOT NULL,
+        grace_reward INT NOT NULL,
+        verses_json JSON NOT NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // Seed 27 dioceses
+    const dioceseValues = DEFAULT_DIOCESES.map(([code, name, prov]) => [code, name, prov, 0]);
+    await conn.query(
+      `INSERT IGNORE INTO diocese_bouquets (diocese_code, diocese_name, ecclesiastical_province, total_grace) VALUES ?`,
+      [dioceseValues]
+    );
+
+    // Seed daily scriptures
+    for (const sc of DEFAULT_SCRIPTURES) {
+      await conn.query(
+        `INSERT IGNORE INTO daily_scriptures (id, theme_title, bible_verse, reference_book, reflection) VALUES (?, ?, ?, ?, ?)`,
+        [sc.id, sc.theme_title, sc.bible_verse, sc.reference_book, sc.reflection]
+      );
+    }
+
+    // Seed prayer catalog
+    for (const pr of DEFAULT_PRAYERS) {
+      await conn.query(
+        `INSERT IGNORE INTO prayer_catalog (id, title, category, duration_sec, grace_reward, verses_json) VALUES (?, ?, ?, ?, ?, ?)`,
+        [pr.id, pr.title, pr.category, pr.duration_sec, pr.grace_reward, pr.verses_json]
+      );
+    }
   }
 
   /**
-   * Pool-compatible getConnection() for MeritBatcher transaction batching
+   * Pool-compatible getConnection() for MeritBatcher & GraceBatcher transaction batching
    */
   async getConnection() {
     if (!this.usingMemory && this.pool) {
@@ -493,9 +792,8 @@ export class DatabaseManager {
   }
 
   async _handleMemoryQuery(sql, params = []) {
-    const normalized = sql.trim().toUpperCase();
+    const normalized = sql.trim().replace(/\s+/g, ' ').toUpperCase();
     if (normalized.startsWith('UPDATE USERS SET MERIT_POINTS')) {
-      // Handle MeritBatcher UPDATE users SET merit_points = merit_points + ? ... WHERE id = ?
       const delta = Number(params[0] || 0);
       const userId = Number(params[params.length - 1]);
       const u = this.memUsers.get(userId);
@@ -515,6 +813,27 @@ export class DatabaseManager {
       const p = this.memProvinces.get(code);
       if (p) p.total_merit += delta;
       return [{ affectedRows: p ? 1 : 0 }];
+    }
+    if (normalized.startsWith('UPDATE NHATHO_USERS SET GRACE_POINTS')) {
+      const delta = Number(params[0] || 0);
+      const userId = Number(params[params.length - 1]);
+      const u = this.memChurchUsers.get(userId);
+      if (u) {
+        u.grace_points += delta;
+        if (params.length >= 5) {
+          u.rosaries_completed += Number(params[1] || 0);
+          u.garden_tended += Number(params[2] || 0);
+          u.virtue_tier = Math.max(u.virtue_tier, Number(params[3] || 1));
+        }
+      }
+      return [{ affectedRows: u ? 1 : 0 }];
+    }
+    if (normalized.startsWith('UPDATE DIOCESE_BOUQUETS SET TOTAL_GRACE')) {
+      const delta = Number(params[0] || 0);
+      const code = String(params[1] || 'SG');
+      const d = this.memDioceses.get(code);
+      if (d) d.total_grace += delta;
+      return [{ affectedRows: d ? 1 : 0 }];
     }
     return [[]];
   }
@@ -960,6 +1279,487 @@ export class DatabaseManager {
       .sort((a, b) => b.merit_points - a.merit_points)
       .slice(0, 30);
     return { provinces, users };
+  }
+
+  // ====================================================================
+  // NHÀ THỜ CÔNG GIÁO ONLINE 3D - DATABASE METHODS
+  // ====================================================================
+
+  async getOrCreateChurchUser({
+    recoveryCode,
+    christianName = 'Tín Hữu Ánh Sáng',
+    outfitColor = '#f5f0e6',
+    avatarStyle = 'GIAO_DAN_AO_DAI',
+    dioceseCode = 'SG'
+  }) {
+    const cleanCode = String(recoveryCode || `TINHUU-${Date.now()}-${Math.random()}`).slice(0, 64);
+    const cleanName = String(christianName || 'Tín Hữu Ánh Sáng').slice(0, 50);
+    const cleanColor = String(outfitColor || '#f5f0e6').slice(0, 16);
+    const cleanStyle = String(avatarStyle || 'GIAO_DAN_AO_DAI').slice(0, 32);
+    const cleanDiocese = String(dioceseCode || 'SG').slice(0, 10);
+
+    if (!this.usingMemory && this.pool) {
+      try {
+        const [rows] = await this.pool.query(
+          `SELECT * FROM nhatho_users WHERE recovery_code = ? LIMIT 1`,
+          [cleanCode]
+        );
+        if (rows.length > 0) {
+          const u = rows[0];
+          return {
+            id: Number(u.id),
+            recoveryCode: u.recovery_code,
+            christianName: u.christian_name,
+            outfitColor: u.outfit_color,
+            avatarStyle: u.avatar_style || 'GIAO_DAN_AO_DAI',
+            dioceseCode: u.diocese_code,
+            gracePoints: Number(u.grace_points || 0),
+            rosariesCompleted: Number(u.rosaries_completed || 0),
+            gardenTended: Number(u.garden_tended || 0),
+            virtueTier: Number(u.virtue_tier || 1)
+          };
+        }
+
+        const [res] = await this.pool.query(
+          `INSERT INTO nhatho_users (recovery_code, christian_name, outfit_color, avatar_style, diocese_code, grace_points, rosaries_completed, garden_tended, virtue_tier)
+           VALUES (?, ?, ?, ?, ?, 0, 0, 0, 1)`,
+          [cleanCode, cleanName, cleanColor, cleanStyle, cleanDiocese]
+        );
+        return {
+          id: Number(res.insertId),
+          recoveryCode: cleanCode,
+          christianName: cleanName,
+          outfitColor: cleanColor,
+          avatarStyle: cleanStyle,
+          dioceseCode: cleanDiocese,
+          gracePoints: 0,
+          rosariesCompleted: 0,
+          gardenTended: 0,
+          virtueTier: 1
+        };
+      } catch (err) {
+        console.warn('[DB] getOrCreateChurchUser MySQL error, falling back to memory:', err.message);
+        this.usingMemory = true;
+      }
+    }
+
+    // Memory mode
+    if (this.memChurchUsersByRecovery.has(cleanCode)) {
+      const id = this.memChurchUsersByRecovery.get(cleanCode);
+      const u = this.memChurchUsers.get(id);
+      return {
+        id: u.id,
+        recoveryCode: u.recovery_code,
+        christianName: u.christian_name,
+        outfitColor: u.outfit_color,
+        avatarStyle: u.avatar_style,
+        dioceseCode: u.diocese_code,
+        gracePoints: u.grace_points,
+        rosariesCompleted: u.rosaries_completed,
+        gardenTended: u.garden_tended,
+        virtueTier: u.virtue_tier
+      };
+    }
+
+    const id = this.memNextChurchUserId++;
+    const newUser = {
+      id,
+      recovery_code: cleanCode,
+      christian_name: cleanName,
+      outfit_color: cleanColor,
+      avatar_style: cleanStyle,
+      diocese_code: cleanDiocese,
+      grace_points: 0,
+      rosaries_completed: 0,
+      garden_tended: 0,
+      virtue_tier: 1
+    };
+    this.memChurchUsers.set(id, newUser);
+    this.memChurchUsersByRecovery.set(cleanCode, id);
+    return {
+      id,
+      recoveryCode: cleanCode,
+      christianName: cleanName,
+      outfitColor: cleanColor,
+      avatarStyle: cleanStyle,
+      dioceseCode: cleanDiocese,
+      gracePoints: 0,
+      rosariesCompleted: 0,
+      gardenTended: 0,
+      virtueTier: 1
+    };
+  }
+
+  async updateChurchUserProfile(userId, { christianName, outfitColor, avatarStyle, dioceseCode }) {
+    const cleanName = String(christianName || 'Tín Hữu Ánh Sáng').slice(0, 50);
+    const cleanColor = String(outfitColor || '#f5f0e6').slice(0, 16);
+    const cleanStyle = String(avatarStyle || 'GIAO_DAN_AO_DAI').slice(0, 32);
+    const cleanDiocese = String(dioceseCode || 'SG').slice(0, 10);
+
+    if (!this.usingMemory && this.pool) {
+      try {
+        await this.pool.query(
+          `UPDATE nhatho_users SET christian_name = ?, outfit_color = ?, avatar_style = ?, diocese_code = ? WHERE id = ?`,
+          [cleanName, cleanColor, cleanStyle, cleanDiocese, userId]
+        );
+      } catch (err) {
+        console.warn('[DB] updateChurchUserProfile error:', err.message);
+      }
+    }
+
+    const memU = this.memChurchUsers.get(Number(userId));
+    if (memU) {
+      memU.christian_name = cleanName;
+      memU.outfit_color = cleanColor;
+      memU.avatar_style = cleanStyle;
+      memU.diocese_code = cleanDiocese;
+    }
+  }
+
+  async registerChurchAccount({
+    recoveryCode,
+    christianName,
+    password,
+    outfitColor = '#f5f0e6',
+    avatarStyle = 'GIAO_DAN_AO_DAI',
+    dioceseCode = 'SG'
+  }) {
+    const cleanCode = String(recoveryCode || `TINHUU-${Date.now()}`).trim().slice(0, 64);
+    const cleanName = String(christianName || '').trim().slice(0, 50);
+    const cleanPass = String(password || '').trim();
+    const cleanColor = String(outfitColor || '#f5f0e6').slice(0, 16);
+    const cleanStyle = String(avatarStyle || 'GIAO_DAN_AO_DAI').slice(0, 32);
+    const cleanDiocese = String(dioceseCode || 'SG').slice(0, 10);
+
+    if (!cleanName || cleanName.length < 2) {
+      return { ok: false, error: 'Tên Thánh & Họ Tên cần tối thiểu 2 ký tự.' };
+    }
+    if (!cleanPass || cleanPass.length < 4) {
+      return { ok: false, error: 'Mật khẩu bảo hộ cần tối thiểu 4 ký tự.' };
+    }
+
+    const pwHash = hashPassword(cleanPass);
+
+    if (!this.usingMemory && this.pool) {
+      try {
+        const [existingByName] = await this.pool.query(
+          `SELECT * FROM nhatho_users WHERE LOWER(christian_name) = LOWER(?) AND password_hash IS NOT NULL LIMIT 1`,
+          [cleanName]
+        );
+        if (existingByName.length > 0 && existingByName[0].recovery_code !== cleanCode) {
+          return {
+            ok: false,
+            error: 'Tên Thánh & Họ Tên này đã được tín hữu khác đăng ký mật khẩu bảo hộ!'
+          };
+        }
+
+        const user = await this.getOrCreateChurchUser({
+          recoveryCode: cleanCode,
+          christianName: cleanName,
+          outfitColor: cleanColor,
+          avatarStyle: cleanStyle,
+          dioceseCode: cleanDiocese
+        });
+
+        await this.pool.query(
+          `UPDATE nhatho_users SET christian_name = ?, password_hash = ?, outfit_color = ?, avatar_style = ?, diocese_code = ? WHERE id = ?`,
+          [cleanName, pwHash, cleanColor, cleanStyle, cleanDiocese, user.id]
+        );
+
+        return {
+          ok: true,
+          user: {
+            ...user,
+            christianName: cleanName,
+            outfitColor: cleanColor,
+            avatarStyle: cleanStyle,
+            dioceseCode: cleanDiocese,
+            isRegistered: true
+          }
+        };
+      } catch (err) {
+        console.warn('[DB] registerChurchAccount MySQL error, falling back to memory:', err.message);
+        this.usingMemory = true;
+      }
+    }
+
+    // Memory mode check
+    for (const u of this.memChurchUsers.values()) {
+      if (
+        u.password_hash &&
+        u.christian_name.toLowerCase() === cleanName.toLowerCase() &&
+        u.recovery_code !== cleanCode
+      ) {
+        return {
+          ok: false,
+          error: 'Tên Thánh & Họ Tên này đã được tín hữu khác đăng ký mật khẩu bảo hộ!'
+        };
+      }
+    }
+
+    const user = await this.getOrCreateChurchUser({
+      recoveryCode: cleanCode,
+      christianName: cleanName,
+      outfitColor: cleanColor,
+      avatarStyle: cleanStyle,
+      dioceseCode: cleanDiocese
+    });
+    const memU = this.memChurchUsers.get(Number(user.id));
+    if (memU) {
+      memU.christian_name = cleanName;
+      memU.password_hash = pwHash;
+      memU.outfit_color = cleanColor;
+      memU.avatar_style = cleanStyle;
+      memU.diocese_code = cleanDiocese;
+    }
+
+    return {
+      ok: true,
+      user: {
+        ...user,
+        christianName: cleanName,
+        outfitColor: cleanColor,
+        avatarStyle: cleanStyle,
+        dioceseCode: cleanDiocese,
+        isRegistered: true
+      }
+    };
+  }
+
+  async loginChurchAccount({ identifier, password = '' }) {
+    const cleanId = String(identifier || '').trim();
+    const cleanPass = String(password || '').trim();
+    if (!cleanId) {
+      return { ok: false, error: 'Vui lòng nhập Tên Thánh hoặc Mã Khôi Phục!' };
+    }
+    const pwHash = cleanPass ? hashPassword(cleanPass) : null;
+
+    if (!this.usingMemory && this.pool) {
+      try {
+        const [byCode] = await this.pool.query(
+          `SELECT * FROM nhatho_users WHERE recovery_code = ? LIMIT 1`,
+          [cleanId]
+        );
+        if (byCode.length > 0) {
+          const u = byCode[0];
+          if (u.password_hash && pwHash && u.password_hash !== pwHash) {
+            return { ok: false, error: 'Mật khẩu không chính xác!' };
+          }
+          return {
+            ok: true,
+            user: {
+              id: Number(u.id),
+              recoveryCode: u.recovery_code,
+              christianName: u.christian_name,
+              outfitColor: u.outfit_color,
+              avatarStyle: u.avatar_style || 'GIAO_DAN_AO_DAI',
+              dioceseCode: u.diocese_code,
+              gracePoints: Number(u.grace_points || 0),
+              rosariesCompleted: Number(u.rosaries_completed || 0),
+              gardenTended: Number(u.garden_tended || 0),
+              virtueTier: Number(u.virtue_tier || 1),
+              isRegistered: Boolean(u.password_hash)
+            }
+          };
+        }
+
+        const [byName] = await this.pool.query(
+          `SELECT * FROM nhatho_users WHERE LOWER(christian_name) = LOWER(?) ORDER BY grace_points DESC LIMIT 5`,
+          [cleanId]
+        );
+        if (byName.length === 0) {
+          return { ok: false, error: 'Không tìm thấy tài khoản với Tên Thánh hoặc Mã Khôi Phục này!' };
+        }
+        const matched = byName.find((u) => !u.password_hash || (pwHash && u.password_hash === pwHash));
+        if (!matched) {
+          return { ok: false, error: 'Mật khẩu không chính xác!' };
+        }
+        return {
+          ok: true,
+          user: {
+            id: Number(matched.id),
+            recoveryCode: matched.recovery_code,
+            christianName: matched.christian_name,
+            outfitColor: matched.outfit_color,
+            avatarStyle: matched.avatar_style || 'GIAO_DAN_AO_DAI',
+            dioceseCode: matched.diocese_code,
+            gracePoints: Number(matched.grace_points || 0),
+            rosariesCompleted: Number(matched.rosaries_completed || 0),
+            gardenTended: Number(matched.garden_tended || 0),
+            virtueTier: Number(matched.virtue_tier || 1),
+            isRegistered: Boolean(matched.password_hash)
+          }
+        };
+      } catch (err) {
+        console.warn('[DB] loginChurchAccount MySQL error, falling back to memory:', err.message);
+        this.usingMemory = true;
+      }
+    }
+
+    // Memory mode
+    if (this.memChurchUsersByRecovery.has(cleanId)) {
+      const id = this.memChurchUsersByRecovery.get(cleanId);
+      const u = this.memChurchUsers.get(id);
+      if (u.password_hash && pwHash && u.password_hash !== pwHash) {
+        return { ok: false, error: 'Mật khẩu không chính xác!' };
+      }
+      return {
+        ok: true,
+        user: {
+          id: u.id,
+          recoveryCode: u.recovery_code,
+          christianName: u.christian_name,
+          outfitColor: u.outfit_color,
+          avatarStyle: u.avatar_style || 'GIAO_DAN_AO_DAI',
+          dioceseCode: u.diocese_code,
+          gracePoints: u.grace_points,
+          rosariesCompleted: u.rosaries_completed,
+          gardenTended: u.garden_tended,
+          virtueTier: u.virtue_tier,
+          isRegistered: Boolean(u.password_hash)
+        }
+      };
+    }
+
+    const candidates = Array.from(this.memChurchUsers.values()).filter(
+      (u) => u.christian_name.toLowerCase() === cleanId.toLowerCase()
+    );
+    if (candidates.length === 0) {
+      return { ok: false, error: 'Không tìm thấy tài khoản với Tên Thánh hoặc Mã Khôi Phục này!' };
+    }
+    const matched = candidates.find((u) => !u.password_hash || (pwHash && u.password_hash === pwHash));
+    if (!matched) {
+      return { ok: false, error: 'Mật khẩu không chính xác!' };
+    }
+    return {
+      ok: true,
+      user: {
+        id: matched.id,
+        recoveryCode: matched.recovery_code,
+        christianName: matched.christian_name,
+        outfitColor: matched.outfit_color,
+        avatarStyle: matched.avatar_style || 'GIAO_DAN_AO_DAI',
+        dioceseCode: matched.diocese_code,
+        gracePoints: matched.grace_points,
+        rosariesCompleted: matched.rosaries_completed,
+        gardenTended: matched.garden_tended,
+        virtueTier: matched.virtue_tier,
+        isRegistered: Boolean(matched.password_hash)
+      }
+    };
+  }
+
+  async createIntention({
+    userId,
+    christianName,
+    intentionType = 'CANDLE',
+    content,
+    posX = 0,
+    posZ = 24
+  }) {
+    const type = intentionType === 'ROSE' ? 'ROSE' : 'CANDLE';
+    const cleanContent = String(content || '').trim().slice(0, 200);
+    const expiresAt = new Date(Date.now() + 24 * 3600 * 1000);
+
+    if (!this.usingMemory && this.pool) {
+      try {
+        const [res] = await this.pool.query(
+          `INSERT INTO prayer_intentions (user_id, christian_name, intention_type, content, pos_x, pos_z, expires_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [userId || 0, christianName || 'Tín hữu', type, cleanContent, posX, posZ, expiresAt]
+        );
+        return {
+          id: Number(res.insertId),
+          user_id: userId,
+          christian_name: christianName,
+          intention_type: type,
+          content: cleanContent,
+          pos_x: posX,
+          pos_z: posZ,
+          expires_at: expiresAt
+        };
+      } catch (err) {
+        console.warn('[DB] createIntention error:', err.message);
+      }
+    }
+
+    const intention = {
+      id: this.memNextIntentionId++,
+      user_id: userId || 0,
+      christian_name: christianName || 'Tín hữu',
+      intention_type: type,
+      content: cleanContent,
+      pos_x: posX,
+      pos_z: posZ,
+      expires_at: expiresAt,
+      created_at: new Date()
+    };
+    this.memIntentions.unshift(intention);
+    if (this.memIntentions.length > 100) this.memIntentions.pop();
+    return intention;
+  }
+
+  async getActiveIntentions(limit = 30) {
+    if (!this.usingMemory && this.pool) {
+      try {
+        const [rows] = await this.pool.query(
+          `SELECT id, user_id, christian_name, intention_type, content, pos_x, pos_z, created_at
+           FROM prayer_intentions
+           WHERE expires_at > NOW()
+           ORDER BY id DESC
+           LIMIT ?`,
+          [limit]
+        );
+        return rows;
+      } catch (err) {
+        console.warn('[DB] getActiveIntentions error:', err.message);
+      }
+    }
+    return this.memIntentions.slice(0, limit);
+  }
+
+  async getRandomScripture() {
+    if (!this.usingMemory && this.pool) {
+      try {
+        const [rows] = await this.pool.query(
+          `SELECT id, theme_title, bible_verse, reference_book, reflection FROM daily_scriptures ORDER BY RAND() LIMIT 1`
+        );
+        if (rows.length > 0) return rows[0];
+      } catch (err) {
+        console.warn('[DB] getRandomScripture error:', err.message);
+      }
+    }
+    return this.memScriptures[Math.floor(Math.random() * this.memScriptures.length)];
+  }
+
+  async getChurchLeaderboards() {
+    if (!this.usingMemory && this.pool) {
+      try {
+        const [dioceses] = await this.pool.query(
+          `SELECT diocese_code, diocese_name, ecclesiastical_province, total_grace
+           FROM diocese_bouquets
+           ORDER BY total_grace DESC, diocese_name ASC
+           LIMIT 27`
+        );
+        const [users] = await this.pool.query(
+          `SELECT id, christian_name, diocese_code, grace_points, rosaries_completed, virtue_tier
+           FROM nhatho_users
+           ORDER BY grace_points DESC
+           LIMIT 30`
+        );
+        return { dioceses, users };
+      } catch (err) {
+        console.warn('[DB] getChurchLeaderboards error:', err.message);
+      }
+    }
+
+    const dioceses = Array.from(this.memDioceses.values()).sort(
+      (a, b) => b.total_grace - a.total_grace
+    );
+    const users = Array.from(this.memChurchUsers.values())
+      .sort((a, b) => b.grace_points - a.grace_points)
+      .slice(0, 30);
+    return { dioceses, users };
   }
 
   async close() {
