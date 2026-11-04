@@ -273,10 +273,10 @@ export class TempleScene {
       this.orbitPitch = 0.24;
       this.orbitAngle = 0.16;
     } else if (zoneName === 'DAI_DIA_TANG') {
-      this.desiredCameraTarget.set(-23.0, 2.6, 4.8);
-      this.orbitDistance = 10.5;
-      this.orbitPitch = 0.26;
-      this.orbitAngle = 0.28;
+      this.desiredCameraTarget.set(-23.0, 2.35, 4.8);
+      this.orbitDistance = 6.2;
+      this.orbitPitch = 0.18;
+      this.orbitAngle = 0.0;
     } else if (zoneName === 'BAO_THAP') {
       this.desiredCameraTarget.set(20.5, 4.5, 6.0);
       this.orbitDistance = 16.5;

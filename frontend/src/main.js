@@ -530,6 +530,11 @@ class ChuaOnlineApp {
           this.templeScene.focusZone('DAI_DI_LAC');
           this._syncProstrateButtonUI('DI_LAC');
           this.showToast('😄 Đã đến Đài Phật Di Lặc — Nhấn phím [L] hoặc click vào Tượng/Bồ Đoàn để cầu hoan hỷ phúc lộc.');
+        } else if (zone === 'DAI_DIA_TANG') {
+          this._handleMoveToGroundPoint(-23.0, 8.4, false);
+          this.templeScene.focusZone('DAI_DIA_TANG');
+          this._syncProstrateButtonUI('DIA_TANG');
+          this.showToast('🔱 Đã đến Đài Địa Tạng Vương Bồ Tát — Nhấn phím [L] hoặc click vào Tượng/Bồ Đoàn để đảnh lễ cầu siêu độ & bình an.');
         } else if (zone === 'BAO_THAP') {
           this._handleMoveToGroundPoint(20.5, 10.4, false);
           this.templeScene.focusZone('BAO_THAP');
