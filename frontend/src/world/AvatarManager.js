@@ -3,11 +3,22 @@ import * as THREE from 'three';
 import { getRealmInfo } from '../data/sutras.js';
 import { CUSHION_COORDS } from './Environment.js';
 
-// Danh sách Đạo Hữu Chibi Đồng Tu ngồi thiền tịnh tâm trong Chánh Điện (như ảnh mẫu)
+// Danh sách 16 Đạo Hữu Chibi Đồng Tu ngồi thiền tịnh tâm trong Chánh Điện 35 chỗ ngồi (5 hàng x 7 cột)
 const AMBIENT_CHIBI_COMPANIONS = [
+  // Hàng 1 (z = -4.6, indices 0..6 — index 3 ở chính giữa dành cho người chơi)
   {
-    socketId: 'npc-chibi-1',
-    cushionIndex: 1,
+    socketId: 'npc-chibi-0',
+    cushionIndex: 0,
+    dharmaName: 'Diệu Tịnh Liên',
+    provinceCode: 'HN',
+    robeColor: '#6f95ab',
+    avatarStyle: 'CHU_TANG_CA_SA',
+    meritPoints: 320,
+    realmLevel: 4
+  },
+  {
+    socketId: 'npc-chibi-2',
+    cushionIndex: 2,
     dharmaName: 'Văn Nhân Hiệp',
     provinceCode: 'HN',
     robeColor: '#769bb0',
@@ -16,8 +27,8 @@ const AMBIENT_CHIBI_COMPANIONS = [
     realmLevel: 7
   },
   {
-    socketId: 'npc-chibi-3',
-    cushionIndex: 3,
+    socketId: 'npc-chibi-4',
+    cushionIndex: 4,
     dharmaName: 'Hoa Yên Vũ Đoan',
     provinceCode: 'DN',
     robeColor: '#6f95ab',
@@ -26,8 +37,19 @@ const AMBIENT_CHIBI_COMPANIONS = [
     realmLevel: 6
   },
   {
-    socketId: 'npc-chibi-5',
-    cushionIndex: 5,
+    socketId: 'npc-chibi-6',
+    cushionIndex: 6,
+    dharmaName: 'Tâm An Lạc',
+    provinceCode: 'SG',
+    robeColor: '#769bb0',
+    avatarStyle: 'CU_SI_AO_LAM',
+    meritPoints: 410,
+    realmLevel: 5
+  },
+  // Hàng 2 (z = -7.0, indices 7..13)
+  {
+    socketId: 'npc-chibi-8',
+    cushionIndex: 8,
     dharmaName: 'Mộng Gia Nam Châu',
     provinceCode: 'SG',
     robeColor: '#6f95ab',
@@ -36,8 +58,8 @@ const AMBIENT_CHIBI_COMPANIONS = [
     realmLevel: 7
   },
   {
-    socketId: 'npc-chibi-6',
-    cushionIndex: 6,
+    socketId: 'npc-chibi-9',
+    cushionIndex: 9,
     dharmaName: 'Khả Khoa Đạo',
     provinceCode: 'CT',
     robeColor: '#d8d5cc',
@@ -46,8 +68,8 @@ const AMBIENT_CHIBI_COMPANIONS = [
     realmLevel: 9
   },
   {
-    socketId: 'npc-chibi-8',
-    cushionIndex: 8,
+    socketId: 'npc-chibi-10',
+    cushionIndex: 10,
     dharmaName: 'Sen Hào Lực',
     provinceCode: 'HUE',
     robeColor: '#dcd9d0',
@@ -56,8 +78,8 @@ const AMBIENT_CHIBI_COMPANIONS = [
     realmLevel: 2
   },
   {
-    socketId: 'npc-chibi-9',
-    cushionIndex: 9,
+    socketId: 'npc-chibi-12',
+    cushionIndex: 12,
     dharmaName: 'Nhẫn Tân Mai',
     provinceCode: 'SG',
     robeColor: '#7ca1b5',
@@ -65,9 +87,10 @@ const AMBIENT_CHIBI_COMPANIONS = [
     meritPoints: 520,
     realmLevel: 6
   },
+  // Hàng 3 (z = -9.4, indices 14..20)
   {
-    socketId: 'npc-chibi-12',
-    cushionIndex: 12,
+    socketId: 'npc-chibi-15',
+    cushionIndex: 15,
     dharmaName: 'Thanh Diên Thường Nghi',
     provinceCode: 'HP',
     robeColor: '#6d93a8',
@@ -76,8 +99,8 @@ const AMBIENT_CHIBI_COMPANIONS = [
     realmLevel: 3
   },
   {
-    socketId: 'npc-chibi-13',
-    cushionIndex: 13,
+    socketId: 'npc-chibi-16',
+    cushionIndex: 16,
     dharmaName: 'Tuyến Trang Liêm',
     provinceCode: 'LD',
     robeColor: '#d8d5cc',
@@ -86,13 +109,65 @@ const AMBIENT_CHIBI_COMPANIONS = [
     realmLevel: 1
   },
   {
-    socketId: 'npc-chibi-15',
-    cushionIndex: 15,
+    socketId: 'npc-chibi-18',
+    cushionIndex: 18,
     dharmaName: 'Chiêu Công Đức',
     provinceCode: 'QN',
     robeColor: '#7298ad',
     avatarStyle: 'CU_SI_AO_LAM',
-    meritPoints: 80,
+    meritPoints: 180,
+    realmLevel: 2
+  },
+  {
+    socketId: 'npc-chibi-20',
+    cushionIndex: 20,
+    dharmaName: 'Thiều Viên Lạc',
+    provinceCode: 'NA',
+    robeColor: '#6f95ab',
+    avatarStyle: 'CHU_TANG_CA_SA',
+    meritPoints: 450,
+    realmLevel: 5
+  },
+  // Hàng 4 (z = -11.8, indices 21..27)
+  {
+    socketId: 'npc-chibi-22',
+    cushionIndex: 22,
+    dharmaName: 'Lộc Xuyên Hòa Hân',
+    provinceCode: 'BD',
+    robeColor: '#769bb0',
+    avatarStyle: 'CHU_TANG_CA_SA',
+    meritPoints: 740,
+    realmLevel: 8
+  },
+  {
+    socketId: 'npc-chibi-24',
+    cushionIndex: 24,
+    dharmaName: 'Mai Thy Nhạc Kha',
+    provinceCode: 'KH',
+    robeColor: '#dcd9d0',
+    avatarStyle: 'CU_SI_AO_LAM',
+    meritPoints: 110,
+    realmLevel: 2
+  },
+  {
+    socketId: 'npc-chibi-26',
+    cushionIndex: 26,
+    dharmaName: 'Liêm Nguyện',
+    provinceCode: 'DNA',
+    robeColor: '#6f95ab',
+    avatarStyle: 'CHU_TANG_CA_SA',
+    meritPoints: 530,
+    realmLevel: 6
+  },
+  // Hàng 5 (z = -14.2, indices 28..34)
+  {
+    socketId: 'npc-chibi-31',
+    cushionIndex: 31,
+    dharmaName: 'Sen Mây Thẳm',
+    provinceCode: 'HUE',
+    robeColor: '#d8d5cc',
+    avatarStyle: 'CHU_TANG_CA_SA',
+    meritPoints: 95,
     realmLevel: 1
   }
 ];
@@ -393,10 +468,10 @@ export class AvatarManager {
     if (cushionIndex !== null && cushionIndex !== undefined && cushionIndex >= 0) {
       return 1.18; // Sitting on meditation cushion inside Chánh Điện
     }
-    if (z < -1.0 && Math.abs(x) < 12.5) {
-      return 1.05; // Inside Chánh Điện platform
+    if (z < -1.0 && Math.abs(x) < 18.2) {
+      return 1.05; // Inside expanded Chánh Điện platform
     }
-    if (z >= -1.0 && z <= 0.3 && Math.abs(x) < 4) {
+    if (z >= -1.0 && z <= 0.6 && Math.abs(x) < 4.5) {
       return 0.55; // On Chánh Điện stairs
     }
     if (z >= 26 && z <= 42 && Math.abs(x) < 2.6) {

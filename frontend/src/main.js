@@ -153,7 +153,7 @@ class ChuaOnlineApp {
     this.avatarManager = new AvatarManager(this.templeScene.scene);
     this.interactables = new Interactables(this.templeScene.scene, this.environment);
 
-    // Spawn local player immediately on center cushion #2 in Chánh Điện (like reference screenshot)
+    // Spawn local player immediately on center front cushion #3 (0, -4.6) in the expanded 35-seat Chánh Điện
     this.localSocketId = 'local-self';
     this.avatarManager.setLocalSocketId(this.localSocketId);
     this.avatarManager.upsertPlayer({
@@ -165,10 +165,10 @@ class ChuaOnlineApp {
       meritPoints: this.profile.meritPoints,
       realmLevel: this.profile.realmLevel,
       x: 0,
-      z: -5.2,
+      z: -4.6,
       rotY: Math.PI,
       state: 'SIT',
-      cushionIndex: 2
+      cushionIndex: 3
     });
 
     // Spawn initial offline leaves so courtyard always has fallen leaves ready
@@ -454,6 +454,7 @@ class ChuaOnlineApp {
       } else if (hit.type === 'CUSHION') {
         this._handleSitOnCushion(hit.data);
       } else if (hit.type === 'INCENSE_BURNER') {
+        this.templeScene.focusZone('LU_HUONG');
         this._openWishModal('INCENSE');
       } else if (hit.type === 'LOTUS_POND') {
         this._openWishModal('LANTERN');
@@ -516,8 +517,8 @@ class ChuaOnlineApp {
         const zone = btn.getAttribute('data-zone');
 
         if (zone === 'CHANH_DIEN') {
-          this.avatarManager.setLocalTargetPosition(0, -5.2, 'SIT', 2);
-          this.socketClient.sitCushion(2, 0, -5.2);
+          this.avatarManager.setLocalTargetPosition(0, -4.6, 'SIT', 3);
+          this.socketClient.sitCushion(3, 0, -4.6);
           this.templeScene.focusZone('CHANH_DIEN');
         } else if (zone === 'DAI_QUAN_AM') {
           this._handleMoveToGroundPoint(7.8, 18.2, false);
@@ -782,6 +783,7 @@ class ChuaOnlineApp {
 
     document.getElementById('dock-offer-incense')?.addEventListener('click', () => {
       autoDismissBanner();
+      this.templeScene.focusZone('LU_HUONG');
       this._openWishModal('INCENSE');
     });
 
@@ -1012,8 +1014,9 @@ class ChuaOnlineApp {
         });
         this.showToast(`🪷 Đèn Hoa Đăng của "${this.profile.dharmaName}" đã được thả trôi lung linh trên Hồ Sen!`);
       } else {
-        this.templeScene.focusZone('CHANH_DIEN');
-        this.showToast(`🪔 Đã dâng nén tâm hương cầu nguyện lên Lư Hương Đại Hùng Bảo Điện!`);
+        this._handleMoveToGroundPoint(0, 4.4, false);
+        this.templeScene.focusZone('LU_HUONG');
+        this.showToast(`🪔 Đã dâng nén tâm hương cầu nguyện lên Lư Hương Đồng Chạm Rồng ngoài thềm Chánh Điện!`);
       }
     });
 
@@ -1505,11 +1508,11 @@ class ChuaOnlineApp {
   _handleKnockWoodenFish() {
     // Quy tắc: Ngồi trong Chánh Điện gõ Mõ! Nếu đang ở ngoài sân chùa thì tự động vào ngồi Bồ Đoàn Chánh Điện để gõ Mõ
     if (!this._isPlayerInsideMainHall()) {
-      const coord = CUSHION_COORDS[2];
+      const coord = CUSHION_COORDS[3];
       this.templeScene.focusZone('CHANH_DIEN');
-      this.avatarManager.setLocalTargetPosition(coord.x, coord.z, 'SIT', 2);
+      this.avatarManager.setLocalTargetPosition(coord.x, coord.z, 'SIT', 3);
       this.templeScene.setFollowTarget(coord.x, coord.y, coord.z);
-      this.socketClient.sitCushion(2, coord.x, coord.z);
+      this.socketClient.sitCushion(3, coord.x, coord.z);
       this.showToast('🪵 Đã vào ngồi Bồ Đoàn trong Chánh Điện để Gõ Mõ tụng kinh!');
     }
     this._syncPercussionLocationUI(true);
@@ -1537,8 +1540,8 @@ class ChuaOnlineApp {
     // Move player to front center cushion in Chánh Điện facing Golden Buddha
     const local = this.avatarManager.getLocalAvatar();
     const cIndex =
-      local?.cushionIndex !== null && local?.cushionIndex !== undefined ? local.cushionIndex : 2;
-    const coord = CUSHION_COORDS[cIndex] || CUSHION_COORDS[2];
+      local?.cushionIndex !== null && local?.cushionIndex !== undefined ? local.cushionIndex : 3;
+    const coord = CUSHION_COORDS[cIndex] || CUSHION_COORDS[3];
 
     this.templeScene.focusZone('CHANH_DIEN');
     this.avatarManager.setLocalTargetPosition(coord.x, coord.z, 'PROSTRATE', cIndex);

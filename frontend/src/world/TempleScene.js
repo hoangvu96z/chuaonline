@@ -16,12 +16,12 @@ export class TempleScene {
     this.camera.position.set(0, 12, 18);
 
     // Camera spherical orbit state around player/target
-    // Góc nhìn mặc định bên trong Chánh Điện phía sau hàng Bồ Đoàn Chibi hướng lên Phật Đài (như ảnh mẫu)
-    this.cameraTarget = new THREE.Vector3(0, 2.25, -6.5);
-    this.desiredCameraTarget = new THREE.Vector3(0, 2.25, -6.5);
+    // Góc nhìn mặc định bên trong Chánh Điện 35 chỗ ngồi phía sau hàng Bồ Đoàn Chibi hướng lên Phật Đài
+    this.cameraTarget = new THREE.Vector3(0, 2.45, -8.5);
+    this.desiredCameraTarget = new THREE.Vector3(0, 2.45, -8.5);
     this.orbitAngle = 0; // Horizontal angle (radians)
-    this.orbitPitch = 0.35; // Góc nhìn từ trên cao nhìn rõ các nhân vật Chibi ngồi Bồ Đoàn & Tượng Phật
-    this.orbitDistance = 7.4;
+    this.orbitPitch = 0.35; // Góc nhìn từ trên cao nhìn rõ 35 Bồ Đoàn Chibi (5 hàng x 7 cột) & Tượng Phật
+    this.orbitDistance = 8.2;
 
     // Renderer setup
     this.renderer = new THREE.WebGLRenderer({
@@ -248,9 +248,14 @@ export class TempleScene {
 
   focusZone(zoneName) {
     if (zoneName === 'CHANH_DIEN') {
-      this.desiredCameraTarget.set(0, 2.25, -6.5);
-      this.orbitDistance = 7.4;
+      this.desiredCameraTarget.set(0, 2.45, -8.5);
+      this.orbitDistance = 8.2;
       this.orbitPitch = 0.35;
+      this.orbitAngle = 0;
+    } else if (zoneName === 'LU_HUONG') {
+      this.desiredCameraTarget.set(0, 1.55, 2.55);
+      this.orbitDistance = 4.6;
+      this.orbitPitch = 0.22;
       this.orbitAngle = 0;
     } else if (zoneName === 'SAN_CHUA') {
       this.desiredCameraTarget.set(0, 2.0, 11.5);
