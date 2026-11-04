@@ -201,6 +201,10 @@ export class SacredMusicPlayer {
     return this.isPlaying;
   }
 
+  togglePlay() {
+    return this.togglePlayPause();
+  }
+
   pause() {
     if (this.noteTimer) {
       clearInterval(this.noteTimer);

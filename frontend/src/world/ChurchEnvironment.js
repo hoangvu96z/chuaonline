@@ -1137,11 +1137,11 @@ export class ChurchEnvironment {
       metalness: 0.06
     });
 
-    // 1. Center High Sanctuary Retable at (0, 6.2, -25.2):
+    // 1. Center High Sanctuary Retable at (0, 6.65, -25.2):
     // Upper Masterpiece: Diego Velázquez's Christ Crucified (/nhatho/art/crucifixion_jesus.jpg)
     const crucifixionRetable = this._createGoldGothicRetableFrame({
-      width: 3.4,
-      height: 4.5,
+      width: 3.1,
+      height: 4.1,
       artPath: '/nhatho/art/crucifixion_jesus.jpg',
       title: 'CHÚA GIÊSU CHỊU NẠN TRÊN THÁNH GIÁ',
       subtitle: 'INRI — Tình Yêu Cứu Độ Trần Gian',
@@ -1155,12 +1155,12 @@ export class ChurchEnvironment {
         label: '✝️ Thờ Lạy Chúa Giêsu Chịu Nạn Trên Thánh Giá'
       }
     });
-    crucifixionRetable.position.set(0, 7.6, -25.2);
+    crucifixionRetable.position.set(0, 6.65, -25.2);
     this.group.add(crucifixionRetable);
 
     // Radiant Golden Filigree Halo behind the High Sanctuary Retable (this.sacredHalo)
     const haloGroup = new THREE.Group();
-    haloGroup.position.set(0, 8.2, -25.45);
+    haloGroup.position.set(0, 7.2, -25.45);
     const outerHaloRing = new THREE.Mesh(
       new THREE.RingGeometry(2.3, 2.85, 36),
       new THREE.MeshBasicMaterial({

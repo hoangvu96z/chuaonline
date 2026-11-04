@@ -295,6 +295,10 @@ export class RosaryGuide {
     }
   }
 
+  advanceManualBead() {
+    this.manualClickBead();
+  }
+
   stop() {
     this.isPraying = false;
     this.isPaused = false;

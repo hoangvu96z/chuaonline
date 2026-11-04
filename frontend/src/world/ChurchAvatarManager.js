@@ -760,8 +760,8 @@ export class ChurchAvatarManager {
     root.add(selfPointerMesh);
 
     const nameplateSprite = new THREE.Sprite();
-    nameplateSprite.position.set(0, 2.02, 0);
-    nameplateSprite.scale.set(2.35, 0.62, 1);
+    nameplateSprite.position.set(0, 1.88, 0);
+    nameplateSprite.scale.set(1.52, 0.38, 1);
     root.add(nameplateSprite);
 
     const christianName = data.christianName || data.dharmaName || 'Giuse Minh Tâm';
@@ -905,13 +905,16 @@ export class ChurchAvatarManager {
     entry.state = newState;
     const isKneeling =
       newState === 'KNEEL_PRAY' ||
+      newState === 'KNEEL' ||
       newState === 'SIT' ||
       newState === 'CHANT' ||
       newState === 'PRAY' ||
+      newState === 'PRAYING' ||
       newState === 'GENUFLECT' ||
       newState === 'PROSTRATE';
 
-    const isTendingGarden = newState === 'TEND_GARDEN' || newState === 'SWEEP';
+    const isTendingGarden =
+      newState === 'TEND_GARDEN' || newState === 'GARDENING' || newState === 'SWEEP';
     const isLightingCandle = newState === 'LIGHT_CANDLE';
 
     entry.standingRobeGroup.visible = !isKneeling;
@@ -1111,7 +1114,12 @@ export class ChurchAvatarManager {
     const dx = clampedX - local.root.position.x;
     const dz = clampedZ - local.root.position.z;
     const isKneeling =
-      state === 'KNEEL_PRAY' || state === 'SIT' || state === 'CHANT' || state === 'PRAY';
+      state === 'KNEEL_PRAY' ||
+      state === 'KNEEL' ||
+      state === 'SIT' ||
+      state === 'CHANT' ||
+      state === 'PRAY' ||
+      state === 'PRAYING';
     if (Math.hypot(dx, dz) > 0.15 && !isKneeling) {
       local.targetRotY = Math.atan2(dx, dz);
     }
@@ -1120,6 +1128,36 @@ export class ChurchAvatarManager {
     local.cushionIndex = pewIndex;
     local.targetPos.set(clampedX, groundY, clampedZ);
     this._applyAvatarState(local, state);
+  }
+
+  moveLocalAvatarTo(x, z, state = 'WALK', pewIndex = null) {
+    this.setLocalTargetPosition(x, z, state, pewIndex);
+  }
+
+  setPlayerState(socketId, state = 'IDLE', pewIndex = null) {
+    const entry = this.avatars.get(socketId);
+    if (!entry) return;
+    if (pewIndex !== undefined && pewIndex !== null) {
+      const pew = this.pewCoords[pewIndex] || this.pewCoords[0];
+      if (pew) {
+        entry.pewIndex = pew.index;
+        entry.cushionIndex = pew.index;
+        const groundY = this._computeGroundHeight(pew.x, pew.z, pew.index);
+        entry.targetPos.set(pew.x, groundY, pew.z);
+      }
+    } else if (pewIndex === null) {
+      entry.pewIndex = null;
+      entry.cushionIndex = null;
+    }
+    this._applyAvatarState(entry, state);
+  }
+
+  triggerBeadPulse(socketId) {
+    this.triggerBeadClickEffect(socketId);
+  }
+
+  triggerGenuflectPulse(socketId, customRotY = null) {
+    this.triggerGenuflectAnimation(socketId, customRotY);
   }
 
   update(dt, elapsed, camera = null) {

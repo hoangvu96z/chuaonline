@@ -26,12 +26,12 @@ export class ChurchScene {
     );
     this.camera.position.set(0, 12, 18);
 
-    // Default camera focus: 'THANH_DUONG' (Nave & Sanctuary Pews)
-    this.cameraTarget = new THREE.Vector3(0, 2.5, -8.5);
-    this.desiredCameraTarget = new THREE.Vector3(0, 2.5, -8.5);
+    // Default camera focus: 'THANH_DUONG' (Nave & Sanctuary Pews looking directly at the High Altar & Sacred Paintings)
+    this.cameraTarget = new THREE.Vector3(0, 3.3, -15.5);
+    this.desiredCameraTarget = new THREE.Vector3(0, 3.3, -15.5);
     this.orbitAngle = 0; // Horizontal angle (radians)
-    this.orbitPitch = 0.34; // Elevated pitch looking across the Nave pews toward the High Altar
-    this.orbitDistance = 9.2;
+    this.orbitPitch = 0.08; // Low eye-level pitch inside the Nave so the Choir Loft does not block the High Altar
+    this.orbitDistance = 12.2;
 
     // Renderer setup
     this.renderer = new THREE.WebGLRenderer({
@@ -51,7 +51,8 @@ export class ChurchScene {
     }
 
     // Lighting & Day/Night cycle state
-    this.timeMode = 'AUTO'; // 'AUTO' | 'DAY' | 'NIGHT'
+    // Default to DAY mode so the 3D Cathedral, stained glass, pews, and sacred artworks are immediately bright and vibrant on load
+    this.timeMode = 'DAY'; // 'AUTO' | 'DAY' | 'NIGHT'
     this.isNight = false;
     this.nightLights = [];
     this.stainedGlassLights = [];
@@ -63,7 +64,7 @@ export class ChurchScene {
 
     this._initLights();
     this._initStarfieldAndMoon();
-    this.applyDayNightCycle();
+    this.applyDayNightCycle('DAY');
 
     // Pointer / Orbit controls & Raycasting
     this.raycaster = new THREE.Raycaster();
@@ -74,6 +75,7 @@ export class ChurchScene {
 
     this.onInteractCallback = null;
     this._bindEvents();
+    this.renderer.render(this.scene, this.camera);
   }
 
   /**
@@ -516,6 +518,10 @@ export class ChurchScene {
     this.desiredCameraTarget.set(x, y + 1.2, z);
   }
 
+  setInteractCallback(fn) {
+    this.onInteractCallback = fn;
+  }
+
   /**
    * Focus Camera on Sacred Cathedral & Parish Zones:
    * - 'THANH_DUONG' (Nave & Sanctuary Pews): target (0, 2.5, -8.5), distance 9.2, pitch 0.34, angle 0
@@ -530,56 +536,56 @@ export class ChurchScene {
     switch (zoneName) {
       case 'THANH_DUONG':
       case 'CHANH_DIEN':
-        this.desiredCameraTarget.set(0, 2.5, -8.5);
-        this.orbitDistance = 9.2;
-        this.orbitPitch = 0.34;
+        this.desiredCameraTarget.set(0, 3.3, -15.5);
+        this.orbitDistance = 12.2;
+        this.orbitPitch = 0.08;
         this.orbitAngle = 0;
         break;
       case 'CUNG_THANH':
-        this.desiredCameraTarget.set(0, 3.2, -18.5);
-        this.orbitDistance = 7.5;
-        this.orbitPitch = 0.24;
+        this.desiredCameraTarget.set(0, 4.2, -21.5);
+        this.orbitDistance = 9.8;
+        this.orbitPitch = 0.06;
         this.orbitAngle = 0;
         break;
       case 'GIA_NEN':
       case 'LU_HUONG':
-        this.desiredCameraTarget.set(-6.2, 1.8, -10.5);
-        this.orbitDistance = 5.8;
-        this.orbitPitch = 0.26;
-        this.orbitAngle = 0.25;
+        this.desiredCameraTarget.set(-6.2, 2.2, -12.5);
+        this.orbitDistance = 6.2;
+        this.orbitPitch = 0.14;
+        this.orbitAngle = 0.22;
         break;
       case 'THAP_CHUONG':
       case 'LAU_CHUONG':
       case 'BAO_THAP':
-        this.desiredCameraTarget.set(12.0, 4.2, 2.5);
-        this.orbitDistance = 12.5;
-        this.orbitPitch = 0.28;
-        this.orbitAngle = -0.35;
+        this.desiredCameraTarget.set(0, 7.5, 2.0);
+        this.orbitDistance = 24.0;
+        this.orbitPitch = 0.22;
+        this.orbitAngle = -0.18;
         break;
       case 'VUON_HOA':
       case 'SAN_NHA_THO':
       case 'SAN_CHUA':
       case 'VUON_BO_DE':
-        this.desiredCameraTarget.set(0, 1.8, 16.5);
-        this.orbitDistance = 16.0;
-        this.orbitPitch = 0.38;
+        this.desiredCameraTarget.set(0, 2.2, 16.5);
+        this.orbitDistance = 17.5;
+        this.orbitPitch = 0.28;
         this.orbitAngle = -0.15;
         break;
       case 'HANG_DA_DUC_ME':
       case 'DAI_QUAN_AM':
       case 'HO_HOA_DANG':
-        this.desiredCameraTarget.set(0, 2.8, 34.0);
+        this.desiredCameraTarget.set(0, 3.4, 33.5);
         this.orbitDistance = 11.5;
-        this.orbitPitch = 0.28;
-        this.orbitAngle = 0;
+        this.orbitPitch = 0.16;
+        this.orbitAngle = Math.PI;
         break;
       case 'DAI_THANH_GIUSE':
       case 'DAI_DI_LAC':
       case 'DAI_DIA_TANG':
-        this.desiredCameraTarget.set(-16.5, 2.6, 15.0);
+        this.desiredCameraTarget.set(-15.5, 2.8, 15.0);
         this.orbitDistance = 8.8;
-        this.orbitPitch = 0.24;
-        this.orbitAngle = 0.25;
+        this.orbitPitch = 0.16;
+        this.orbitAngle = -Math.PI / 2;
         break;
       default:
         break;
@@ -611,7 +617,7 @@ export class ChurchScene {
         this.dragMoved = true;
       }
       this.orbitAngle -= dx * 0.0065;
-      this.orbitPitch = Math.max(0.15, Math.min(1.25, this.orbitPitch + dy * 0.0055));
+      this.orbitPitch = Math.max(0.03, Math.min(1.15, this.orbitPitch + dy * 0.0055));
       this.prevPointer.x = e.clientX;
       this.prevPointer.y = e.clientY;
     });

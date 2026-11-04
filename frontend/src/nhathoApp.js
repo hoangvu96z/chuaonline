@@ -139,10 +139,10 @@ export class NhaThoOnlineApp {
     this.avatarManager = new ChurchAvatarManager(this.churchScene.scene, PEW_COORDS);
     this.interactables = new ChurchInteractables(this.churchScene.scene, this.environment);
 
-    // Spawn local parishioner immediately kneeling on front center pew #1 (x: -2.6, z: -4.2) facing the High Altar
+    // Spawn local parishioner immediately kneeling on front center pew #13 (x: -2.6, z: -10.2) facing the High Altar
     this.localSocketId = 'local-self';
     this.avatarManager.setLocalSocketId(this.localSocketId);
-    const defaultPew = PEW_COORDS[1] || { x: -2.6, z: -4.2, index: 1 };
+    const defaultPew = PEW_COORDS[13] || PEW_COORDS[9] || { x: -2.6, z: -10.2, index: 13 };
     this.avatarManager.upsertPlayer({
       socketId: this.localSocketId,
       christianName: this.profile.christianName,
@@ -161,12 +161,23 @@ export class NhaThoOnlineApp {
     // Spawn initial fallback rose bushes in Parish Rose Garden
     this._spawnInitialFallbackGardenTasks();
 
-    // Transform DOM labels/modals to Catholic Stained-Glass UI & bind events
-    this._applyCatholicDOMTheme();
-    this._injectCatholicRitesDialog();
-    this._initUI();
-    this._initSocket();
+    // Start 3D render loop immediately so the Cathedral 3D scene is rendered on frame 0
     this._startRenderLoop();
+
+    // Transform DOM labels/modals to Catholic Stained-Glass UI & bind events
+    try {
+      this._applyCatholicDOMTheme();
+      this._injectCatholicRitesDialog();
+      this._initUI();
+    } catch (err) {
+      console.error('NhaThoOnlineApp UI init warning:', err);
+    }
+
+    try {
+      this._initSocket();
+    } catch (err) {
+      console.error('NhaThoOnlineApp Socket init warning:', err);
+    }
   }
 
   _getBackendBaseUrl() {
@@ -222,6 +233,8 @@ export class NhaThoOnlineApp {
     }
     const meritLabel = document.querySelector('.merit-label');
     if (meritLabel) meritLabel.textContent = 'HOA THIÊNG';
+    const roomNameEl = document.getElementById('hud-room-name');
+    if (roomNameEl) roomNameEl.textContent = 'Thánh Đường 1';
 
     // 3. Quick Camera Zones (7 Sacred Cathedral Zones + Cross-link)
     const zoneGroup = document.getElementById('zone-shortcuts-group');
@@ -242,14 +255,21 @@ export class NhaThoOnlineApp {
     if (authTopBtn) {
       authTopBtn.textContent = '🕊️';
       authTopBtn.title = 'Hồ Sơ Giáo Dân & Đăng Nhập Tài Khoản';
+      authTopBtn.setAttribute('aria-label', 'Hồ Sơ Giáo Dân & Đăng Nhập Tài Khoản');
     }
     const musicTopBtn = document.getElementById('btn-toggle-music');
     if (musicTopBtn) {
       musicTopBtn.textContent = '🎼';
       musicTopBtn.title = 'Mở Đài Thánh Ca Ca Đoàn, Đàn Đại Quản Cầm (Pipe Organ) & YouTube (Phím P)';
+      musicTopBtn.setAttribute('aria-label', 'Mở Đài Thánh Ca Ca Đoàn & Đàn Pipe Organ');
+    }
+    const audioTopBtn = document.getElementById('btn-toggle-audio');
+    if (audioTopBtn) {
+      audioTopBtn.title = 'Bật / Tắt Âm Thanh Thánh Đường';
+      audioTopBtn.setAttribute('aria-label', 'Bật / Tắt Âm Thanh Thánh Đường');
     }
 
-    // 4. Global Liturgy Banner + Priest Pastoral Call Button
+    // 4. Global Liturgy Banner + Priest Pastoral Call Button (Compact Single-Bar)
     const globalBanner = document.getElementById('global-sutra-banner');
     if (globalBanner) {
       globalBanner.removeAttribute('hidden');
@@ -257,16 +277,16 @@ export class NhaThoOnlineApp {
         <div class="global-banner-left">
           <span class="pulse-halo">✝️</span>
           <div>
-            <strong id="global-liturgy-heading">LỜI KÊU GỌI CỦA CHA CHỦ TẾ &amp; GIỜ KINH HIỆP THÔNG (x2 Hoa Thiêng)</strong>
-            <p id="global-sutra-desc">Cha Chủ Tế Phêrô: "Xin mời cộng đoàn cùng quỳ bên ghế gỗ, dâng những đóa hoa thiêng cầu bình an cho gia đình và Giáo phận!"</p>
+            <strong id="global-liturgy-heading">LỜI KÊU GỌI CỦA CHA &amp; GIỜ KINH HIỆP THÔNG (x2 Hoa Thiêng)</strong>
+            <p id="global-sutra-desc">Cha Chủ Tế Phêrô: "Xin mời cộng đoàn quỳ ghế gỗ, dâng hoa thiêng cầu bình an!"</p>
           </div>
         </div>
         <div class="global-banner-actions">
           <button type="button" class="secondary-zen-btn" id="btn-hear-priest-call" title="Nghe giọng Cha Chủ Tế đọc lời kêu gọi & ban phép lành kèm tiếng Đàn Đại Quản Cầm">
-            🎙️ Nghe Lời Kêu Gọi Của Cha
+            🎙️ Lời Cha
           </button>
           <button type="button" class="gold-cta-btn" id="btn-join-global-chant">
-            🧎 Quỳ Ghế Gỗ &amp; Hiệp Thông
+            🧎 Hiệp Thông
           </button>
           <button type="button" class="banner-dismiss-btn" id="btn-close-global-banner" aria-label="Đóng thông báo" title="Ẩn thông báo">✕</button>
         </div>
@@ -294,7 +314,11 @@ export class NhaThoOnlineApp {
       knockBtn.innerHTML = '📿 Lần Hạt Đọc Câu Này (+3 Hoa Thiêng)';
     }
 
-    // 6. Parish Communion Chat Widget
+    // 6. Parish Communion Chat Widget (Start collapsed by default so 3D Cathedral view is clear)
+    const chatWidget = document.getElementById('zen-chat-widget');
+    chatWidget?.classList.add('collapsed');
+    const chatBodyInit = document.getElementById('zen-chat-body');
+    chatBodyInit?.setAttribute('hidden', '');
     const chatTogglePill = document.querySelector('#btn-toggle-chat span:first-child');
     if (chatTogglePill) chatTogglePill.textContent = '💬 Hiệp Thông Giáo Xứ';
     const chatMessages = document.getElementById('zen-chat-messages');
@@ -1407,19 +1431,25 @@ export class NhaThoOnlineApp {
       progressEl.style.width = `${pct}%`;
     }
 
-    if (textEl && Array.isArray(verseState.words)) {
+    if (textEl) {
+      const words = Array.isArray(verseState.words)
+        ? verseState.words
+        : String(verseState.text || '')
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean);
       const activeIdx = verseState.wordIndex ?? -1;
-      textEl.innerHTML = verseState.words
+      textEl.innerHTML = words
         .map((w, idx) => {
-          if (idx < activeIdx) return `<span class="word-sung">${w}</span>`;
-          if (idx === activeIdx) return `<span class="word-active">${w}</span>`;
-          return `<span>${w}</span>`;
+          if (idx < activeIdx) return `<span class="karaoke-word spoken word-sung">${w}</span>`;
+          if (idx === activeIdx) return `<span class="karaoke-word active word-active">${w}</span>`;
+          return `<span class="karaoke-word">${w}</span>`;
         })
         .join(' ');
     }
 
-    if (verseState.isVerseCompleted) {
-      const grace = verseState.graceEarned || 3;
+    if (verseState.isVerseCompleted || verseState.isVerseDone) {
+      const grace = verseState.graceEarned || verseState.graceReward || 3;
       this.socketClient.prayVerse(verseState.prayerId, verseState.verseIndex, grace);
       this._addLocalOptimisticGrace(grace, 'Đọc Câu Kinh');
     }
@@ -1722,8 +1752,14 @@ export class NhaThoOnlineApp {
 
   _displayScriptureResult(raw) {
     if (!raw) return;
-    const title = raw.title || raw.scripture_ref || raw.rank_title || 'Lời Chúa Hôm Nay';
-    const verseText = raw.verse_text || raw.verseText || raw.poem || '';
+    const title =
+      raw.theme_title ||
+      raw.reference_book ||
+      raw.title ||
+      raw.scripture_ref ||
+      raw.rank_title ||
+      'Lời Chúa Hôm Nay';
+    const verseText = raw.bible_verse || raw.verse_text || raw.verseText || raw.poem || '';
     const reflection = raw.reflection || raw.interpretation || '';
 
     this.lastScripture = { title, verseText, reflection };
@@ -2050,6 +2086,7 @@ export class NhaThoOnlineApp {
   // PARISH COMMUNION CHAT WIDGET & 3D SPEECH BUBBLES
   // ============================================================================
   _bindParishChatWidget() {
+    const widgetEl = document.getElementById('zen-chat-widget');
     const toggleBtn = document.getElementById('btn-toggle-chat');
     const hideBtn = document.getElementById('btn-hide-chat');
     const bodyEl = document.getElementById('zen-chat-body');
@@ -2058,16 +2095,19 @@ export class NhaThoOnlineApp {
 
     toggleBtn?.addEventListener('click', () => {
       if (!bodyEl) return;
-      const hidden = bodyEl.hasAttribute('hidden');
+      const hidden = bodyEl.hasAttribute('hidden') || widgetEl?.classList.contains('collapsed');
       if (hidden) {
         bodyEl.removeAttribute('hidden');
+        widgetEl?.classList.remove('collapsed');
       } else {
         bodyEl.setAttribute('hidden', '');
+        widgetEl?.classList.add('collapsed');
       }
     });
 
     hideBtn?.addEventListener('click', () => {
       bodyEl?.setAttribute('hidden', '');
+      widgetEl?.classList.add('collapsed');
     });
 
     document.querySelectorAll('.chat-quick-btn').forEach((btn) => {
@@ -2090,7 +2130,7 @@ export class NhaThoOnlineApp {
     const { cleaned } = filterCatholicChatText(rawText);
     if (!cleaned) return;
 
-    this.avatarManager.showChatBubble(this.localSocketId, cleaned, this.profile.christianName);
+    this.avatarManager.showChatBubble(this.localSocketId, this.profile.christianName, cleaned);
 
     if (this.socketClient.connected) {
       this.socketClient.sendChat(cleaned, {
@@ -2123,7 +2163,7 @@ export class NhaThoOnlineApp {
     }
 
     if (!msg.skipBubble && msg.socketId) {
-      this.avatarManager.showChatBubble(msg.socketId, msg.text, sender);
+      this.avatarManager.showChatBubble(msg.socketId, sender, msg.text);
     }
   }
 
