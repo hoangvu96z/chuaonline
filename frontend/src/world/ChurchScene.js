@@ -542,10 +542,16 @@ export class ChurchScene {
         this.orbitAngle = 0;
         break;
       case 'CUNG_THANH':
-        this.desiredCameraTarget.set(0, 4.2, -21.5);
+        this.desiredCameraTarget.set(0, 4.0, -21.0);
         this.orbitDistance = 9.8;
-        this.orbitPitch = 0.06;
+        this.orbitPitch = 0.08;
         this.orbitAngle = 0;
+        break;
+      case 'CA_DOAN':
+        this.desiredCameraTarget.set(-10.6, 2.5, -15.6);
+        this.orbitDistance = 5.4;
+        this.orbitPitch = 0.15;
+        this.orbitAngle = 0.52;
         break;
       case 'GIA_NEN':
       case 'LU_HUONG':
@@ -574,18 +580,18 @@ export class ChurchScene {
       case 'HANG_DA_DUC_ME':
       case 'DAI_QUAN_AM':
       case 'HO_HOA_DANG':
-        this.desiredCameraTarget.set(0, 3.4, 33.5);
-        this.orbitDistance = 11.5;
+        this.desiredCameraTarget.set(0, 3.8, 35.5);
+        this.orbitDistance = 13.5;
         this.orbitPitch = 0.16;
         this.orbitAngle = Math.PI;
         break;
       case 'DAI_THANH_GIUSE':
       case 'DAI_DI_LAC':
       case 'DAI_DIA_TANG':
-        this.desiredCameraTarget.set(-15.5, 2.8, 15.0);
-        this.orbitDistance = 8.8;
-        this.orbitPitch = 0.16;
-        this.orbitAngle = -Math.PI / 2;
+        this.desiredCameraTarget.set(-16.8, 2.6, 14.5);
+        this.orbitDistance = 8.2;
+        this.orbitPitch = 0.15;
+        this.orbitAngle = Math.PI / 2;
         break;
       default:
         break;
@@ -601,32 +607,52 @@ export class ChurchScene {
       this.renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
+    this.downPointer = { x: 0, y: 0 };
+
     dom.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0 && e.button !== 2) return;
+      if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 2) return;
       this.isDragging = true;
       this.dragMoved = false;
       this.prevPointer.x = e.clientX;
       this.prevPointer.y = e.clientY;
+      this.downPointer.x = e.clientX;
+      this.downPointer.y = e.clientY;
     });
 
     window.addEventListener('pointermove', (e) => {
       if (!this.isDragging) return;
       const dx = e.clientX - this.prevPointer.x;
       const dy = e.clientY - this.prevPointer.y;
-      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+      const totalDx = e.clientX - this.downPointer.x;
+      const totalDy = e.clientY - this.downPointer.y;
+      const tapThreshold = e.pointerType === 'touch' ? 16 : 6;
+      if (Math.hypot(totalDx, totalDy) > tapThreshold) {
         this.dragMoved = true;
       }
-      this.orbitAngle -= dx * 0.0065;
-      this.orbitPitch = Math.max(0.03, Math.min(1.15, this.orbitPitch + dy * 0.0055));
       this.prevPointer.x = e.clientX;
       this.prevPointer.y = e.clientY;
+
+      if (!this.dragMoved) return;
+
+      this.orbitAngle -= dx * 0.0065;
+      this.orbitPitch = Math.max(0.04, Math.min(1.18, this.orbitPitch + dy * 0.0055));
+    });
+
+    window.addEventListener('pointercancel', () => {
+      this.isDragging = false;
     });
 
     window.addEventListener('pointerup', (e) => {
       if (!this.isDragging) return;
       this.isDragging = false;
 
-      if (!this.dragMoved && e.target === dom && this.onInteractCallback) {
+      const isPrimaryTap = e.pointerType === 'touch' || e.button === 0 || e.button === undefined;
+      if (
+        !this.dragMoved &&
+        isPrimaryTap &&
+        this.onInteractCallback &&
+        (e.target === dom || (this.container && this.container.contains(e.target)))
+      ) {
         const rect = dom.getBoundingClientRect();
         this.pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
         this.pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;

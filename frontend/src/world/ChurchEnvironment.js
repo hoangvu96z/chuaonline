@@ -59,18 +59,26 @@ export class ChurchEnvironment {
     this.organPipeMeshes = [];
     this.organGlowIntensity = 0;
 
+    this.bishopCelebrantGroup = null;
+    this.choirSingers = [];
+    this.choirMusicNotes = [];
+    this.organistGroup = null;
+    this.conductorGroup = null;
+
     this.grottoWaterMesh = null;
     this.waterfallDrops = [];
     this.candleFlameMeshes = [];
     this.whiteDoves = [];
 
-    // Build all 6 sacred zones of Nhà Thờ Công Giáo Online 3D
+    // Build all sacred zones of Nhà Thờ Công Giáo Online 3D
     this._buildGroundAndCourtyard();
     this._buildCathedralNaveAndWindows();
     this._buildWoodenPews();
     this._buildSanctuaryAndHighAltar();
+    this._buildBishopCelebrantAndServers();
     this._buildGrandSanctuaryRetables();
     this._buildChoirLoftAndPipeOrgan();
+    this._buildSanctuaryChoirAndOrganArea();
     this._buildVotiveCandleStands();
     this._buildTwinBellTowers();
     this._buildOutdoorShrinesAndRoseGarden();
@@ -1123,6 +1131,297 @@ export class ChurchEnvironment {
   }
 
   // ===========================================================================
+  // ĐỨC CHA CHỦ TẾ DÂNG THÁNH LỄ & HAI LỄ SINH GIÚP LỄ TẠI BÀN THỜ CUNG THÁNH
+  // ===========================================================================
+  _buildBishopCelebrantAndServers() {
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0xf4d3b8, roughness: 0.42 });
+    const albWhiteMat = new THREE.MeshStandardMaterial({ color: 0xfbfbfa, roughness: 0.35 });
+    const chasubleGoldMat = new THREE.MeshStandardMaterial({
+      color: 0xe6b830,
+      metalness: 0.52,
+      roughness: 0.28,
+      emissive: 0x3d2800,
+      emissiveIntensity: 0.15
+    });
+    const crimsonVelvetMat = new THREE.MeshStandardMaterial({
+      color: 0x8b111e,
+      roughness: 0.45
+    });
+    const goldMetalMat = new THREE.MeshStandardMaterial({
+      color: 0xffd700,
+      metalness: 0.85,
+      roughness: 0.18,
+      emissive: 0x5c4300,
+      emissiveIntensity: 0.25
+    });
+    const bishopPurpleMat = new THREE.MeshStandardMaterial({
+      color: 0x7e22ce,
+      roughness: 0.38
+    });
+
+    const bishopHitData = {
+      type: 'BISHOP_CELEBRANT',
+      label: '✝️ Xin Phép Lành & Nghe Huấn Từ Của Đức Cha Chủ Tế'
+    };
+
+    // 1. Đức Giám Mục Chủ Tế (Đức Cha Giuse) standing on a raised Celebrant Dais behind the High Altar facing the Nave (rotY = 0)
+    const bishopRoot = new THREE.Group();
+    bishopRoot.position.set(0, 2.22, -20.45);
+    bishopRoot.scale.setScalar(1.14);
+
+    const bodyGroup = new THREE.Group();
+    bishopRoot.add(bodyGroup);
+
+    // White Liturgical Alb (Áo Alba Trắng Dài)
+    const albMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.38, 1.42, 18), albWhiteMat);
+    albMesh.position.y = 0.71;
+    albMesh.castShadow = true;
+    albMesh.userData = bishopHitData;
+    this.interactiveMeshes.push(albMesh);
+    bodyGroup.add(albMesh);
+
+    // Ornate Gold & Crimson Chasuble (Áo Lễ Giám Mục Vàng Thêu Đỏ)
+    const chasubleMesh = new THREE.Mesh(new THREE.ConeGeometry(0.42, 1.18, 18), chasubleGoldMat);
+    chasubleMesh.scale.set(1.05, 1.0, 0.78);
+    chasubleMesh.position.y = 0.92;
+    chasubleMesh.castShadow = true;
+    chasubleMesh.userData = bishopHitData;
+    this.interactiveMeshes.push(chasubleMesh);
+    bodyGroup.add(chasubleMesh);
+
+    // Crimson & Gold Orphrey Pillar Cross on front of Chasuble
+    const orphreyV = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.95, 0.04), crimsonVelvetMat);
+    orphreyV.position.set(0, 0.92, 0.26);
+    bodyGroup.add(orphreyV);
+    const orphreyH = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.09, 0.045), crimsonVelvetMat);
+    orphreyH.position.set(0, 1.16, 0.25);
+    bodyGroup.add(orphreyH);
+
+    // White Archiepiscopal/Episcopal Pallium Collar & Golden Pectoral Cross (Thánh Giá Ngực Giám Mục)
+    const palliumRing = new THREE.Mesh(new THREE.TorusGeometry(0.21, 0.032, 10, 20), albWhiteMat);
+    palliumRing.rotation.x = Math.PI / 2 + 0.18;
+    palliumRing.position.set(0, 1.38, 0.04);
+    bodyGroup.add(palliumRing);
+
+    const pecCrossV = new THREE.Mesh(new THREE.BoxGeometry(0.036, 0.16, 0.024), goldMetalMat);
+    pecCrossV.position.set(0, 1.18, 0.29);
+    bodyGroup.add(pecCrossV);
+    const pecCrossH = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.036, 0.024), goldMetalMat);
+    pecCrossH.position.set(0, 1.21, 0.29);
+    bodyGroup.add(pecCrossH);
+
+    // Head, Eyes, Gentle Smile & Bishop's Mitre (Mũ Giám Mục Hai Chóp Thêu Vàng)
+    const headGroup = new THREE.Group();
+    headGroup.position.set(0, 1.56, 0.02);
+    bodyGroup.add(headGroup);
+
+    const headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.165, 18, 18), skinMat);
+    headMesh.castShadow = true;
+    headMesh.userData = bishopHitData;
+    this.interactiveMeshes.push(headMesh);
+    headGroup.add(headMesh);
+
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x1e293b });
+    for (const ex of [-0.055, 0.055]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), eyeMat);
+      eye.position.set(ex, 0.02, 0.15);
+      headGroup.add(eye);
+    }
+
+    // Purple Zucchetto rim & Tall White/Gold Mitre (Mũ Giám Mục)
+    const zucchetto = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.165, 0.168, 0.06, 16),
+      bishopPurpleMat
+    );
+    zucchetto.position.y = 0.11;
+    headGroup.add(zucchetto);
+
+    const mitreBase = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.15, 0.17, 0.14, 16),
+      albWhiteMat
+    );
+    mitreBase.position.y = 0.18;
+    headGroup.add(mitreBase);
+
+    const mitrePeakFront = new THREE.Mesh(new THREE.ConeGeometry(0.165, 0.34, 4), albWhiteMat);
+    mitrePeakFront.rotation.y = Math.PI / 4;
+    mitrePeakFront.scale.set(1.05, 1.0, 0.48);
+    mitrePeakFront.position.set(0, 0.38, 0.03);
+    mitrePeakFront.userData = bishopHitData;
+    this.interactiveMeshes.push(mitrePeakFront);
+    headGroup.add(mitrePeakFront);
+
+    const mitreGoldBandV = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.38, 0.02), goldMetalMat);
+    mitreGoldBandV.position.set(0, 0.32, 0.09);
+    headGroup.add(mitreGoldBandV);
+    const mitreGoldBandH = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.04, 0.02), goldMetalMat);
+    mitreGoldBandH.position.set(0, 0.18, 0.09);
+    headGroup.add(mitreGoldBandH);
+
+    const mitreTopCross = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.09, 0.025), goldMetalMat);
+    mitreTopCross.position.set(0, 0.58, 0.03);
+    headGroup.add(mitreTopCross);
+
+    // Left Arm + Ornate Golden Pastoral Crosier (Gậy Mục Tử Giám Mục)
+    const leftArmPivot = new THREE.Group();
+    leftArmPivot.position.set(-0.34, 1.28, 0.06);
+    bodyGroup.add(leftArmPivot);
+
+    const leftSleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.11, 0.42, 12), chasubleGoldMat);
+    leftSleeve.position.set(-0.06, -0.14, 0.12);
+    leftSleeve.rotation.x = -0.75;
+    leftArmPivot.add(leftSleeve);
+
+    const leftHand = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 10), skinMat);
+    leftHand.position.set(-0.08, -0.26, 0.28);
+    leftArmPivot.add(leftHand);
+
+    // Bishop's Golden Crosier Staff (Gậy Mục Tử Cao 2.15m Đầu Uốn Cong)
+    const crosierStaff = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.022, 2.15, 10), goldMetalMat);
+    crosierStaff.position.set(-0.46, 1.05, 0.24);
+    bodyGroup.add(crosierStaff);
+
+    const crosierCrook = new THREE.Mesh(
+      new THREE.TorusGeometry(0.14, 0.026, 10, 22, Math.PI * 1.45),
+      goldMetalMat
+    );
+    crosierCrook.position.set(-0.46, 2.22, 0.24);
+    crosierCrook.rotation.z = Math.PI * 0.15;
+    bodyGroup.add(crosierCrook);
+
+    // Right Arm (Animated Blessing & Eucharistic Elevation)
+    const rightArmPivot = new THREE.Group();
+    rightArmPivot.position.set(0.34, 1.28, 0.06);
+    bodyGroup.add(rightArmPivot);
+
+    const rightSleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.11, 0.42, 12), chasubleGoldMat);
+    rightSleeve.position.set(0.06, -0.12, 0.14);
+    rightSleeve.rotation.x = -0.85;
+    rightArmPivot.add(rightSleeve);
+
+    const rightHand = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 10), skinMat);
+    rightHand.position.set(0.08, -0.22, 0.32);
+    rightArmPivot.add(rightHand);
+
+    // Radiant Sacred Host & Halo held during Elevation above the Altar (at chest height so Đức Cha's face is unobstructed)
+    const hostElevateGroup = new THREE.Group();
+    hostElevateGroup.position.set(0, 1.08, 0.38);
+    const elevatedHost = new THREE.Mesh(
+      new THREE.CircleGeometry(0.13, 24),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
+    );
+    hostElevateGroup.add(elevatedHost);
+    const hostGlowRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.14, 0.24, 24),
+      new THREE.MeshBasicMaterial({
+        color: 0xffd700,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.72
+      })
+    );
+    hostElevateGroup.add(hostGlowRing);
+    bodyGroup.add(hostElevateGroup);
+
+    // Floating Nameplate above Đức Cha Chủ Tế
+    const nameCanvas = document.createElement('canvas');
+    nameCanvas.width = 460;
+    nameCanvas.height = 84;
+    const nctx = nameCanvas.getContext('2d');
+    nctx.fillStyle = 'rgba(24, 12, 18, 0.88)';
+    nctx.strokeStyle = '#ffd700';
+    nctx.lineWidth = 3;
+    if (nctx.roundRect) {
+      nctx.roundRect(4, 4, 452, 76, 16);
+    } else {
+      nctx.rect(4, 4, 452, 76);
+    }
+    nctx.fill();
+    nctx.stroke();
+    nctx.fillStyle = '#fde047';
+    nctx.font = 'bold 21px sans-serif';
+    nctx.textAlign = 'center';
+    nctx.fillText('✝️ ĐỨC CHA GIUSE — CHỦ TẾ THÁNH LỄ', 230, 34);
+    nctx.fillStyle = '#f8fafc';
+    nctx.font = '16px sans-serif';
+    nctx.fillText('Nhấn vào Đức Cha để nhận Phép Lành Trọng Thể', 230, 62);
+
+    const nameTex = new THREE.CanvasTexture(nameCanvas);
+    nameTex.colorSpace = THREE.SRGBColorSpace;
+    const nameSprite = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: nameTex, transparent: true, depthWrite: false })
+    );
+    nameSprite.position.set(0, 2.58, 0);
+    nameSprite.scale.set(2.85, 0.52, 1);
+    bishopRoot.add(nameSprite);
+
+    // Generous click hitbox for Đức Cha Chủ Tế
+    const bishopHitbox = new THREE.Mesh(
+      new THREE.BoxGeometry(1.4, 2.6, 1.2),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    bishopHitbox.position.y = 1.25;
+    bishopHitbox.userData = bishopHitData;
+    this.interactiveMeshes.push(bishopHitbox);
+    bishopRoot.add(bishopHitbox);
+
+    this.bishopCelebrantGroup = {
+      root: bishopRoot,
+      bodyGroup,
+      headGroup,
+      leftArmPivot,
+      rightArmPivot,
+      hostElevateGroup
+    };
+    this.group.add(bishopRoot);
+
+    // 2. Two Altar Servers (2 Lễ Sinh Giúp Lễ mặc Áo Dòng Đỏ & Áo Trắng Các Phép) flanking the High Altar
+    for (const side of [-1, 1]) {
+      const serverGroup = new THREE.Group();
+      serverGroup.position.set(side * 2.55, 1.65, -19.55);
+      serverGroup.rotation.y = side * -0.35;
+
+      // Red Cassock (Áo Dòng Đỏ)
+      const cassock = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.18, 0.28, 1.18, 14),
+        crimsonVelvetMat
+      );
+      cassock.position.y = 0.59;
+      cassock.castShadow = true;
+      serverGroup.add(cassock);
+
+      // White Surplice (Áo Các Phép Trắng)
+      const surplice = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.21, 0.26, 0.58, 14),
+        albWhiteMat
+      );
+      surplice.position.y = 0.88;
+      serverGroup.add(surplice);
+
+      // Head
+      const sHead = new THREE.Mesh(new THREE.SphereGeometry(0.135, 14, 14), skinMat);
+      sHead.position.y = 1.32;
+      serverGroup.add(sHead);
+
+      // Processional Torch Candle held by each Altar Server
+      const torchPole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.15, 8), goldMetalMat);
+      torchPole.position.set(0, 0.85, 0.24);
+      serverGroup.add(torchPole);
+
+      const torchFlame = new THREE.Mesh(
+        new THREE.SphereGeometry(0.042, 8, 8),
+        new THREE.MeshBasicMaterial({ color: 0xffe066 })
+      );
+      torchFlame.scale.set(0.7, 1.6, 0.7);
+      torchFlame.position.set(0, 1.48, 0.24);
+      serverGroup.add(torchFlame);
+      this.candleFlameMeshes.push(torchFlame);
+
+      this.group.add(serverGroup);
+    }
+  }
+
+  // ===========================================================================
   // GRAND SANCTUARY RETABLES (CRUCIFIXION, SACRED HEART, DIVINE MERCY, MARY, JOSEPH)
   // ===========================================================================
   _buildGrandSanctuaryRetables() {
@@ -1417,50 +1716,291 @@ export class ChurchEnvironment {
   }
 
   /**
-   * Sculpted 3D Statue of Saint Joseph with Golden Lily Staff
+   * Sculpted 3D Statue of Saint Joseph holding the Infant Jesus & Blooming White Lily Staff
    */
   _createSculptedJosephStatue(scale = 1.0) {
     const group = new THREE.Group();
     group.scale.setScalar(scale);
 
-    const tunicMat = new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.45 });
-    const mantleMat = new THREE.MeshStandardMaterial({ color: 0xc28b2c, roughness: 0.4 });
-    const marbleSkin = new THREE.MeshStandardMaterial({ color: 0xf5ebe0, roughness: 0.35 });
-    const goldMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.78, roughness: 0.22 });
+    const tunicMat = new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.42 });
+    const mantleMat = new THREE.MeshStandardMaterial({ color: 0xc88a28, roughness: 0.36, metalness: 0.08 });
+    const marbleSkin = new THREE.MeshStandardMaterial({ color: 0xf4dec8, roughness: 0.34 });
+    const beardMat = new THREE.MeshStandardMaterial({ color: 0x3b2618, roughness: 0.62 });
+    const goldMat = new THREE.MeshStandardMaterial({
+      color: 0xffd700,
+      metalness: 0.84,
+      roughness: 0.18,
+      emissive: 0x5c4300,
+      emissiveIntensity: 0.25
+    });
     const whiteLilyMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const greenStemMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.55 });
+    const childRobeMat = new THREE.MeshStandardMaterial({ color: 0xfff8eb, roughness: 0.3 });
 
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.38, 0.22, 16), marbleSkin);
-    base.position.y = 0.11;
-    group.add(base);
+    // Octagonal Carved Marble Pedestal Base with Gold Molding
+    const baseLower = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.48, 0.16, 8), marbleSkin);
+    baseLower.position.y = 0.08;
+    group.add(baseLower);
 
-    const robe = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.34, 1.26, 16), tunicMat);
-    robe.position.y = 0.76;
+    const baseGoldRim = new THREE.Mesh(new THREE.CylinderGeometry(0.39, 0.41, 0.05, 16), goldMat);
+    baseGoldRim.position.y = 0.18;
+    group.add(baseGoldRim);
+
+    const baseUpper = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.38, 0.16, 16), marbleSkin);
+    baseUpper.position.y = 0.28;
+    group.add(baseUpper);
+
+    // Flowing Brown Tunic with Vertical Sculpted Folds
+    const robe = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.36, 1.32, 18), tunicMat);
+    robe.position.y = 0.94;
     robe.castShadow = true;
     group.add(robe);
 
-    const mantle = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.05, 16), mantleMat);
-    mantle.position.set(0, 0.85, -0.02);
+    // Golden-Ochre Draped Mantle across shoulders & waist
+    const mantle = new THREE.Mesh(new THREE.ConeGeometry(0.39, 1.15, 18), mantleMat);
+    mantle.position.set(0, 1.0, -0.02);
+    mantle.castShadow = true;
     group.add(mantle);
 
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.145, 16, 16), marbleSkin);
-    head.position.set(0, 1.48, 0.02);
+    const sashBelt = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.032, 10, 20), goldMat);
+    sashBelt.rotation.x = Math.PI / 2;
+    sashBelt.position.set(0, 1.06, 0.02);
+    group.add(sashBelt);
+
+    // Sculpted Head, Hair, Full Paternal Beard & Gentle Eyes
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.155, 18, 18), marbleSkin);
+    head.position.set(0, 1.72, 0.03);
+    head.castShadow = true;
     group.add(head);
 
-    const halo = new THREE.Mesh(new THREE.RingGeometry(0.18, 0.25, 24), goldMat);
-    halo.position.set(0, 1.52, -0.06);
-    group.add(halo);
+    const hairCap = new THREE.Mesh(
+      new THREE.SphereGeometry(0.162, 16, 14, 0, Math.PI * 2, 0, Math.PI * 0.58),
+      beardMat
+    );
+    hairCap.position.set(0, 1.74, 0.0);
+    group.add(hairCap);
 
-    // St. Joseph's Blooming White Lily Staff (Cành Hoa Huệ Trắng Thanh Khiết)
-    const staff = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.65, 8), goldMat);
-    staff.position.set(0.24, 0.92, 0.14);
+    const beard = new THREE.Mesh(new THREE.ConeGeometry(0.115, 0.24, 12), beardMat);
+    beard.rotation.x = Math.PI;
+    beard.position.set(0, 1.59, 0.09);
+    group.add(beard);
+
+    // Ornate 3D Golden Halo with Filigree Rays behind St. Joseph's Head
+    const haloGroup = new THREE.Group();
+    haloGroup.position.set(0, 1.76, -0.08);
+    const haloRing = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.018, 10, 28), goldMat);
+    haloGroup.add(haloRing);
+    for (let r = 0; r < 8; r++) {
+      const a = (r / 8) * Math.PI * 2;
+      const ray = new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.09, 4), goldMat);
+      ray.position.set(Math.cos(a) * 0.27, Math.sin(a) * 0.27, 0);
+      ray.rotation.z = a - Math.PI / 2;
+      haloGroup.add(ray);
+    }
+    group.add(haloGroup);
+
+    // Left Arm cradling the Infant Jesus (Chúa Hài Đồng Giêsu 3D trên tay Thánh Giuse)
+    const leftArm = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.09, 0.42, 12), mantleMat);
+    leftArm.position.set(-0.22, 1.32, 0.16);
+    leftArm.rotation.z = -0.55;
+    leftArm.rotation.x = 0.65;
+    group.add(leftArm);
+
+    const childGroup = new THREE.Group();
+    childGroup.position.set(-0.2, 1.42, 0.25);
+
+    const childRobe = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.38, 14), childRobeMat);
+    childRobe.position.y = 0.08;
+    childGroup.add(childRobe);
+
+    const childHead = new THREE.Mesh(new THREE.SphereGeometry(0.085, 14, 14), marbleSkin);
+    childHead.position.set(0, 0.32, 0.02);
+    childGroup.add(childHead);
+
+    const childHalo = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.012, 8, 20), goldMat);
+    childHalo.position.set(0, 0.34, -0.04);
+    childGroup.add(childHalo);
+
+    // Child Jesus holding a small Golden Globe with Cross (Quả Cầu Cứu Độ)
+    const orb = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 10), goldMat);
+    orb.position.set(0.08, 0.18, 0.11);
+    childGroup.add(orb);
+    group.add(childGroup);
+
+    // Right Arm & Hand holding the Tall Blooming White Lily Staff (Cành Hoa Huệ Trắng Khiết Tịnh)
+    const rightArm = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.09, 0.4, 12), mantleMat);
+    rightArm.position.set(0.24, 1.34, 0.12);
+    rightArm.rotation.z = 0.35;
+    rightArm.rotation.x = 0.45;
+    group.add(rightArm);
+
+    const rightHand = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 10), marbleSkin);
+    rightHand.position.set(0.28, 1.24, 0.22);
+    group.add(rightHand);
+
+    const staff = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.02, 1.85, 10), goldMat);
+    staff.position.set(0.29, 1.12, 0.22);
     group.add(staff);
 
-    for (let i = 0; i < 3; i++) {
-      const lily = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.14, 6), whiteLilyMat);
-      lily.position.set(0.24 + (i - 1) * 0.06, 1.76 + (i === 1 ? 0.06 : 0), 0.14);
+    // Green Lily Leaves & 5 Blooming White Lilies with Golden Stamens at the top of the Staff
+    for (let l = 0; l < 4; l++) {
+      const la = (l / 4) * Math.PI * 2;
+      const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.22, 5), greenStemMat);
+      leaf.position.set(0.29 + Math.cos(la) * 0.06, 1.88, 0.22 + Math.sin(la) * 0.06);
+      leaf.rotation.z = Math.cos(la) * 0.45;
+      group.add(leaf);
+    }
+
+    const lilyOffsets = [
+      [0, 0.16, 0],
+      [-0.08, 0.06, 0.04],
+      [0.08, 0.06, 0.04],
+      [-0.05, -0.02, -0.05],
+      [0.05, -0.02, -0.05]
+    ];
+    for (const [lx, ly, lz] of lilyOffsets) {
+      const lily = new THREE.Mesh(new THREE.ConeGeometry(0.068, 0.16, 6), whiteLilyMat);
+      lily.position.set(0.29 + lx, 1.98 + ly, 0.22 + lz);
       lily.rotation.x = Math.PI;
       group.add(lily);
+
+      const stamen = new THREE.Mesh(new THREE.SphereGeometry(0.024, 8, 8), goldMat);
+      stamen.position.set(0.29 + lx, 2.04 + ly, 0.22 + lz);
+      group.add(stamen);
     }
+
+    // Carpenter's Golden Square (Thước Thợ Mộc Thánh Giuse) at the pedestal side
+    const sqV = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.36, 0.02), goldMat);
+    sqV.position.set(0.26, 0.52, 0.26);
+    group.add(sqV);
+    const sqH = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.035, 0.02), goldMat);
+    sqH.position.set(0.16, 0.68, 0.26);
+    group.add(sqH);
+
+    return group;
+  }
+
+  /**
+   * Sculpted 3D Statue of Cha Phanxicô Xaviê Trương Bửu Diệp in Vietnamese Black Cassock & Pectoral Cross
+   */
+  _createSculptedChaDiepStatue(scale = 1.0) {
+    const group = new THREE.Group();
+    group.scale.setScalar(scale);
+
+    const cassockBlackMat = new THREE.MeshStandardMaterial({ color: 0x1c1e24, roughness: 0.48 });
+    const collarWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0xf1d2b6, roughness: 0.38 });
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.82, roughness: 0.2 });
+    const marbleMat = new THREE.MeshStandardMaterial({ color: 0xf5f0e6, roughness: 0.35 });
+
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.42, 0.24, 12), marbleMat);
+    base.position.y = 0.12;
+    group.add(base);
+
+    const cassock = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.35, 1.32, 18), cassockBlackMat);
+    cassock.position.y = 0.88;
+    cassock.castShadow = true;
+    group.add(cassock);
+
+    const romanCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.145, 0.15, 0.06, 16), collarWhiteMat);
+    romanCollar.position.y = 1.52;
+    group.add(romanCollar);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 18, 18), skinMat);
+    head.position.set(0, 1.68, 0.02);
+    group.add(head);
+
+    const halo = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.015, 8, 24), goldMat);
+    halo.position.set(0, 1.72, -0.06);
+    group.add(halo);
+
+    // Clasped praying hands & Golden Cross on chest
+    const hands = new THREE.Mesh(new THREE.SphereGeometry(0.085, 10, 10), skinMat);
+    hands.scale.set(0.85, 1.25, 1.1);
+    hands.position.set(0, 1.22, 0.24);
+    group.add(hands);
+
+    const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.16, 0.02), goldMat);
+    crossV.position.set(0, 1.36, 0.24);
+    group.add(crossV);
+    const crossH = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.03, 0.02), goldMat);
+    crossH.position.set(0, 1.39, 0.24);
+    group.add(crossH);
+
+    return group;
+  }
+
+  /**
+   * Sculpted 3D Statue of Jesus of Divine Mercy (Tượng Chúa Giêsu Lòng Thương Xót 3D) with Red & Pale Rays
+   */
+  _createSculptedDivineMercyStatue(scale = 1.0) {
+    const group = new THREE.Group();
+    group.scale.setScalar(scale);
+
+    const whiteRobeMat = new THREE.MeshStandardMaterial({ color: 0xfdfcf7, roughness: 0.28 });
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0xf4d8c0, roughness: 0.36 });
+    const beardMat = new THREE.MeshStandardMaterial({ color: 0x4a2f1d, roughness: 0.58 });
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.84, roughness: 0.18 });
+    const redRayMat = new THREE.MeshBasicMaterial({
+      color: 0xef4444,
+      transparent: true,
+      opacity: 0.65,
+      side: THREE.DoubleSide
+    });
+    const paleRayMat = new THREE.MeshBasicMaterial({
+      color: 0x7dd3fc,
+      transparent: true,
+      opacity: 0.65,
+      side: THREE.DoubleSide
+    });
+
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.42, 0.24, 16), whiteRobeMat);
+    base.position.y = 0.12;
+    group.add(base);
+
+    const robe = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.35, 1.34, 18), whiteRobeMat);
+    robe.position.y = 0.89;
+    robe.castShadow = true;
+    group.add(robe);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 18, 18), skinMat);
+    head.position.set(0, 1.7, 0.02);
+    group.add(head);
+
+    const hair = new THREE.Mesh(new THREE.CylinderGeometry(0.155, 0.17, 0.32, 14), beardMat);
+    hair.position.set(0, 1.66, -0.02);
+    group.add(hair);
+
+    const halo = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.018, 10, 24), goldMat);
+    halo.position.set(0, 1.74, -0.06);
+    group.add(halo);
+
+    // Right hand raised in blessing
+    const rightArm = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.08, 0.42, 10), whiteRobeMat);
+    rightArm.position.set(0.25, 1.48, 0.16);
+    rightArm.rotation.z = -0.35;
+    rightArm.rotation.x = -0.45;
+    group.add(rightArm);
+
+    // Glowing Sacred Heart & Two Rays of Divine Mercy (Tia Đỏ Máu Thánh & Tia Trắng Xanh Nước Thánh)
+    const heart = new THREE.Mesh(
+      new THREE.SphereGeometry(0.055, 10, 10),
+      new THREE.MeshBasicMaterial({ color: 0xff2a44 })
+    );
+    heart.position.set(0, 1.34, 0.24);
+    group.add(heart);
+
+    const redRay = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.95, 12, 1, true), redRayMat);
+    redRay.position.set(-0.14, 0.95, 0.44);
+    redRay.rotation.x = -0.52;
+    redRay.rotation.z = -0.22;
+    group.add(redRay);
+
+    const paleRay = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.95, 12, 1, true), paleRayMat);
+    paleRay.position.set(0.14, 0.95, 0.44);
+    paleRay.rotation.x = -0.52;
+    paleRay.rotation.z = 0.22;
+    group.add(paleRay);
 
     return group;
   }
@@ -1543,6 +2083,305 @@ export class ChurchEnvironment {
     }
 
     this.group.add(organGroup);
+  }
+
+  // ===========================================================================
+  // SANCTUARY CHOIR & PIPE ORGAN AREA (KHU CA ĐOÀN & ĐÀN HÁT THÁNH CA) AT (-10.8, 1.05, -15.6)
+  // ===========================================================================
+  _buildSanctuaryChoirAndOrganArea() {
+    const walnutWoodMat = new THREE.MeshStandardMaterial({ color: 0x4a2511, roughness: 0.48 });
+    const redCarpetMat = new THREE.MeshStandardMaterial({ color: 0x8b111e, roughness: 0.72 });
+    const goldMat = new THREE.MeshStandardMaterial({
+      color: 0xffd700,
+      metalness: 0.84,
+      roughness: 0.18,
+      emissive: 0x4a3500,
+      emissiveIntensity: 0.22
+    });
+    const whiteRobeMat = new THREE.MeshStandardMaterial({ color: 0xfbfbfa, roughness: 0.35 });
+    const goldStoleMat = new THREE.MeshStandardMaterial({
+      color: 0xeab308,
+      metalness: 0.45,
+      roughness: 0.32
+    });
+    const marianBlueCapeMat = new THREE.MeshStandardMaterial({ color: 0x1e40af, roughness: 0.4 });
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0xf3d4b8, roughness: 0.4 });
+    const hairMat = new THREE.MeshStandardMaterial({ color: 0x1e1b18, roughness: 0.65 });
+    const hymnalRedMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.45 });
+    const ivoryKeyMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const ebonyKeyMat = new THREE.MeshBasicMaterial({ color: 0x111827 });
+
+    const choirHitData = {
+      type: 'CHOIR_AREA',
+      label: '🎼 Khu Ca Đoàn & Đàn Đại Quản Cầm — Nhấn Để Nghe Hợp Xướng Thánh Ca'
+    };
+
+    const choirGroup = new THREE.Group();
+    choirGroup.position.set(-10.6, 1.05, -15.6);
+    choirGroup.rotation.y = 0.42; // Angled gracefully toward the High Altar & Nave Pews
+
+    // 1. Two-Tiered Choir Risers & Carved Balustrade (Bục Đứng Ca Đoàn 2 Tầng Thảm Đỏ)
+    const riserTier1 = new THREE.Mesh(new THREE.BoxGeometry(5.8, 0.26, 2.8), walnutWoodMat);
+    riserTier1.position.set(0, 0.13, 0);
+    riserTier1.receiveShadow = true;
+    riserTier1.userData = choirHitData;
+    this.interactiveMeshes.push(riserTier1);
+    choirGroup.add(riserTier1);
+
+    const carpetTier1 = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.03, 2.6), redCarpetMat);
+    carpetTier1.position.set(0, 0.275, 0);
+    choirGroup.add(carpetTier1);
+
+    const riserTier2 = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.32, 1.35), walnutWoodMat);
+    riserTier2.position.set(0, 0.42, -0.7);
+    riserTier2.receiveShadow = true;
+    choirGroup.add(riserTier2);
+
+    const carpetTier2 = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.03, 1.25), redCarpetMat);
+    carpetTier2.position.set(0, 0.595, -0.7);
+    choirGroup.add(carpetTier2);
+
+    // Front Choir Modesty Rail with Golden Lyre / Cross Emblem
+    const frontRail = new THREE.Mesh(new THREE.BoxGeometry(5.8, 0.68, 0.12), walnutWoodMat);
+    frontRail.position.set(0, 0.6, 1.36);
+    frontRail.userData = choirHitData;
+    this.interactiveMeshes.push(frontRail);
+    choirGroup.add(frontRail);
+
+    const railGoldTrim = new THREE.Mesh(new THREE.BoxGeometry(5.86, 0.06, 0.15), goldMat);
+    railGoldTrim.position.set(0, 0.95, 1.36);
+    choirGroup.add(railGoldTrim);
+
+    // 2. Sanctuary Pipe Organ Console & 13 Gleaming Golden Organ Pipes (Đàn Đại Quản Cầm & Nhạc Công)
+    const organConsole = new THREE.Group();
+    organConsole.position.set(-2.15, 0.28, 0.15);
+    organConsole.rotation.y = 0.35;
+
+    const organBody = new THREE.Mesh(new THREE.BoxGeometry(1.55, 1.18, 0.92), walnutWoodMat);
+    organBody.position.y = 0.59;
+    organBody.castShadow = true;
+    organBody.userData = choirHitData;
+    this.interactiveMeshes.push(organBody);
+    organConsole.add(organBody);
+
+    // Two-Manual Organ Keyboards (2 Tầng Phím Đàn Trắng Đen)
+    for (let m = 0; m < 2; m++) {
+      const manualWhite = new THREE.Mesh(new THREE.BoxGeometry(1.26, 0.05, 0.22), ivoryKeyMat);
+      manualWhite.position.set(0, 0.86 + m * 0.11, 0.42 - m * 0.1);
+      organConsole.add(manualWhite);
+
+      for (let k = -5; k <= 5; k++) {
+        if (k === -1 || k === 3) continue;
+        const blackKey = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.035, 0.12), ebonyKeyMat);
+        blackKey.position.set(k * 0.1, 0.89 + m * 0.11, 0.39 - m * 0.1);
+        organConsole.add(blackKey);
+      }
+    }
+
+    // Music Score Stand on the Organ
+    const scoreSheet = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.34, 0.03), ivoryKeyMat);
+    scoreSheet.position.set(0, 1.24, 0.16);
+    scoreSheet.rotation.x = -0.25;
+    organConsole.add(scoreSheet);
+
+    // 13 Golden Organ Pipes rising behind the Sanctuary Organ Console
+    for (let p = 0; p < 13; p++) {
+      const px = (p - 6) * 0.115;
+      const pHeight = 2.15 - Math.abs(p - 6) * 0.2;
+      const pRadius = 0.048 - Math.abs(p - 6) * 0.0025;
+      const pipe = new THREE.Mesh(
+        new THREE.CylinderGeometry(pRadius, pRadius, pHeight, 10),
+        goldMat.clone()
+      );
+      pipe.position.set(px, 1.15 + pHeight / 2, -0.32);
+      organConsole.add(pipe);
+      this.organPipeMeshes.push(pipe);
+    }
+
+    // Organ Bench & Seated Organist (Nhạc Công Đánh Đàn Đại Quản Cầm)
+    const bench = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.52, 0.42), walnutWoodMat);
+    bench.position.set(0, 0.26, 0.85);
+    organConsole.add(bench);
+
+    const organist = new THREE.Group();
+    organist.position.set(0, 0.52, 0.82);
+    organist.rotation.y = Math.PI; // Facing the organ manuals (-Z of organConsole)
+
+    const orgTorso = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 0.72, 12), whiteRobeMat);
+    orgTorso.position.y = 0.36;
+    organist.add(orgTorso);
+
+    const orgStole = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.2, 0.34, 12), goldStoleMat);
+    orgStole.position.y = 0.55;
+    organist.add(orgStole);
+
+    const orgHead = new THREE.Mesh(new THREE.SphereGeometry(0.135, 14, 14), skinMat);
+    orgHead.position.y = 0.84;
+    organist.add(orgHead);
+
+    const orgHair = new THREE.Mesh(
+      new THREE.SphereGeometry(0.14, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.55),
+      hairMat
+    );
+    orgHair.position.y = 0.86;
+    organist.add(orgHair);
+
+    const orgLeftHand = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), skinMat);
+    orgLeftHand.position.set(-0.2, 0.42, 0.36);
+    organist.add(orgLeftHand);
+
+    const orgRightHand = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), skinMat);
+    orgRightHand.position.set(0.2, 0.42, 0.36);
+    organist.add(orgRightHand);
+
+    this.organistGroup = {
+      root: organist,
+      leftHand: orgLeftHand,
+      rightHand: orgRightHand,
+      torso: orgTorso
+    };
+    organConsole.add(organist);
+    choirGroup.add(organConsole);
+
+    // 3. 8 Choir Singers (Ca Viên Ca Đoàn) in 2 Rows holding Open Red/Gold Hymnals
+    const singerPositions = [
+      // Front Row (Sopranos & Altos on Tier 1: Y = 0.28, Z = 0.35)
+      { x: -0.65, y: 0.28, z: 0.35, capeMat: goldStoleMat },
+      { x: 0.15, y: 0.28, z: 0.35, capeMat: goldStoleMat },
+      { x: 0.95, y: 0.28, z: 0.35, capeMat: goldStoleMat },
+      { x: 1.75, y: 0.28, z: 0.35, capeMat: goldStoleMat },
+      // Back Elevated Row (Tenors & Basses on Tier 2: Y = 0.60, Z = -0.68)
+      { x: -0.65, y: 0.60, z: -0.68, capeMat: marianBlueCapeMat },
+      { x: 0.15, y: 0.60, z: -0.68, capeMat: marianBlueCapeMat },
+      { x: 0.95, y: 0.60, z: -0.68, capeMat: marianBlueCapeMat },
+      { x: 1.75, y: 0.60, z: -0.68, capeMat: marianBlueCapeMat }
+    ];
+
+    for (let i = 0; i < singerPositions.length; i++) {
+      const sp = singerPositions[i];
+      const singer = new THREE.Group();
+      singer.position.set(sp.x, sp.y, sp.z);
+
+      const gown = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.27, 1.18, 14), whiteRobeMat);
+      gown.position.y = 0.59;
+      gown.castShadow = true;
+      gown.userData = choirHitData;
+      this.interactiveMeshes.push(gown);
+      singer.add(gown);
+
+      const stole = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.24, 0.42, 14), sp.capeMat);
+      stole.position.y = 0.96;
+      singer.add(stole);
+
+      const sHead = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 14), skinMat);
+      sHead.position.y = 1.32;
+      singer.add(sHead);
+
+      const sHair = new THREE.Mesh(
+        new THREE.SphereGeometry(0.135, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.55),
+        hairMat
+      );
+      sHair.position.y = 1.34;
+      singer.add(sHair);
+
+      // Open Red & Gold Hymnal Book (Sách Thánh Ca Đang Mở) held in front of chest
+      const hymnalGroup = new THREE.Group();
+      hymnalGroup.position.set(0, 0.94, 0.24);
+      hymnalGroup.rotation.x = -0.45;
+
+      const bookCover = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.22, 0.025), hymnalRedMat);
+      hymnalGroup.add(bookCover);
+      const bookPages = new THREE.Mesh(new THREE.BoxGeometry(0.29, 0.2, 0.03), ivoryKeyMat);
+      bookPages.position.z = 0.008;
+      hymnalGroup.add(bookPages);
+
+      singer.add(hymnalGroup);
+      choirGroup.add(singer);
+      this.choirSingers.push({ group: singer, baseY: sp.y, phase: i * 0.85 });
+    }
+
+    // 4. Choir Conductor (Ca Trưởng Điều Khiển Hợp Xướng) + Golden Music Stand
+    const standPole = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.04, 1.05, 8), goldMat);
+    standPole.position.set(0.55, 0.78, 1.05);
+    choirGroup.add(standPole);
+    const standDesk = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.32, 0.03), goldMat);
+    standDesk.position.set(0.55, 1.28, 1.05);
+    standDesk.rotation.x = 0.45;
+    choirGroup.add(standDesk);
+
+    // 5. Floating 3D Golden Musical Notes (Nốt Nhạc Thánh Ca Bay Lên) above the Choir
+    for (let n = 0; n < 6; n++) {
+      const noteGroup = new THREE.Group();
+      const nx = -1.6 + n * 0.72;
+      const ny = 2.1 + (n % 3) * 0.35;
+      const nz = (n % 2 === 0 ? 0.15 : -0.45);
+      noteGroup.position.set(nx, ny, nz);
+
+      const noteHead = new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 10), goldMat);
+      noteHead.scale.set(1.3, 0.9, 0.8);
+      noteGroup.add(noteHead);
+
+      const noteStem = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.28, 6), goldMat);
+      noteStem.position.set(0.07, 0.14, 0);
+      noteGroup.add(noteStem);
+
+      const noteFlag = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.05, 0.02), goldMat);
+      noteFlag.position.set(0.12, 0.25, 0);
+      noteFlag.rotation.z = -0.35;
+      noteGroup.add(noteFlag);
+
+      choirGroup.add(noteGroup);
+      this.choirMusicNotes.push({
+        group: noteGroup,
+        baseX: nx,
+        baseY: ny,
+        phase: n * 1.1
+      });
+    }
+
+    // 6. Floating Banner above Sanctuary Choir & Organ Area
+    const choirCanvas = document.createElement('canvas');
+    choirCanvas.width = 480;
+    choirCanvas.height = 84;
+    const cctx = choirCanvas.getContext('2d');
+    cctx.fillStyle = 'rgba(18, 28, 52, 0.88)';
+    cctx.strokeStyle = '#ffd700';
+    cctx.lineWidth = 3;
+    if (cctx.roundRect) {
+      cctx.roundRect(4, 4, 472, 76, 16);
+    } else {
+      cctx.rect(4, 4, 472, 76);
+    }
+    cctx.fill();
+    cctx.stroke();
+    cctx.fillStyle = '#fde047';
+    cctx.font = 'bold 20px sans-serif';
+    cctx.textAlign = 'center';
+    cctx.fillText('🎼 CA ĐOÀN THÁNH GIA & ĐÀN ĐẠI QUẢN CẦM', 240, 34);
+    cctx.fillStyle = '#e2e8f0';
+    cctx.font = '15px sans-serif';
+    cctx.fillText('Nhấn vào Ca Đoàn để Bật / Đổi Thánh Ca Hợp Xướng', 240, 62);
+
+    const choirTex = new THREE.CanvasTexture(choirCanvas);
+    choirTex.colorSpace = THREE.SRGBColorSpace;
+    const choirSprite = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: choirTex, transparent: true, depthWrite: false })
+    );
+    choirSprite.position.set(0.1, 2.75, 0);
+    choirSprite.scale.set(3.1, 0.54, 1);
+    choirGroup.add(choirSprite);
+
+    // Generous interactive hitbox for the whole Choir & Organ Stall
+    const choirHitbox = new THREE.Mesh(
+      new THREE.BoxGeometry(6.2, 2.8, 3.2),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    choirHitbox.position.set(0, 1.4, 0);
+    choirHitbox.userData = choirHitData;
+    this.interactiveMeshes.push(choirHitbox);
+    choirGroup.add(choirHitbox);
+
+    this.group.add(choirGroup);
   }
 
   // ===========================================================================
@@ -1915,53 +2754,81 @@ export class ChurchEnvironment {
       target: 'CHA_DIEP',
       label: '🙏 Xin Khấn Cùng Cha Phanxicô Trương Bửu Diệp'
     };
+    const josephHitData = {
+      type: 'SHRINE_STATUE',
+      target: 'THANH_GIUSE',
+      label: '🙏 Cầu Khẩn Trước Tượng Thánh Cả Giuse'
+    };
 
-    // Authentic Portrait of Cha Phanxicô Xaviê Trương Bửu Diệp (/nhatho/art/cha_truong_buu_diep.jpg)
-    const chaDiepFrame = this._createGoldGothicRetableFrame({
-      width: 2.15,
-      height: 2.85,
-      artPath: '/nhatho/art/cha_truong_buu_diep.jpg',
-      title: 'CHA PHANXICÔ TRƯƠNG BỬU DIỆP',
-      subtitle: 'Tôi sống giữa đoàn chiên và nếu cần sẽ chết cho đoàn chiên',
-      archTop: true,
-      addSpotlight: true,
-      spotlightIntensity: 1.9,
-      addCrossCrest: true,
-      interactionData: chaDiepHitData
-    });
-    chaDiepFrame.position.set(-1.15, 2.55, -0.85);
-    chaDiepPavilion.add(chaDiepFrame);
-
-    // Portrait of Đức Giáo Hoàng Phanxicô (/nhatho/art/pope_francis.jpg) alongside for Ecclesial Communion
-    const popeFrame = this._createGoldGothicRetableFrame({
-      width: 1.75,
-      height: 2.35,
-      artPath: '/nhatho/art/pope_francis.jpg',
-      title: 'ĐỨC GIÁO HOÀNG PHANXICÔ',
-      subtitle: 'Hiệp Thông Giáo Hội Công Giáo Hoàn Vũ',
-      archTop: true,
-      addSpotlight: true,
-      spotlightIntensity: 1.5,
-      addCrossCrest: true,
-      interactionData: chaDiepHitData
-    });
-    popeFrame.position.set(1.45, 2.35, -0.85);
-    chaDiepPavilion.add(popeFrame);
-
-    // Altar Table, Kneeler, Flowers & Candles in front of Cha Trương Bửu Diệp
-    const shrineTable = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.88, 0.95), darkWoodMat);
-    shrineTable.position.set(0, 0.85, 0.45);
-    shrineTable.userData = chaDiepHitData;
+    // Altar Pedestal, Flowers & Grand 3D Sculpted Statues of Thánh Cả Giuse & Cha Trương Bửu Diệp
+    const shrineTable = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.64, 1.45), stoneMat);
+    shrineTable.position.set(0, 0.53, 0.15);
+    shrineTable.userData = josephHitData;
     this.interactiveMeshes.push(shrineTable);
     chaDiepPavilion.add(shrineTable);
 
-    this._addFloralBouquet(chaDiepPavilion, -1.35, 1.3, 0.45, 0xfacc15);
-    this._addFloralBouquet(chaDiepPavilion, 1.35, 1.3, 0.45, 0xf43f5e);
+    // Prominent 3D Statue of Saint Joseph holding Infant Jesus & White Lily Staff (Center-Right)
+    const josephStatueLeftShrine = this._createSculptedJosephStatue(1.32);
+    josephStatueLeftShrine.position.set(1.15, 0.85, 0.25);
+    josephStatueLeftShrine.traverse((child) => {
+      if (child.isMesh) {
+        child.userData = josephHitData;
+        this.interactiveMeshes.push(child);
+      }
+    });
+    chaDiepPavilion.add(josephStatueLeftShrine);
+
+    // 3D Sculpted Statue of Cha Phanxicô Trương Bửu Diệp (Center-Left)
+    const chaDiepStatue3D = this._createSculptedChaDiepStatue(1.32);
+    chaDiepStatue3D.position.set(-1.15, 0.85, 0.25);
+    chaDiepStatue3D.traverse((child) => {
+      if (child.isMesh) {
+        child.userData = chaDiepHitData;
+        this.interactiveMeshes.push(child);
+      }
+    });
+    chaDiepPavilion.add(chaDiepStatue3D);
+
+    // Overhead Golden Nameplate Banner for Đài Thánh Cả Giuse & Cha Diệp
+    const shrineBannerCanvas = document.createElement('canvas');
+    shrineBannerCanvas.width = 560;
+    shrineBannerCanvas.height = 88;
+    const sbCtx = shrineBannerCanvas.getContext('2d');
+    sbCtx.fillStyle = 'rgba(24, 16, 12, 0.9)';
+    sbCtx.strokeStyle = '#ffd700';
+    sbCtx.lineWidth = 3.5;
+    if (sbCtx.roundRect) {
+      sbCtx.roundRect(5, 5, 550, 78, 16);
+    } else {
+      sbCtx.rect(5, 5, 550, 78);
+    }
+    sbCtx.fill();
+    sbCtx.stroke();
+    sbCtx.fillStyle = '#fde047';
+    sbCtx.font = 'bold 22px Georgia, serif';
+    sbCtx.textAlign = 'center';
+    sbCtx.fillText('🙏 ĐÀI TƯỢNG THÁNH CẢ GIUSE & CHA TRƯƠNG BỬU DIỆP', 280, 36);
+    sbCtx.fillStyle = '#f8fafc';
+    sbCtx.font = '16px sans-serif';
+    sbCtx.fillText('Nhấn vào Tượng Thánh Giuse hoặc Cha Diệp để dâng lời khấn nguyện', 280, 65);
+
+    const shrineBannerTex = new THREE.CanvasTexture(shrineBannerCanvas);
+    shrineBannerTex.colorSpace = THREE.SRGBColorSpace;
+    const shrineBannerSprite = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: shrineBannerTex, transparent: true, depthWrite: false })
+    );
+    shrineBannerSprite.position.set(0, 3.65, 1.15);
+    shrineBannerSprite.scale.set(4.2, 0.66, 1);
+    chaDiepPavilion.add(shrineBannerSprite);
+
+    this._addFloralBouquet(chaDiepPavilion, -2.2, 0.86, 0.35, 0xfacc15);
+    this._addFloralBouquet(chaDiepPavilion, 0.0, 0.86, 0.42, 0xffffff);
+    this._addFloralBouquet(chaDiepPavilion, 2.2, 0.86, 0.35, 0xf43f5e);
 
     this.group.add(chaDiepPavilion);
 
     // -------------------------------------------------------------------------
-    // 2. Đài Lòng Chúa Thương Xót & Thánh Cả Giuse (X = 17.5, Z = 14.5)
+    // 2. Đài Tượng Chúa Giêsu Lòng Thương Xót & Thánh Cả Giuse 3D (X = 17.5, Z = 14.5)
     // -------------------------------------------------------------------------
     const mercyShrine = new THREE.Group();
     mercyShrine.position.set(17.5, 0, 14.5);
@@ -1993,48 +2860,37 @@ export class ChurchEnvironment {
       label: '✝️ Tín Thác Trước Đài Lòng Chúa Thương Xót'
     };
 
-    const mercyRetable = this._createGoldGothicRetableFrame({
-      width: 2.15,
-      height: 2.95,
-      artPath: '/nhatho/art/divine_mercy_jesus.jpg',
-      title: 'ĐÀI LÒNG CHÚA THƯƠNG XÓT',
-      subtitle: 'Lạy Chúa Giêsu, con tín thác vào Chúa!',
-      archTop: true,
-      addSpotlight: true,
-      spotlightIntensity: 1.95,
-      addCrossCrest: true,
-      interactionData: mercyHitData
-    });
-    mercyRetable.position.set(-1.1, 2.6, -0.85);
-    mercyShrine.add(mercyRetable);
-
-    const josephOutdoorRetable = this._createGoldGothicRetableFrame({
-      width: 1.85,
-      height: 2.55,
-      artPath: '/nhatho/art/saint_joseph.jpg',
-      title: 'ĐÀI THÁNH CẢ GIUSE',
-      subtitle: 'Mẫu Gương Gia Trưởng & Lao Động',
-      archTop: true,
-      addSpotlight: true,
-      spotlightIntensity: 1.65,
-      addCrossCrest: true,
-      interactionData: {
-        type: 'SHRINE_STATUE',
-        target: 'THANH_GIUSE',
-        label: '🙏 Cầu Khẩn Trước Đài Thánh Cả Giuse'
-      }
-    });
-    josephOutdoorRetable.position.set(1.4, 2.4, -0.85);
-    mercyShrine.add(josephOutdoorRetable);
-
-    const mercyPedestal = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.88, 0.95), stoneMat);
-    mercyPedestal.position.set(0, 0.85, 0.45);
+    const mercyPedestal = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.92, 1.45), stoneMat);
+    mercyPedestal.position.set(0, 0.88, 0.15);
     mercyPedestal.userData = mercyHitData;
     this.interactiveMeshes.push(mercyPedestal);
     mercyShrine.add(mercyPedestal);
 
-    this._addFloralBouquet(mercyShrine, -1.35, 1.3, 0.45, 0xef4444);
-    this._addFloralBouquet(mercyShrine, 1.35, 1.3, 0.45, 0xffffff);
+    // 3D Sculpted Statue of Jesus of Divine Mercy on left pedestal
+    const divineMercyStatue3D = this._createSculptedDivineMercyStatue(1.55);
+    divineMercyStatue3D.position.set(-1.15, 1.34, 0.2);
+    divineMercyStatue3D.traverse((child) => {
+      if (child.isMesh) {
+        child.userData = mercyHitData;
+        this.interactiveMeshes.push(child);
+      }
+    });
+    mercyShrine.add(divineMercyStatue3D);
+
+    // Prominent Heroic-Scale 3D Sculpted Statue of St. Joseph on right pedestal
+    const josephOutdoorStatue3D = this._createSculptedJosephStatue(1.62);
+    josephOutdoorStatue3D.position.set(1.15, 1.34, 0.2);
+    josephOutdoorStatue3D.traverse((child) => {
+      if (child.isMesh) {
+        child.userData = josephHitData;
+        this.interactiveMeshes.push(child);
+      }
+    });
+    mercyShrine.add(josephOutdoorStatue3D);
+
+    this._addFloralBouquet(mercyShrine, -2.2, 1.35, 0.35, 0xef4444);
+    this._addFloralBouquet(mercyShrine, 0.0, 1.35, 0.42, 0xfef08a);
+    this._addFloralBouquet(mercyShrine, 2.2, 1.35, 0.35, 0xffffff);
 
     this.group.add(mercyShrine);
 
@@ -2094,38 +2950,64 @@ export class ChurchEnvironment {
   }
 
   // ===========================================================================
-  // ZONE 6: HANG ĐÁ ĐỨC MẸ LỘ ĐỨC (LOURDES MARIAN GROTTO & REFLECTION POOL) AT Z = 27 TO 44
+  // ZONE 6: HANG ĐÁ ĐỨC MẸ LỘ ĐỨC (MAJESTIC LOURDES MASSABIELLE GROTTO & MOUNTAIN SANCTUARY) AT Z = 27 TO 44
   // ===========================================================================
   _buildLourdesMarianGrotto() {
     const grottoGroup = new THREE.Group();
     grottoGroup.position.set(0, 0, 35.0);
 
-    const rockMat = new THREE.MeshStandardMaterial({
+    // Multi-toned Natural Limestone & Granite Cliff Materials
+    const lightLimestoneMat = new THREE.MeshStandardMaterial({
+      color: 0x8d959e,
+      roughness: 0.86,
+      metalness: 0.05
+    });
+    const midRockMat = new THREE.MeshStandardMaterial({
       color: 0x6b7280,
-      roughness: 0.88,
-      metalness: 0.08
+      roughness: 0.89,
+      metalness: 0.06
     });
     const darkRockMat = new THREE.MeshStandardMaterial({
-      color: 0x4b5563,
+      color: 0x475569,
       roughness: 0.92
     });
+    const cavernInteriorMat = new THREE.MeshStandardMaterial({
+      color: 0x1e2530,
+      roughness: 0.96
+    });
+    const mossyRockMat = new THREE.MeshStandardMaterial({
+      color: 0x3f6246,
+      roughness: 0.88
+    });
     const curbStoneMat = new THREE.MeshStandardMaterial({
-      color: 0xd6d3cd,
-      roughness: 0.65
+      color: 0xded9d0,
+      roughness: 0.62
     });
     const waterMat = new THREE.MeshStandardMaterial({
       color: 0x0ea5e9,
-      roughness: 0.15,
-      metalness: 0.35,
+      roughness: 0.14,
+      metalness: 0.36,
       transparent: true,
-      opacity: 0.84
+      opacity: 0.86
     });
     const goldMat = new THREE.MeshStandardMaterial({
       color: 0xffd700,
-      metalness: 0.82,
-      roughness: 0.2,
+      metalness: 0.84,
+      roughness: 0.18,
       emissive: 0x5c4300,
       emissiveIntensity: 0.32
+    });
+    const pineLeafMat = new THREE.MeshStandardMaterial({
+      color: 0x165b33,
+      roughness: 0.78
+    });
+    const trunkMat = new THREE.MeshStandardMaterial({
+      color: 0x4a2e19,
+      roughness: 0.85
+    });
+    const woodBenchMat = new THREE.MeshStandardMaterial({
+      color: 0x4a2511,
+      roughness: 0.52
     });
 
     const grottoHitData = {
@@ -2135,49 +3017,97 @@ export class ChurchEnvironment {
     };
 
     // 1. Crystal Reflection Pool (Hồ Nước Hang Đá Đức Mẹ: Z = 28 to 34.5 -> local Z = -7.0 to -0.5)
-    const poolBorder = new THREE.Mesh(new THREE.BoxGeometry(24.5, 0.38, 7.2), curbStoneMat);
-    poolBorder.position.set(0, 0.19, -3.6);
+    const poolBorder = new THREE.Mesh(new THREE.BoxGeometry(24.8, 0.4, 7.2), curbStoneMat);
+    poolBorder.position.set(0, 0.2, -3.6);
     poolBorder.receiveShadow = true;
     poolBorder.userData = grottoHitData;
     this.interactiveMeshes.push(poolBorder);
     grottoGroup.add(poolBorder);
 
-    const poolWater = new THREE.Mesh(new THREE.PlaneGeometry(23.2, 6.2), waterMat);
+    const poolWater = new THREE.Mesh(new THREE.PlaneGeometry(23.5, 6.2), waterMat);
     poolWater.rotation.x = -Math.PI / 2;
-    poolWater.position.set(0, 0.28, -3.6);
+    poolWater.position.set(0, 0.29, -3.6);
     poolWater.userData = grottoHitData;
     this.interactiveMeshes.push(poolWater);
     this.grottoWaterMesh = poolWater;
     grottoGroup.add(poolWater);
 
-    // Arched Stone Footbridge spanning the center of the Reflection Pool
-    const bridgeDeck = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.28, 7.4), curbStoneMat);
+    // Arched Stone Footbridge with Low Stone Balustrades spanning the center of the Pool
+    const bridgeDeck = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.32, 7.4), curbStoneMat);
     bridgeDeck.position.set(0, 0.36, -3.6);
     bridgeDeck.receiveShadow = true;
     bridgeDeck.userData = { type: 'GROUND' };
     this.walkableMeshes.push(bridgeDeck);
     grottoGroup.add(bridgeDeck);
 
-    // 2. Sculpted Natural Lourdes Rock Mountain (Núi Đá Tự Nhiên Lộ Đức) at local Z = 1.5 (world Z = 36.5)
-    const boulderConfigs = [
-      // Base boulders
-      { x: 0, y: 1.8, z: 2.2, rx: 6.2, ry: 2.2, rz: 2.8, mat: darkRockMat },
-      { x: -5.4, y: 2.4, z: 1.6, rx: 3.2, ry: 2.8, rz: 2.6, mat: rockMat },
-      { x: 5.4, y: 2.4, z: 1.6, rx: 3.2, ry: 2.8, rz: 2.6, mat: rockMat },
-      // Left & Right Grotto Arch Pillars
-      { x: -3.2, y: 4.4, z: 1.8, rx: 2.2, ry: 3.4, rz: 2.2, mat: rockMat },
-      { x: 3.2, y: 4.4, z: 1.8, rx: 2.2, ry: 3.4, rz: 2.2, mat: rockMat },
-      // Overarching Grotto Vault & Summit Peak
-      { x: 0, y: 7.2, z: 2.0, rx: 4.6, ry: 2.0, rz: 2.4, mat: darkRockMat },
-      { x: 0, y: 8.6, z: 2.2, rx: 2.8, ry: 1.6, rz: 2.0, mat: rockMat },
-      { x: -7.5, y: 1.5, z: 0.8, rx: 2.4, ry: 1.8, rz: 2.2, mat: darkRockMat },
-      { x: 7.5, y: 1.5, z: 0.8, rx: 2.4, ry: 1.8, rz: 2.2, mat: darkRockMat }
+    for (const bx of [-1.95, 1.95]) {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.48, 7.2), curbStoneMat);
+      rail.position.set(bx, 0.68, -3.6);
+      grottoGroup.add(rail);
+    }
+
+    // Sanctuary Stone Terrace in front of the Grotto Cavern (local Z = -0.3 to 2.2)
+    const grottoTerrace = new THREE.Mesh(new THREE.BoxGeometry(16.5, 0.55, 3.2), curbStoneMat);
+    grottoTerrace.position.set(0, 0.275, 1.0);
+    grottoTerrace.receiveShadow = true;
+    grottoTerrace.userData = { type: 'GROUND' };
+    this.walkableMeshes.push(grottoTerrace);
+    grottoGroup.add(grottoTerrace);
+
+    // 2 Pilgrim Wooden Kneeling Benches facing the Grotto (Ghế Quỳ Hành Hương Trước Hang Đá)
+    for (const side of [-1, 1]) {
+      const benchGroup = new THREE.Group();
+      benchGroup.position.set(side * 4.4, 0, -7.8);
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.46, 0.52), woodBenchMat);
+      seat.position.y = 0.23;
+      benchGroup.add(seat);
+      const kneeler = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.18, 0.32), woodBenchMat);
+      kneeler.position.set(0, 0.09, 0.38);
+      benchGroup.add(kneeler);
+      grottoGroup.add(benchGroup);
+    }
+
+    // 2. Majestic Multi-Tiered Natural Lourdes Mountain Cliff & Deep Recessed Cavern Arch
+    //    (All cliff boulders at z = 2.6..4.8 so the Grotto Altar & Our Lady of Lourdes Niche at z = 0.6..1.1 are 100% unobstructed!)
+    const mountainBoulders = [
+      // Deep dark recessed cave back wall & vault interior
+      { x: 0, y: 2.8, z: 3.9, rx: 4.5, ry: 3.2, rz: 1.4, mat: cavernInteriorMat, rotZ: 0.05 },
+      // Massive mountain rear backbone (forming high craggy cliff silhouette)
+      { x: 0, y: 5.4, z: 4.7, rx: 8.6, ry: 5.8, rz: 2.6, mat: darkRockMat, rotZ: 0.18 },
+      { x: -6.8, y: 4.6, z: 4.2, rx: 5.2, ry: 4.8, rz: 2.4, mat: midRockMat, rotZ: -0.22 },
+      { x: 6.8, y: 4.8, z: 4.2, rx: 5.4, ry: 5.1, rz: 2.4, mat: midRockMat, rotZ: 0.25 },
+      { x: -10.5, y: 2.8, z: 3.0, rx: 3.8, ry: 3.2, rz: 2.3, mat: darkRockMat, rotZ: 0.15 },
+      { x: 10.5, y: 2.9, z: 3.0, rx: 3.8, ry: 3.4, rz: 2.3, mat: darkRockMat, rotZ: -0.18 },
+
+      // Left Wing Cliff & Apparition Rock Ledge (Screen Right when viewing from Courtyard!)
+      { x: -5.4, y: 1.9, z: 2.4, rx: 2.6, ry: 2.0, rz: 1.8, mat: darkRockMat, rotZ: 0.12 },
+      { x: -4.8, y: 3.9, z: 2.6, rx: 2.4, ry: 2.5, rz: 1.8, mat: lightLimestoneMat, rotZ: -0.18 },
+      { x: -7.8, y: 1.6, z: 1.9, rx: 2.5, ry: 1.7, rz: 1.8, mat: mossyRockMat, rotZ: -0.15 },
+
+      // Right Wing Cliff & Stepped Waterfall Ledge (Screen Left when viewing from Courtyard!)
+      { x: 5.4, y: 1.9, z: 2.4, rx: 2.6, ry: 2.0, rz: 1.8, mat: darkRockMat, rotZ: -0.1 },
+      { x: 4.8, y: 3.9, z: 2.6, rx: 2.4, ry: 2.5, rz: 1.8, mat: lightLimestoneMat, rotZ: 0.16 },
+      { x: 7.8, y: 1.6, z: 1.9, rx: 2.5, ry: 1.7, rz: 1.8, mat: mossyRockMat, rotZ: 0.2 },
+
+      // Overarching Main Grotto Cavern Roof & Craggy Mountain Summit Peaks (Y = 6.8 to 10.2)
+      { x: -2.2, y: 6.9, z: 2.6, rx: 3.2, ry: 1.6, rz: 1.9, mat: lightLimestoneMat, rotZ: -0.08 },
+      { x: 2.2, y: 6.9, z: 2.6, rx: 3.2, ry: 1.6, rz: 1.9, mat: midRockMat, rotZ: 0.12 },
+      { x: 0, y: 7.5, z: 2.7, rx: 3.4, ry: 1.7, rz: 1.9, mat: lightLimestoneMat, rotZ: 0.04 },
+      { x: -2.8, y: 8.6, z: 3.4, rx: 3.0, ry: 2.0, rz: 2.0, mat: darkRockMat, rotZ: -0.22 },
+      { x: 2.8, y: 8.6, z: 3.4, rx: 3.0, ry: 2.0, rz: 2.0, mat: lightLimestoneMat, rotZ: 0.18 },
+      { x: 0, y: 9.8, z: 3.6, rx: 2.8, ry: 2.2, rz: 1.9, mat: midRockMat, rotZ: 0.06 },
+
+      // Natural Mossy Outcrops along the outer Pool Edge
+      { x: -9.5, y: 0.7, z: 0.4, rx: 1.7, ry: 0.85, rz: 1.4, mat: mossyRockMat, rotZ: 0.1 },
+      { x: 9.5, y: 0.7, z: 0.4, rx: 1.7, ry: 0.85, rz: 1.4, mat: mossyRockMat, rotZ: -0.1 }
     ];
 
-    for (const b of boulderConfigs) {
-      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1.0, 1), b.mat);
+    for (const b of mountainBoulders) {
+      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1.0, 0), b.mat);
       rock.scale.set(b.rx, b.ry, b.rz);
       rock.position.set(b.x, b.y, b.z);
+      if (b.rotZ) rock.rotation.z = b.rotZ;
+      rock.rotation.y = (b.x * 0.37) % Math.PI;
       rock.castShadow = true;
       rock.receiveShadow = true;
       rock.userData = grottoHitData;
@@ -2185,34 +3115,58 @@ export class ChurchEnvironment {
       grottoGroup.add(rock);
     }
 
-    // 3. Summit Illuminated Cross atop the Lourdes Grotto (Y = 10.6m)
-    const grottoCrossV = new THREE.Mesh(new THREE.BoxGeometry(0.24, 2.2, 0.24), goldMat);
-    grottoCrossV.position.set(0, 10.6, 2.2);
+    // 3. Mediterranean Cypress & Pine Trees on the Lourdes Mountain Slopes (Cây Tùng Bách Xanh Trên Núi)
+    const treePlacements = [
+      { x: -11.2, y: 1.2, z: 2.4, s: 1.25 },
+      { x: -8.2, y: 4.2, z: 3.8, s: 1.1 },
+      { x: -4.8, y: 7.2, z: 3.9, s: 0.95 },
+      { x: 4.8, y: 7.4, z: 3.9, s: 0.95 },
+      { x: 8.4, y: 4.4, z: 3.8, s: 1.1 },
+      { x: 11.2, y: 1.2, z: 2.4, s: 1.25 }
+    ];
+    for (const tp of treePlacements) {
+      const tree = new THREE.Group();
+      tree.position.set(tp.x, tp.y, tp.z);
+      tree.scale.setScalar(tp.s);
+
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.24, 1.4, 8), trunkMat);
+      trunk.position.y = 0.7;
+      tree.add(trunk);
+
+      for (let tier = 0; tier < 3; tier++) {
+        const cone = new THREE.Mesh(
+          new THREE.ConeGeometry(1.15 - tier * 0.26, 1.85 - tier * 0.25, 10),
+          pineLeafMat
+        );
+        cone.position.y = 1.65 + tier * 0.95;
+        cone.castShadow = true;
+        tree.add(cone);
+      }
+      grottoGroup.add(tree);
+    }
+
+    // 4. Summit Illuminated Golden Cross atop the Lourdes Mountain (Y = 12.2m)
+    const grottoCrossV = new THREE.Mesh(new THREE.BoxGeometry(0.28, 2.5, 0.28), goldMat);
+    grottoCrossV.position.set(0, 12.1, 3.4);
     grottoGroup.add(grottoCrossV);
-    const grottoCrossH = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.24, 0.24), goldMat);
-    grottoCrossH.position.set(0, 10.9, 2.2);
+    const grottoCrossH = new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.28, 0.28), goldMat);
+    grottoCrossH.position.set(0, 12.45, 3.4);
     grottoGroup.add(grottoCrossH);
 
-    // 4. Arched Marian Niche with High-Res Masterpiece (/nhatho/art/virgin_mary_lourdes.jpg)
-    //    AND White Carrara Marble Our Lady of Lourdes Statue crowned with 12 Golden Stars!
-    const lourdesRetable = this._createGoldGothicRetableFrame({
-      width: 2.8,
-      height: 3.9,
-      artPath: '/nhatho/art/virgin_mary_lourdes.jpg',
-      title: 'ĐỨC MẸ LỘ ĐỨC — TA LÀ ĐẤNG VÔ NHIỄM NGUYÊN TỘI',
-      subtitle: 'Lạy Mẹ Maria Vô Nhiễm, xin cầu cho chúng con chạy đến cùng Mẹ',
-      archTop: true,
-      addSpotlight: true,
-      spotlightIntensity: 2.3,
-      addCrossCrest: false,
-      interactionData: grottoHitData
-    });
-    lourdesRetable.position.set(0, 4.35, 1.35);
-    grottoGroup.add(lourdesRetable);
+    // 5. CARVED STONE APPARITION PEDESTAL & MAIN 3D STATUE OF OUR LADY OF LOURDES
+    //    Positioned prominently in front of the Cavern Arch at (x = -2.1, y = 2.35, z = 0.85)
+    //    (On the upper-right of the Grotto when viewed from the Courtyard, 100% unobstructed!)
+    const apparitionLedge = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.15, 1.45, 1.85, 8),
+      lightLimestoneMat
+    );
+    apparitionLedge.position.set(-2.1, 1.42, 0.95);
+    apparitionLedge.castShadow = true;
+    grottoGroup.add(apparitionLedge);
 
-    // Sculpted White Marble Statue of Our Lady of Lourdes standing on the rock niche ledge
-    const lourdesStatue = this._createSculptedMarianStatue(1.38);
-    lourdesStatue.position.set(2.35, 2.65, 0.85);
+    const lourdesStatue = this._createSculptedMarianStatue(1.85);
+    lourdesStatue.position.set(-2.1, 2.35, 0.85);
+    lourdesStatue.rotation.y = Math.PI; // Facing -Z toward the courtyard & camera!
     lourdesStatue.traverse((child) => {
       if (child.isMesh) {
         child.userData = grottoHitData;
@@ -2221,39 +3175,162 @@ export class ChurchEnvironment {
     });
     grottoGroup.add(lourdesStatue);
 
-    // Rotating 12-Star Halo behind the Grotto Niche (this.grottoHalo)
+    // Warm Golden Grotto Niche Spotlight illuminating Our Lady of Lourdes
+    const nicheLight = new THREE.PointLight(0xfff1c2, 2.6, 12);
+    nicheLight.position.set(-2.1, 4.4, -0.2);
+    grottoGroup.add(nicheLight);
+
+    // Rotating 12-Star Halo behind Our Lady of Lourdes in the Niche (this.grottoHalo)
     const grottoHalo = new THREE.Group();
-    grottoHalo.position.set(0, 5.2, 1.25);
+    grottoHalo.position.set(-2.1, 4.95, 1.25);
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * Math.PI * 2;
       const star = new THREE.Mesh(new THREE.OctahedronGeometry(0.14, 0), goldMat);
-      star.position.set(Math.cos(a) * 2.1, Math.sin(a) * 2.1, 0);
+      star.position.set(Math.cos(a) * 1.45, Math.sin(a) * 1.45, 0);
       grottoHalo.add(star);
     }
     this.grottoHalo = grottoHalo;
     grottoGroup.add(grottoHalo);
 
-    // 5. Cascading Waterfall on Left Rock Face into the Reflection Pool
+    // 6. Natural Hewn-Rock Grotto Altar in the Center of the Cavern Opening (X = 0.4, Y = 0.55, Z = 1.05)
+    const grottoAltarGroup = new THREE.Group();
+    grottoAltarGroup.position.set(0.45, 0.55, 1.05);
+    grottoAltarGroup.rotation.y = Math.PI; // Facing -Z toward the pilgrims
+
+    const rockAltarBase = new THREE.Mesh(
+      new THREE.BoxGeometry(2.85, 1.05, 1.15),
+      lightLimestoneMat
+    );
+    rockAltarBase.position.y = 0.525;
+    rockAltarBase.castShadow = true;
+    rockAltarBase.userData = grottoHitData;
+    this.interactiveMeshes.push(rockAltarBase);
+    grottoAltarGroup.add(rockAltarBase);
+
+    const altarCloth = new THREE.Mesh(
+      new THREE.BoxGeometry(2.95, 0.18, 1.22),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 })
+    );
+    altarCloth.position.y = 1.02;
+    grottoAltarGroup.add(altarCloth);
+
+    // Golden Cross & 4 Lit Altar Candles inside the Grotto Cavern
+    const gAltarCrossV = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.58, 0.06), goldMat);
+    gAltarCrossV.position.set(0, 1.38, 0);
+    grottoAltarGroup.add(gAltarCrossV);
+    const gAltarCrossH = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.06, 0.06), goldMat);
+    gAltarCrossH.position.set(0, 1.48, 0);
+    grottoAltarGroup.add(gAltarCrossH);
+
+    for (const cx of [-1.1, -0.65, 0.65, 1.1]) {
+      const cStick = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.03, 0.03, 0.28, 8),
+        new THREE.MeshBasicMaterial({ color: 0xfffef0 })
+      );
+      cStick.position.set(cx, 1.24, 0.15);
+      grottoAltarGroup.add(cStick);
+
+      const cFlame = new THREE.Mesh(
+        new THREE.SphereGeometry(0.042, 8, 8),
+        new THREE.MeshBasicMaterial({ color: 0xffd166 })
+      );
+      cFlame.scale.set(0.7, 1.6, 0.7);
+      cFlame.position.set(cx, 1.42, 0.15);
+      grottoAltarGroup.add(cFlame);
+      this.candleFlameMeshes.push(cFlame);
+    }
+
+    const cavernWarmLight = new THREE.PointLight(0xffb74d, 1.95, 10);
+    cavernWarmLight.position.set(0, 2.2, -0.5);
+    grottoAltarGroup.add(cavernWarmLight);
+    grottoGroup.add(grottoAltarGroup);
+
+    // 7. 3D Statue of St. Bernadette Kneeling in Prayer before Our Lady of Lourdes
+    const bernadetteGroup = new THREE.Group();
+    bernadetteGroup.position.set(2.45, 0.55, 0.25);
+    bernadetteGroup.rotation.y = 2.35; // Looking toward Our Lady's Niche at (-2.1, 2.35, 0.85)
+
+    const bSkirt = new THREE.Mesh(
+      new THREE.ConeGeometry(0.28, 0.78, 14),
+      new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.65 })
+    );
+    bSkirt.position.y = 0.39;
+    bernadetteGroup.add(bSkirt);
+
+    const bShawl = new THREE.Mesh(
+      new THREE.ConeGeometry(0.26, 0.52, 14),
+      new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.45 })
+    );
+    bShawl.position.y = 0.72;
+    bernadetteGroup.add(bShawl);
+
+    const bHead = new THREE.Mesh(
+      new THREE.SphereGeometry(0.125, 14, 14),
+      new THREE.MeshStandardMaterial({ color: 0xf4d5bc, roughness: 0.38 })
+    );
+    bHead.position.set(0, 1.02, 0.02);
+    bernadetteGroup.add(bHead);
+
+    const bHalo = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.012, 8, 20), goldMat);
+    bHalo.position.set(0, 1.05, -0.05);
+    bernadetteGroup.add(bHalo);
+    grottoGroup.add(bernadetteGroup);
+
+    // 8. Carved Stone Arch Plaque above the Grotto Cavern (Facing -Z toward the courtyard!)
+    const plaqueCanvas = document.createElement('canvas');
+    plaqueCanvas.width = 640;
+    plaqueCanvas.height = 96;
+    const pctx = plaqueCanvas.getContext('2d');
+    pctx.fillStyle = 'rgba(22, 32, 48, 0.9)';
+    pctx.strokeStyle = '#ffd700';
+    pctx.lineWidth = 4;
+    if (pctx.roundRect) {
+      pctx.roundRect(6, 6, 628, 84, 18);
+    } else {
+      pctx.rect(6, 6, 628, 84);
+    }
+    pctx.fill();
+    pctx.stroke();
+    pctx.fillStyle = '#fde047';
+    pctx.font = 'bold 24px Georgia, serif';
+    pctx.textAlign = 'center';
+    pctx.fillText('🌹 HANG ĐÁ ĐỨC MẸ LỘ ĐỨC — VÔ NHIỄM NGUYÊN TỘI', 320, 40);
+    pctx.fillStyle = '#f1f5f9';
+    pctx.font = '17px sans-serif';
+    pctx.fillText('"Ta là Đấng Vô Nhiễm Nguyên Tội — Hãy ăn năn đền tội và lần hạt Mân Côi"', 320, 72);
+
+    const plaqueTex = new THREE.CanvasTexture(plaqueCanvas);
+    plaqueTex.colorSpace = THREE.SRGBColorSpace;
+    const plaqueSprite = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: plaqueTex, transparent: true, depthWrite: false })
+    );
+    plaqueSprite.position.set(0, 6.65, -0.35);
+    plaqueSprite.scale.set(5.2, 0.78, 1);
+    grottoGroup.add(plaqueSprite);
+
+    // 9. Multi-Stream Cascading Miracle Spring Waterfall on Cliff Face into the Reflection Pool
     const dropMat = new THREE.MeshBasicMaterial({
       color: 0xe0f2fe,
       transparent: true,
-      opacity: 0.72
+      opacity: 0.78
     });
-    for (let i = 0; i < 18; i++) {
-      const drop = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), dropMat.clone());
-      drop.scale.set(0.8, 1.8, 0.8);
+    for (let i = 0; i < 28; i++) {
+      const drop = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), dropMat.clone());
+      drop.scale.set(0.85, 1.9, 0.85);
       drop.userData = {
-        progress: i / 18,
-        offsetX: -4.4 + (Math.random() - 0.5) * 0.85
+        progress: i / 28,
+        offsetX: 4.5 + (Math.random() - 0.5) * 1.35
       };
       grottoGroup.add(drop);
       this.waterfallDrops.push(drop);
     }
 
-    // Pink & White Rose Bushes flanking the Grotto Niche
-    this._addFloralBouquet(grottoGroup, -2.5, 2.4, 0.85, 0xf43f5e);
-    this._addFloralBouquet(grottoGroup, -1.6, 2.1, 0.95, 0xffffff);
-    this._addFloralBouquet(grottoGroup, 1.6, 2.1, 0.95, 0xfbbf24);
+    // Lush Rose Bushes & Floral Offerings around Our Lady's Niche & Grotto Terrace
+    this._addFloralBouquet(grottoGroup, -2.95, 2.3, 0.75, 0xf43f5e);
+    this._addFloralBouquet(grottoGroup, -1.25, 2.3, 0.75, 0xfbbf24);
+    this._addFloralBouquet(grottoGroup, -1.2, 0.55, 0.85, 0xf43f5e);
+    this._addFloralBouquet(grottoGroup, 2.1, 0.55, 0.85, 0xffffff);
+    this._addFloralBouquet(grottoGroup, 3.6, 0.55, 0.85, 0xfbbf24);
 
     this.group.add(grottoGroup);
   }
@@ -2293,7 +3370,7 @@ export class ChurchEnvironment {
   }
 
   // ===========================================================================
-  // FRAME UPDATE (HALOS, TABERNACLE LAMP, BELL SWING, WATERFALL, CANDLE FLAMES)
+  // FRAME UPDATE (HALOS, BISHOP CELEBRANT, CHOIR & ORGAN, BELL SWING, WATERFALL, CANDLES)
   // ===========================================================================
   update(dt, elapsed) {
     // 1. Gently rotate the Sanctuary Sacred Halo & Lourdes 12-Star Halo
@@ -2304,14 +3381,59 @@ export class ChurchEnvironment {
       this.grottoHalo.rotation.z = -elapsed * 0.28;
     }
 
-    // 2. Pulse the Eternal Red Sanctuary Lamp (Đèn Chầu Đỏ Luôn Sáng) beside the Tabernacle
+    // 2. Animate Đức Cha Chủ Tế Dâng Lễ & Ban Phép Lành at the High Altar
+    if (this.bishopCelebrantGroup) {
+      const b = this.bishopCelebrantGroup;
+      const cycle = Math.sin(elapsed * 0.85);
+      const blessingWave = Math.sin(elapsed * 1.9);
+
+      // Gentle liturgical breathing & bow
+      b.bodyGroup.position.y = Math.sin(elapsed * 1.8) * 0.012;
+      b.headGroup.rotation.x = 0.06 + Math.sin(elapsed * 1.1) * 0.04;
+
+      // Right arm raises in blessing / Orans gesture
+      b.rightArmPivot.rotation.x = -0.35 - Math.max(0, cycle) * 0.55;
+      b.rightArmPivot.rotation.z = blessingWave * 0.16;
+      b.leftArmPivot.rotation.x = -0.15 - Math.max(0, cycle) * 0.25;
+
+      // Sacred Host elevation glow above the Altar
+      if (b.hostElevateGroup) {
+        b.hostElevateGroup.position.y = 1.08 + Math.max(0, cycle) * 0.16;
+        const hScale = 1.0 + Math.sin(elapsed * 3.6) * 0.08;
+        b.hostElevateGroup.scale.setScalar(hScale);
+      }
+    }
+
+    // 3. Animate Sanctuary Choir Singers, Organist & Floating Musical Notes (Ca Đoàn & Đàn Hát)
+    for (const singer of this.choirSingers) {
+      singer.group.rotation.z = Math.sin(elapsed * 2.1 + singer.phase) * 0.045;
+      singer.group.position.y =
+        singer.baseY + Math.abs(Math.sin(elapsed * 2.1 + singer.phase)) * 0.018;
+    }
+
+    if (this.organistGroup) {
+      this.organistGroup.torso.rotation.z = Math.sin(elapsed * 2.8) * 0.05;
+      this.organistGroup.leftHand.position.x = -0.2 + Math.sin(elapsed * 6.5) * 0.09;
+      this.organistGroup.leftHand.position.y = 0.42 + Math.abs(Math.cos(elapsed * 8.0)) * 0.03;
+      this.organistGroup.rightHand.position.x = 0.2 + Math.cos(elapsed * 6.8) * 0.09;
+      this.organistGroup.rightHand.position.y = 0.42 + Math.abs(Math.sin(elapsed * 8.5)) * 0.03;
+    }
+
+    for (const note of this.choirMusicNotes) {
+      const floatCycle = (elapsed * 0.45 + note.phase) % 1.0;
+      note.group.position.y = note.baseY + floatCycle * 1.15;
+      note.group.position.x = note.baseX + Math.sin(elapsed * 2.4 + note.phase) * 0.14;
+      note.group.rotation.y = elapsed * 1.4 + note.phase;
+    }
+
+    // 4. Pulse the Eternal Red Sanctuary Lamp (Đèn Chầu Đỏ Luôn Sáng) beside the Tabernacle
     if (this.tabernacleLampGlow) {
       const pulse = 1.0 + Math.sin(elapsed * 4.2) * 0.18;
       this.tabernacleLampGlow.scale.setScalar(pulse);
       this.tabernacleLampGlow.material.opacity = 0.34 + Math.sin(elapsed * 4.2) * 0.12;
     }
 
-    // 3. Animate Twin Bell Tower & Lower Bell Pavilion Swing Physics
+    // 5. Animate Twin Bell Tower & Lower Bell Pavilion Swing Physics
     if (this.towerBellGroup) {
       if (Math.abs(this.bellSwingVelocity) > 0.001 || Math.abs(this.bellSwingAngle) > 0.001) {
         const springForce = -9.2 * this.bellSwingAngle;
@@ -2335,20 +3457,20 @@ export class ChurchEnvironment {
       }
     }
 
-    // 4. Animate Cascading Waterfall at Hang Đá Đức Mẹ Lộ Đức
+    // 6. Animate Cascading Waterfall at Hang Đá Đức Mẹ Lộ Đức
     for (const drop of this.waterfallDrops) {
-      drop.userData.progress += dt * 0.55;
+      drop.userData.progress += dt * 0.52;
       if (drop.userData.progress > 1) {
         drop.userData.progress = 0;
       }
       const p = drop.userData.progress;
-      drop.position.x = drop.userData.offsetX + Math.sin(elapsed * 3 + p * 6) * 0.08;
-      drop.position.y = 4.6 - p * 4.2;
-      drop.position.z = 0.9 - p * 1.8;
-      drop.material.opacity = Math.sin(p * Math.PI) * 0.72;
+      drop.position.x = drop.userData.offsetX + Math.sin(elapsed * 3.2 + p * 6) * 0.12;
+      drop.position.y = 5.4 - p * 4.9;
+      drop.position.z = 1.6 - p * 2.4;
+      drop.material.opacity = Math.sin(p * Math.PI) * 0.78;
     }
 
-    // 5. Subtle Flicker on Altar & Votive Candle Flames
+    // 7. Subtle Flicker on Altar & Votive Candle Flames
     for (let i = 0; i < this.candleFlameMeshes.length; i++) {
       const flame = this.candleFlameMeshes[i];
       const s = 1.0 + Math.sin(elapsed * 9.5 + i * 1.3) * 0.12;

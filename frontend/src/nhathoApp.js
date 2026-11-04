@@ -169,6 +169,11 @@ export class NhaThoOnlineApp {
       this._applyCatholicDOMTheme();
       this._injectCatholicRitesDialog();
       this._initUI();
+      const urlZone = new URLSearchParams(window.location.search).get('zone');
+      if (urlZone) {
+        this.churchScene.focusZone(urlZone);
+        this._moveAvatarNearZone(urlZone);
+      }
     } catch (err) {
       console.error('NhaThoOnlineApp UI init warning:', err);
     }
@@ -236,12 +241,13 @@ export class NhaThoOnlineApp {
     const roomNameEl = document.getElementById('hud-room-name');
     if (roomNameEl) roomNameEl.textContent = 'Thánh Đường 1';
 
-    // 3. Quick Camera Zones (7 Sacred Cathedral Zones + Cross-link)
+    // 3. Quick Camera Zones (8 Sacred Cathedral Zones)
     const zoneGroup = document.getElementById('zone-shortcuts-group');
     if (zoneGroup) {
       zoneGroup.innerHTML = `
         <button type="button" class="zone-btn active" data-zone="THANH_DUONG">⛪ Thánh Đường</button>
         <button type="button" class="zone-btn" data-zone="CUNG_THANH">✝️ Cung Thánh</button>
+        <button type="button" class="zone-btn" data-zone="CA_DOAN">🎼 Ca Đoàn</button>
         <button type="button" class="zone-btn" data-zone="GIA_NEN">🕯️ Giá Nến</button>
         <button type="button" class="zone-btn" data-zone="THAP_CHUONG">🔔 Tháp Chuông</button>
         <button type="button" class="zone-btn" data-zone="VUON_HOA">🌿 Vườn Hoa (<span id="hud-leaf-count">14</span>)</button>
@@ -1038,6 +1044,7 @@ export class NhaThoOnlineApp {
     const zonePositions = {
       THANH_DUONG: { x: -2.6, z: -6.2, rotY: Math.PI, state: 'KNEEL', pewIndex: 5 },
       CUNG_THANH: { x: 0, z: -15.2, rotY: Math.PI, state: 'IDLE', pewIndex: null },
+      CA_DOAN: { x: -7.5, z: -15.2, rotY: -Math.PI / 2, state: 'IDLE', pewIndex: null },
       GIA_NEN: { x: -5.4, z: -10.5, rotY: -Math.PI / 2, state: 'IDLE', pewIndex: null },
       THAP_CHUONG: { x: 10.5, z: 4.5, rotY: Math.PI / 2, state: 'IDLE', pewIndex: null },
       VUON_HOA: { x: -8.5, z: 14.5, rotY: 0, state: 'IDLE', pewIndex: null },
@@ -1067,6 +1074,7 @@ export class NhaThoOnlineApp {
       }
 
       switch (hit.type) {
+        case 'PEW':
         case 'PEW_KNEELER':
         case 'CUSHION': {
           const pewIdx = hit.data?.pewIndex ?? hit.data?.cushionIndex ?? 0;
@@ -1078,12 +1086,46 @@ export class NhaThoOnlineApp {
           break;
         }
 
+        case 'BISHOP_CELEBRANT': {
+          this.avatarManager.moveLocalAvatarTo(0, -15.5, 'GENUFLECT');
+          this.avatarManager.setPlayerState(this.localSocketId, 'GENUFLECT', null);
+          this.avatarManager.triggerGenuflectPulse(this.localSocketId);
+          this.playPriestPastoralCall();
+          break;
+        }
+
+        case 'CHOIR_AREA': {
+          this.avatarManager.moveLocalAvatarTo(-7.5, -15.2, 'WALK');
+          this.churchScene.focusZone('CA_DOAN');
+          const selectTrack = document.getElementById('select-zen-track');
+          const nextIdx = this.sacredMusicPlayer.isPlaying
+            ? (this.sacredMusicPlayer.currentTrackIndex + 1) % SACRED_MUSIC_TRACKS.length
+            : 2; // Track 2: Ca Đoàn Hợp Xướng Kinh Hòa Bình & Gloria
+          const track = this.sacredMusicPlayer.playSynthTrack(nextIdx);
+          if (selectTrack) selectTrack.value = String(this.sacredMusicPlayer.currentTrackIndex);
+          this._syncMusicWidgetState(true);
+          this.showToast(`🎼 Ca Đoàn & Đàn Đại Quản Cầm đang tấu: ${track.title}`, 3500);
+          break;
+        }
+
         case 'SANCTUARY_ALTAR':
+        case 'SHRINE_STATUE':
         case 'MARIAN_SHRINE':
         case 'SAINT_SHRINE':
         case 'MARIAN_GROTTO': {
           const targetKey = hit.data?.target || 'ALTAR';
           this.performGenuflectionAndSignOfCross(targetKey);
+          break;
+        }
+
+        case 'STATIONS_OF_CROSS': {
+          const stationTitle = hit.data?.label || 'Chặng Đàng Thánh Giá';
+          this.sacredAudio.playSanctuaryChime(0.55);
+          this.lectorVoice.speakVerse(
+            `${stationTitle}. Lạy Chúa Kitô, chúng con thờ lạy và ngợi khen Chúa, vì Chúa đã dùng Thánh Giá Chúa mà chuộc tội cho thiên hạ.`
+          );
+          this._addLocalOptimisticGrace(5, stationTitle);
+          this.showToast(`✝️ Suy niệm ${stationTitle}: Chúng con thờ lạy và ngợi khen Chúa!`, 3600);
           break;
         }
 
@@ -1128,8 +1170,8 @@ export class NhaThoOnlineApp {
 
         case 'GROUND': {
           if (hit.point) {
-            const tx = Math.max(-24, Math.min(24, hit.point.x));
-            const tz = Math.max(-23, Math.min(35, hit.point.z));
+            const tx = Math.max(-26, Math.min(26, hit.point.x));
+            const tz = Math.max(-24, Math.min(40, hit.point.z));
             const local = this.avatarManager.getLocalAvatar();
             const curX = local ? local.root.position.x : 0;
             const curZ = local ? local.root.position.z : 0;
@@ -1142,6 +1184,57 @@ export class NhaThoOnlineApp {
         }
       }
     });
+
+    this._injectTouchWalkPad();
+  }
+
+  /**
+   * Injects a compact Mobile & Desktop Directional Step Pad (🕹️ Di chuyển)
+   * so parishioners on mobile phones can walk smoothly in any direction or tap the floor.
+   */
+  _injectTouchWalkPad() {
+    if (document.getElementById('nhatho-walk-pad')) return;
+    const pad = document.createElement('div');
+    pad.id = 'nhatho-walk-pad';
+    pad.className = 'nhatho-walk-pad';
+    pad.innerHTML = `
+      <button type="button" class="walk-pad-btn walk-up" data-dx="0" data-dz="-3.2" title="Đi tới Cung Thánh (W / ⬆️)" aria-label="Đi tới">▲</button>
+      <div class="walk-pad-mid">
+        <button type="button" class="walk-pad-btn walk-left" data-dx="-3.0" data-dz="0" title="Sang trái (A / ⬅️)" aria-label="Sang trái">◀</button>
+        <span class="walk-pad-center" title="Chạm mặt đất hoặc bấm phím mũi tên để di chuyển">🚶</span>
+        <button type="button" class="walk-pad-btn walk-right" data-dx="3.0" data-dz="0" title="Sang phải (D / ➡️)" aria-label="Sang phải">▶</button>
+      </div>
+      <button type="button" class="walk-pad-btn walk-down" data-dx="0" data-dz="3.2" title="Đi ra Sân & Hang Đá (S / ⬇️)" aria-label="Đi lùi">▼</button>
+    `;
+    document.body.appendChild(pad);
+
+    pad.querySelectorAll('.walk-pad-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const dx = Number(btn.getAttribute('data-dx') || 0);
+        const dz = Number(btn.getAttribute('data-dz') || 0);
+        this._stepLocalAvatarBy(dx, dz);
+      });
+    });
+  }
+
+  _stepLocalAvatarBy(dx, dz) {
+    const local = this.avatarManager.getLocalAvatar();
+    const curX = local ? local.root.position.x : 0;
+    const curZ = local ? local.root.position.z : -8;
+
+    // Rotate step vector relative to camera orbitAngle so "Up" always walks forward in camera view!
+    const angle = this.churchScene?.orbitAngle || 0;
+    const worldDx = dx * Math.cos(angle) + dz * Math.sin(angle);
+    const worldDz = -dx * Math.sin(angle) + dz * Math.cos(angle);
+
+    const tx = Math.max(-26, Math.min(26, curX + worldDx));
+    const tz = Math.max(-24, Math.min(40, curZ + worldDz));
+    const rotY = Math.atan2(tx - curX, tz - curZ);
+
+    this.avatarManager.moveLocalAvatarTo(tx, tz, 'WALK');
+    this.churchScene.setFollowTarget(tx, 1.8, tz);
+    this.socketClient.sendMove(tx, tz, rotY, 'WALK', null);
   }
 
   // ============================================================================
@@ -2287,7 +2380,19 @@ export class NhaThoOnlineApp {
       if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
 
       const key = e.key.toUpperCase();
-      if (key === 'L') {
+      if (e.key === 'ArrowUp' || key === 'W') {
+        e.preventDefault();
+        this._stepLocalAvatarBy(0, -3.2);
+      } else if (e.key === 'ArrowDown' || key === 'S') {
+        e.preventDefault();
+        this._stepLocalAvatarBy(0, 3.2);
+      } else if (e.key === 'ArrowLeft' || key === 'A') {
+        e.preventDefault();
+        this._stepLocalAvatarBy(-3.0, 0);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        this._stepLocalAvatarBy(3.0, 0);
+      } else if (key === 'L') {
         e.preventDefault();
         this.performGenuflectionAndSignOfCross('ALTAR');
       } else if (key === 'M' || e.code === 'Space') {
@@ -2475,6 +2580,17 @@ export class NhaThoOnlineApp {
       this.environment.update(dt, elapsed);
       this.avatarManager.update(dt, elapsed);
       this.interactables.update(dt, elapsed);
+
+      // Smoothly follow the local avatar when walking across the Cathedral, Courtyard, or Grotto
+      const local = this.avatarManager.getLocalAvatar();
+      if (local && local.state === 'WALK') {
+        this.churchScene.setFollowTarget(
+          local.root.position.x,
+          local.root.position.y + 1.0,
+          local.root.position.z
+        );
+      }
+
       this.churchScene.update(dt, elapsed);
       this.avatarManager.updateChatBubblesProjection(this.churchScene.camera, dt);
     };

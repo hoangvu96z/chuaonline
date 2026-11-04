@@ -1108,7 +1108,7 @@ export class ChurchAvatarManager {
     if (!local) return;
 
     const clampedX = Math.max(-28, Math.min(28, x));
-    const clampedZ = Math.max(-18.5, Math.min(42, z));
+    const clampedZ = Math.max(-24.5, Math.min(42, z));
     const groundY = this._computeGroundHeight(clampedX, clampedZ, pewIndex);
 
     const dx = clampedX - local.root.position.x;

@@ -525,8 +525,20 @@ export class ChurchInteractables {
       }
     }
 
-    // 3. Check Environment Interactive Meshes (Pews, High Altar, Ambo, Votive Stands, Bell Tower, Shrines, Grotto)
+    // 3. Check Environment Interactive Meshes & Walkable Ground Meshes
     const envHits = raycaster.intersectObjects(this.environment.interactiveMeshes, false);
+    const groundHits = raycaster.intersectObjects(this.environment.walkableMeshes, false);
+
+    if (envHits.length > 0 && groundHits.length > 0) {
+      // If the walkable floor is significantly closer than the interactive backdrop behind it, walk to the floor point
+      if (groundHits[0].distance + 0.25 < envHits[0].distance) {
+        return {
+          type: 'GROUND',
+          point: groundHits[0].point
+        };
+      }
+    }
+
     if (envHits.length > 0) {
       const hit = envHits[0];
       const uData = hit.object.userData || {};
@@ -537,13 +549,23 @@ export class ChurchInteractables {
       };
     }
 
-    // 4. Check Walkable Ground Meshes
-    const groundHits = raycaster.intersectObjects(this.environment.walkableMeshes, false);
     if (groundHits.length > 0) {
       return {
         type: 'GROUND',
         point: groundHits[0].point
       };
+    }
+
+    // 4. Fallback mathematical plane intersection so mobile/desktop taps on steps or edges always work
+    const fallbackPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.5);
+    const planePoint = new THREE.Vector3();
+    if (raycaster.ray.intersectPlane(fallbackPlane, planePoint)) {
+      if (Math.abs(planePoint.x) <= 32 && planePoint.z >= -26 && planePoint.z <= 44) {
+        return {
+          type: 'GROUND',
+          point: planePoint
+        };
+      }
     }
 
     return null;
