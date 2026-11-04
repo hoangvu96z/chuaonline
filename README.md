@@ -12,8 +12,9 @@
 ## ✨ Tính Năng Nổi Bật
 
 ### 1. Không Gian 3D Chùa Cổ Truyền Việt Nam (`Environment.js`)
-- **🏯 Đại Hùng Bảo Điện (35 Bồ Đoàn Thiền Định — 5 Hàng × 7 Cột):**
-  - Điện thờ mở rộng `40m × 27.5m` với tôn tượng **Đức Phật Bổn Sư Thích Ca Mâu Ni** tọa đài sen 3 tầng có hào quang lá Bồ Đề xoay tỏa sáng, 2 tôn tượng phù điêu đá chạm nổi hai bên cùng **Bảng Vàng Tịnh Tâm** và **Bảng Pháp Ngữ**.
+- **🏯 Đại Hùng Bảo Điện (35 Bồ Đoàn Thiền Định — 5 Hàng × 7 Cột, 4 Cột Góc Thoáng Đãng):**
+  - Điện thờ mở rộng `40m × 27.5m` với thiết kế **4 cột gỗ lim ở 4 góc** giúp tầm nhìn hoàn toàn thoáng đãng, không che khuất **Bảng Vàng Tịnh Tâm** và **Bảng Pháp Ngữ**.
+  - Ban thờ Tam Tôn trang nghiêm trong Chánh Điện gồm: **Tôn tượng Đức Địa Tạng Vương Bồ Tát** (bên trái, mẫu Phúc Đan 3D), **Tôn tượng Đức Phật Bổn Sư Thích Ca Mâu Ni** (ở giữa, tọa đài sen 3 tầng có hào quang lá Bồ Đề xoay tỏa sáng) và **Tôn tượng Đức Quán Thế Âm Bồ Tát** (bên phải, ngọc trắng Bạch Y tọa đài sen hồng), đồng thời vẫn giữ nguyên **Đài Địa Tạng** và **Đài Quán Thế Âm** ngoài sân chùa.
   - **35 chỗ ngồi Bồ Đoàn** thêu hoa văn cánh sen đặt trên chiếu vuông đỏ viền vàng kim dành cho các đạo hữu thật đang online trong Đạo Tràng.
 - **🪔 Lư Hương Đồng Chạm Rồng Nổi Ngoài Thềm Chánh Điện:**
   - Đặt trang nghiêm trên bệ đá trước bậc tam cấp Chánh Điện, điêu khắc 3D chi tiết theo mẫu **Đỉnh Đồng Tam Sự Cổ Truyền**: đế đồng tròn chạm Dơi Ngũ Phúc & 3 chân đế quỳ, 3 chân đỉnh uốn cong chữ S chạm mặt Hổ Phù, đôi tai mây xoắn ốc Như Ý và **Rồng Chạm Nổi 3D** uốn lượn chầu Viên Ngọc Lửa.

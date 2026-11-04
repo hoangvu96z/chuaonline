@@ -177,13 +177,13 @@ export class Environment {
       this.walkableMeshes.push(stair);
     }
 
-    // Wooden Pillars (Hàng cột gỗ lim Chánh Điện dời rộng sang hai bên để không chắn tầm nhìn 35 Bồ Đoàn)
-    const pillarGeo = new THREE.CylinderGeometry(0.46, 0.54, 9.2, 14);
+    // 4 Cột Gỗ Lim Bốn Góc Chánh Điện (Giữ lại đúng 4 cột góc để không gian Chánh Điện thoáng đãng, không che khuất tầm nhìn)
+    const pillarGeo = new THREE.CylinderGeometry(0.48, 0.56, 9.2, 16);
     const pillarCoords = [
-      [-15.5, -3.2], [-10.2, -3.2], [10.2, -3.2], [15.5, -3.2],
-      [-15.5, -11.5], [15.5, -11.5],
-      [-15.5, -19.5], [15.5, -19.5],
-      [-15.5, -25.5], [-10.2, -25.5], [10.2, -25.5], [15.5, -25.5]
+      [-16.4, -3.2],
+      [16.4, -3.2],
+      [-16.4, -25.2],
+      [16.4, -25.2]
     ];
     for (const [px, pz] of pillarCoords) {
       const pillar = new THREE.Mesh(pillarGeo, woodMat);
@@ -211,78 +211,147 @@ export class Environment {
       this.group.add(sideWall);
     }
 
-    // Hai Tôn Tượng Phù Điêu Đá Chạm Nổi & Bảng Vàng Pháp Ngữ hai bên Phật Đài (như ảnh mẫu Chánh Điện)
-    const reliefStoneMat = new THREE.MeshStandardMaterial({
-      color: 0x82786d,
-      roughness: 0.58,
-      metalness: 0.15
+    // 1. TÔN TƯỢNG ĐỨC ĐỊA TẠNG VƯƠNG BỒ TÁT (Bên Trái Phật Đài trong Chánh Điện: X = -6.0, Z = -21.4)
+    const indoorDiaTangAltar = new THREE.Group();
+    indoorDiaTangAltar.position.set(-6.0, 1.05, -21.4);
+
+    const altarWoodMat = new THREE.MeshStandardMaterial({ color: 0x4e1e0e, roughness: 0.45 });
+    const leftPedestal = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.15, 2.6), altarWoodMat);
+    leftPedestal.position.y = 0.575;
+    leftPedestal.castShadow = true;
+    leftPedestal.receiveShadow = true;
+    indoorDiaTangAltar.add(leftPedestal);
+
+    const leftPedestalTrim = new THREE.Mesh(new THREE.BoxGeometry(3.55, 0.14, 2.75), goldTrimMat);
+    leftPedestalTrim.position.y = 1.16;
+    indoorDiaTangAltar.add(leftPedestalTrim);
+
+    const indoorDiaTangSculpture = this._createPhucDanDiaTangSculpture();
+    indoorDiaTangSculpture.scale.set(0.86, 0.86, 0.86);
+    indoorDiaTangSculpture.position.set(0, 1.02, 0);
+    indoorDiaTangAltar.add(indoorDiaTangSculpture);
+
+    const indoorDtHitbox = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.5, 1.6, 4.5, 12),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    indoorDtHitbox.position.set(0, 2.8, 0);
+    indoorDtHitbox.userData = {
+      type: 'BUDDHA_STATUE',
+      label: '🙏 Đảnh Lễ Đức Địa Tạng Vương Bồ Tát (Trong Chánh Điện)'
+    };
+    indoorDiaTangAltar.add(indoorDtHitbox);
+    this.interactiveMeshes.push(indoorDtHitbox);
+
+    this.group.add(indoorDiaTangAltar);
+
+    // 2. TÔN TƯỢNG ĐỨC QUÁN THẾ ÂM BỒ TÁT (Bên Phải Phật Đài trong Chánh Điện: X = 6.0, Z = -21.4)
+    const indoorQuanAmAltar = new THREE.Group();
+    indoorQuanAmAltar.position.set(6.0, 1.05, -21.4);
+
+    const rightPedestal = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.15, 2.6), altarWoodMat);
+    rightPedestal.position.y = 0.575;
+    rightPedestal.castShadow = true;
+    rightPedestal.receiveShadow = true;
+    indoorQuanAmAltar.add(rightPedestal);
+
+    const rightPedestalTrim = new THREE.Mesh(new THREE.BoxGeometry(3.55, 0.14, 2.75), goldTrimMat);
+    rightPedestalTrim.position.y = 1.16;
+    indoorQuanAmAltar.add(rightPedestalTrim);
+
+    const qaWhiteJadeMat = new THREE.MeshStandardMaterial({
+      color: 0xfcfaf2,
+      roughness: 0.24,
+      metalness: 0.14,
+      emissive: 0x383224,
+      emissiveIntensity: 0.22
     });
-    const reliefHighlightMat = new THREE.MeshStandardMaterial({
-      color: 0x9b9084,
-      roughness: 0.48,
-      metalness: 0.2
+    const qaLotusPinkMat = new THREE.MeshStandardMaterial({
+      color: 0xf48fb1,
+      roughness: 0.32,
+      metalness: 0.20,
+      emissive: 0x3b1020,
+      emissiveIntensity: 0.2
     });
-    for (const side of [-1, 1]) {
-      const sideStatueGroup = new THREE.Group();
-      sideStatueGroup.position.set(side * 5.6, 1.05, -22.2);
 
-      const sPedestal = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.35, 2.2), woodMat);
-      sPedestal.position.y = 0.68;
-      sideStatueGroup.add(sPedestal);
+    const qaLotusBase = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.02, 0.42, 24), goldTrimMat);
+    qaLotusBase.position.y = 1.42;
+    indoorQuanAmAltar.add(qaLotusBase);
 
-      const sPedestalTrim = new THREE.Mesh(new THREE.BoxGeometry(3.32, 0.12, 2.32), goldTrimMat);
-      sPedestalTrim.position.y = 1.36;
-      sideStatueGroup.add(sPedestalTrim);
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      const petal = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.68, 5), qaLotusPinkMat);
+      petal.scale.set(1.1, 1, 0.45);
+      petal.position.set(Math.cos(a) * 1.18, 1.48, Math.sin(a) * 1.18);
+      petal.rotation.y = -a + Math.PI / 2;
+      petal.rotation.x = 0.35;
+      indoorQuanAmAltar.add(petal);
+    }
 
-      const sLotus = new THREE.Mesh(new THREE.CylinderGeometry(1.32, 1.08, 0.42, 20), reliefStoneMat);
-      sLotus.position.y = 1.58;
-      sideStatueGroup.add(sLotus);
-
-      // Cánh sen đá quanh bệ phù điêu
-      for (let p = 0; p < 12; p++) {
-        const pa = (p / 12) * Math.PI * 2;
-        const sp = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.55, 5), reliefHighlightMat);
-        sp.scale.set(1.1, 1, 0.45);
-        sp.position.set(Math.cos(pa) * 1.22, 1.62, Math.sin(pa) * 1.22);
-        sp.rotation.y = -pa + Math.PI / 2;
-        sp.rotation.x = 0.35;
-        sideStatueGroup.add(sp);
+    const qaIndoorLoader = new GLTFLoader();
+    qaIndoorLoader.load(
+      '/models/quan_am_statue.glb',
+      (gltf) => {
+        const qaModel = gltf.scene;
+        qaModel.scale.set(0.92, 0.92, 0.92);
+        qaModel.position.set(0, 1.56, 0);
+        qaModel.traverse((child) => {
+          if (child.isMesh) {
+            child.material = qaWhiteJadeMat;
+            child.castShadow = true;
+            child.receiveShadow = true;
+            child.userData = {
+              type: 'BUDDHA_STATUE',
+              label: '🙏 Đảnh Lễ Đức Quán Thế Âm Bồ Tát (Trong Chánh Điện)'
+            };
+            this.interactiveMeshes.push(child);
+          }
+        });
+        indoorQuanAmAltar.add(qaModel);
+      },
+      undefined,
+      (err) => {
+        console.warn('[Environment] Lỗi tải /models/quan_am_statue.glb trong Chánh Điện:', err);
       }
+    );
 
-      // Lá đề đá chạm nổi phía sau (Stone Mandorla)
-      const sMandorla = new THREE.Mesh(new THREE.ConeGeometry(1.68, 3.5, 20), reliefStoneMat);
-      sMandorla.scale.set(1.05, 1.0, 0.32);
-      sMandorla.position.set(0, 3.25, -0.38);
-      sideStatueGroup.add(sMandorla);
+    const qaIndoorHalo = new THREE.Group();
+    qaIndoorHalo.position.set(0, 4.82, -0.42);
+    qaIndoorHalo.add(
+      new THREE.Mesh(
+        new THREE.RingGeometry(0.85, 1.16, 32),
+        new THREE.MeshBasicMaterial({
+          color: 0xffe885,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.85
+        })
+      )
+    );
+    indoorQuanAmAltar.add(qaIndoorHalo);
 
-      const sHaloRing = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.06, 10, 24), reliefHighlightMat);
-      sHaloRing.position.set(0, 3.72, -0.18);
-      sideStatueGroup.add(sHaloRing);
+    const qaIndoorLight = new THREE.PointLight(0xfff4d6, 1.8, 10, 1.4);
+    qaIndoorLight.position.set(0, 4.4, 2.4);
+    indoorQuanAmAltar.add(qaIndoorLight);
 
-      // Thân tượng ngồi kiết già & hai tay bắt ấn thiền định
-      const sLegs = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.18, 0.48, 18), reliefHighlightMat);
-      sLegs.scale.set(1.1, 1, 0.78);
-      sLegs.position.set(0, 1.98, 0.08);
-      sideStatueGroup.add(sLegs);
+    const indoorQaHitbox = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.4, 1.5, 4.5, 12),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    indoorQaHitbox.position.set(0, 2.8, 0);
+    indoorQaHitbox.userData = {
+      type: 'BUDDHA_STATUE',
+      label: '🙏 Đảnh Lễ Đức Quán Thế Âm Bồ Tát (Trong Chánh Điện)'
+    };
+    indoorQuanAmAltar.add(indoorQaHitbox);
+    this.interactiveMeshes.push(indoorQaHitbox);
 
-      const sBody = new THREE.Mesh(new THREE.CylinderGeometry(0.56, 0.88, 1.48, 18), reliefHighlightMat);
-      sBody.scale.set(1.08, 1, 0.72);
-      sBody.position.set(0, 2.75, 0.04);
-      sideStatueGroup.add(sBody);
+    this.group.add(indoorQuanAmAltar);
 
-      const sHead = new THREE.Mesh(new THREE.SphereGeometry(0.42, 18, 16), reliefHighlightMat);
-      sHead.position.set(0, 3.72, 0.08);
-      sideStatueGroup.add(sHead);
-
-      const sUshnisha = new THREE.Mesh(new THREE.SphereGeometry(0.22, 14, 12), reliefStoneMat);
-      sUshnisha.position.set(0, 4.10, 0.06);
-      sideStatueGroup.add(sUshnisha);
-
-      this.group.add(sideStatueGroup);
-
-      // Bảng Vàng Tịnh Tâm (Trái) & Bảng Pháp Ngữ (Phải) treo hai bên hậu cung
+    // 3. Bảng Vàng Tịnh Tâm (Trái) & Bảng Pháp Ngữ (Phải) treo hai bên hậu cung (X = ±11.2, không bị cột che)
+    for (const side of [-1, 1]) {
       const boardFrame = new THREE.Mesh(new THREE.BoxGeometry(2.75, 4.1, 0.16), goldTrimMat);
-      boardFrame.position.set(side * 10.2, 4.35, -25.7);
+      boardFrame.position.set(side * 11.2, 4.35, -25.7);
       this.group.add(boardFrame);
 
       const boardCanvas = document.createElement('canvas');
@@ -330,7 +399,7 @@ export class Environment {
         new THREE.BoxGeometry(2.5, 3.85, 0.2),
         new THREE.MeshBasicMaterial({ map: boardTex })
       );
-      boardInner.position.set(side * 10.2, 4.35, -25.66);
+      boardInner.position.set(side * 11.2, 4.35, -25.66);
       this.group.add(boardInner);
     }
 
@@ -1971,17 +2040,10 @@ export class Environment {
     this.group.add(diLacGroup);
   }
 
-  _buildDiaTangStatue() {
-    // Đài Đức Địa Tạng Vương Bồ Tát (Tây Bắc Sân Chùa mở rộng: X = -23.0, Z = 4.8)
-    // Điêu khắc 3D chi tiết theo nguyên mẫu Phúc Đan 3D (https://phucdan3d.com/file-mau-dia-tang-vuong-3d-mau-phuc-dan-3d/):
-    // - Ngồi kiết già trên Đài Sen 3 tầng (đế tròn + chuỗi hạt liên châu + cánh sen úp + 2 tầng cánh sen ngửa dày dặn)
-    // - Đội Mão Tỳ Lư Ngũ Phật 5 cánh chạm nổi hình Phật nhỏ + chóp búp sen + 2 dải phướn rủ dọc qua vai xuống ngực
-    // - Diện tướng từ bi định tĩnh, mắt khép hờ nhìn xuống chúng sinh, bạch hào giữa trán, đôi tai dài phúc hậu
-    // - Khoác Y Cà Sa & Áo Giao Lĩnh xếp nếp mềm mại phủ kín hai đầu gối
-    // - Tay phải nâng trước ngực cầm Tích Trượng nghiêng chéo có đầu chạm hoa văn mây xoắn đối xứng & 6 vòng khoen
-    // - Tay trái đặt giữa lòng nâng Viên Minh Châu tỏa ngọn lửa Tam Muội
+  _createPhucDanDiaTangSculpture() {
+    // Khối Tượng Đức Địa Tạng Vương Bồ Tát điêu khắc 3D theo nguyên mẫu Phúc Đan 3D
+    // Dùng chung cho cả Tôn tượng bên trái Phật Đài trong Chánh Điện và Đài Địa Tạng ngoài Sân Chùa
     const diaTangGroup = new THREE.Group();
-    diaTangGroup.position.set(-23.0, 0.05, 4.8);
 
     // Chất liệu Gỗ Hoàng Đàn / Đồng Vàng Chạm Khắc Mịn (Warm Sculpted Golden Sandalwood & Gilded Bronze)
     const carvedGoldMat = new THREE.MeshStandardMaterial({
@@ -2007,14 +2069,6 @@ export class Environment {
       color: 0x3b2814,
       roughness: 0.35
     });
-    const stonePlinthMat = new THREE.MeshStandardMaterial({ color: 0x707571, roughness: 0.82 });
-
-    // 0. Thềm đá bát giác nâng đỡ Đài Sen Địa Tạng
-    const stoneStep = new THREE.Mesh(new THREE.CylinderGeometry(2.25, 2.45, 0.24, 16), stonePlinthMat);
-    stoneStep.position.y = 0.12;
-    stoneStep.receiveShadow = true;
-    stoneStep.castShadow = true;
-    diaTangGroup.add(stoneStep);
 
     // 1. ĐÀI SEN 3 TẦNG CHẠM NỔI PHÚC ĐAN 3D (y = 0.24 -> 1.48)
     const lotusPedestal = new THREE.Group();
@@ -2585,7 +2639,25 @@ export class Environment {
     dtKeyLight.position.set(0, 3.8, 3.0);
     diaTangGroup.add(dtKeyLight);
 
-    // 7. HITBOX & BỒ ĐOÀN QUỲ LẠY TRƯỚC ĐÀI ĐỊA TẠNG VƯƠNG BỒ TÁT
+    return diaTangGroup;
+  }
+
+  _buildDiaTangStatue() {
+    // Đài Đức Địa Tạng Vương Bồ Tát ngoài Sân Chùa (Tây Bắc Sân Chùa: X = -23.0, Z = 4.8)
+    const outdoorDiaTangGroup = new THREE.Group();
+    outdoorDiaTangGroup.position.set(-23.0, 0.05, 4.8);
+
+    const stonePlinthMat = new THREE.MeshStandardMaterial({ color: 0x707571, roughness: 0.82 });
+    const stoneStep = new THREE.Mesh(new THREE.CylinderGeometry(2.25, 2.45, 0.24, 16), stonePlinthMat);
+    stoneStep.position.y = 0.12;
+    stoneStep.receiveShadow = true;
+    stoneStep.castShadow = true;
+    outdoorDiaTangGroup.add(stoneStep);
+
+    const diaTangSculpture = this._createPhucDanDiaTangSculpture();
+    outdoorDiaTangGroup.add(diaTangSculpture);
+
+    // Hitbox & Bồ Đoàn Quỳ Lạy trước Đài Địa Tạng Vương Bồ Tát ngoài Sân Chùa
     const dtHitbox = new THREE.Mesh(
       new THREE.CylinderGeometry(1.6, 1.8, 4.6, 12),
       new THREE.MeshBasicMaterial({ visible: false })
@@ -2595,7 +2667,7 @@ export class Environment {
       type: 'DIA_TANG_STATUE',
       label: '🙏 Đảnh Lễ Địa Tạng Vương Bồ Tát — Đại Hiếu & Siêu Độ (+5 Công Đức)'
     };
-    diaTangGroup.add(dtHitbox);
+    outdoorDiaTangGroup.add(dtHitbox);
     this.interactiveMeshes.push(dtHitbox);
 
     const dtCushion = new THREE.Mesh(
@@ -2608,10 +2680,10 @@ export class Environment {
       type: 'DIA_TANG_STATUE',
       label: '🙏 Quỳ Lạy Địa Tạng Vương Bồ Tát (+5 Công Đức)'
     };
-    diaTangGroup.add(dtCushion);
+    outdoorDiaTangGroup.add(dtCushion);
     this.interactiveMeshes.push(dtCushion);
 
-    this.group.add(diaTangGroup);
+    this.group.add(outdoorDiaTangGroup);
   }
 
   _buildSevenStoryPagoda() {
