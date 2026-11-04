@@ -16,12 +16,12 @@ export class TempleScene {
     this.camera.position.set(0, 12, 18);
 
     // Camera spherical orbit state around player/target
-    // Default initial angle looks directly into Chánh Điện without the Banyan tree blocking!
-    this.cameraTarget = new THREE.Vector3(0, 1.8, -1);
-    this.desiredCameraTarget = new THREE.Vector3(0, 1.8, -1);
+    // Góc nhìn mặc định bên trong Chánh Điện phía sau hàng Bồ Đoàn Chibi hướng lên Phật Đài (như ảnh mẫu)
+    this.cameraTarget = new THREE.Vector3(0, 2.25, -6.5);
+    this.desiredCameraTarget = new THREE.Vector3(0, 2.25, -6.5);
     this.orbitAngle = 0; // Horizontal angle (radians)
-    this.orbitPitch = 0.36; // Gentle elevation angle so Buddha statue inside Chánh Điện is clearly visible
-    this.orbitDistance = 16;
+    this.orbitPitch = 0.35; // Góc nhìn từ trên cao nhìn rõ các nhân vật Chibi ngồi Bồ Đoàn & Tượng Phật
+    this.orbitDistance = 7.4;
 
     // Renderer setup
     this.renderer = new THREE.WebGLRenderer({
@@ -248,9 +248,9 @@ export class TempleScene {
 
   focusZone(zoneName) {
     if (zoneName === 'CHANH_DIEN') {
-      this.desiredCameraTarget.set(0, 2.4, -9);
-      this.orbitDistance = 13.5;
-      this.orbitPitch = 0.28;
+      this.desiredCameraTarget.set(0, 2.25, -6.5);
+      this.orbitDistance = 7.4;
+      this.orbitPitch = 0.35;
       this.orbitAngle = 0;
     } else if (zoneName === 'SAN_CHUA') {
       this.desiredCameraTarget.set(0, 2.0, 11.5);

@@ -153,7 +153,7 @@ class ChuaOnlineApp {
     this.avatarManager = new AvatarManager(this.templeScene.scene);
     this.interactables = new Interactables(this.templeScene.scene, this.environment);
 
-    // Spawn local player immediately so 3D scene works offline or before socket handshake
+    // Spawn local player immediately on center cushion #2 in Chánh Điện (like reference screenshot)
     this.localSocketId = 'local-self';
     this.avatarManager.setLocalSocketId(this.localSocketId);
     this.avatarManager.upsertPlayer({
@@ -165,9 +165,10 @@ class ChuaOnlineApp {
       meritPoints: this.profile.meritPoints,
       realmLevel: this.profile.realmLevel,
       x: 0,
-      z: 6,
+      z: -5.2,
       rotY: Math.PI,
-      state: 'IDLE'
+      state: 'SIT',
+      cushionIndex: 2
     });
 
     // Spawn initial offline leaves so courtyard always has fallen leaves ready
@@ -515,7 +516,8 @@ class ChuaOnlineApp {
         const zone = btn.getAttribute('data-zone');
 
         if (zone === 'CHANH_DIEN') {
-          this._handleMoveToGroundPoint(0, -5.5, false);
+          this.avatarManager.setLocalTargetPosition(0, -5.2, 'SIT', 2);
+          this.socketClient.sitCushion(2, 0, -5.2);
           this.templeScene.focusZone('CHANH_DIEN');
         } else if (zone === 'DAI_QUAN_AM') {
           this._handleMoveToGroundPoint(7.8, 18.2, false);

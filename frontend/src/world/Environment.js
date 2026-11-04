@@ -3,20 +3,26 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 export const CUSHION_COORDS = [
-  // Row 1 (Front row in Chánh Điện, Z = -7.2)
-  { index: 0, x: -5.5, y: 1.05, z: -7.2 },
-  { index: 1, x: -3.3, y: 1.05, z: -7.2 },
-  { index: 2, x: -1.1, y: 1.05, z: -7.2 },
-  { index: 3, x: 1.1, y: 1.05, z: -7.2 },
-  { index: 4, x: 3.3, y: 1.05, z: -7.2 },
-  { index: 5, x: 5.5, y: 1.05, z: -7.2 },
-  // Row 2 (Back row in Chánh Điện, Z = -9.6)
-  { index: 6, x: -5.5, y: 1.05, z: -9.6 },
-  { index: 7, x: -3.3, y: 1.05, z: -9.6 },
-  { index: 8, x: -1.1, y: 1.05, z: -9.6 },
-  { index: 9, x: 1.1, y: 1.05, z: -9.6 },
-  { index: 10, x: 3.3, y: 1.05, z: -9.6 },
-  { index: 11, x: 5.5, y: 1.05, z: -9.6 }
+  // Hàng 1 (Hàng gần lối vào Chánh Điện, Z = -5.2)
+  { index: 0, x: -5.4, y: 1.05, z: -5.2 },
+  { index: 1, x: -3.25, y: 1.05, z: -5.2 },
+  { index: 2, x: 0.0, y: 1.05, z: -5.2 },
+  { index: 3, x: 3.25, y: 1.05, z: -5.2 },
+  { index: 4, x: 5.4, y: 1.05, z: -5.2 },
+  // Hàng 2 (Hàng giữa Chánh Điện, Z = -7.3)
+  { index: 5, x: -5.4, y: 1.05, z: -7.3 },
+  { index: 6, x: -3.25, y: 1.05, z: -7.3 },
+  { index: 7, x: -1.15, y: 1.05, z: -7.3 },
+  { index: 8, x: 1.15, y: 1.05, z: -7.3 },
+  { index: 9, x: 3.25, y: 1.05, z: -7.3 },
+  { index: 10, x: 5.4, y: 1.05, z: -7.3 },
+  // Hàng 3 (Hàng gần Phật Đài Chánh Điện, Z = -9.4)
+  { index: 11, x: -5.4, y: 1.05, z: -9.4 },
+  { index: 12, x: -3.25, y: 1.05, z: -9.4 },
+  { index: 13, x: -1.15, y: 1.05, z: -9.4 },
+  { index: 14, x: 1.15, y: 1.05, z: -9.4 },
+  { index: 15, x: 3.25, y: 1.05, z: -9.4 },
+  { index: 16, x: 5.4, y: 1.05, z: -9.4 }
 ];
 
 export class Environment {
@@ -425,9 +431,9 @@ export class Environment {
   }
 
   _buildIncenseBurner() {
-    // Blueprint: Lư hương lớn ở (0, 1, -4)
+    // Đỉnh Hương Đồng Tam Bảo đặt trước thềm Chánh Điện (0, 0.08, 2.2) để bên trong Chánh Điện thoáng đãng cho 17 Bồ Đoàn Chibi
     const burnerGroup = new THREE.Group();
-    burnerGroup.position.set(0, 1.05, -4);
+    burnerGroup.position.set(0, 0.08, 2.2);
 
     const bronzeMat = new THREE.MeshStandardMaterial({
       color: 0x8c6239,
@@ -617,9 +623,9 @@ export class Environment {
 
     this.group.add(bellPavilion);
 
-    // 2. Pháp Khí Mõ Tụng Kinh (Mộc Ngư Đỏ Son Thếp Vàng + Dùi Gõ Mõ) đặt ngay trong Chánh Điện (-2.4, 1.05, -5.2)
+    // 2. Pháp Khí Mõ Tụng Kinh (Mộc Ngư Đỏ Son Thếp Vàng + Dùi Gõ Mõ) đặt trang nghiêm bên trái Phật Đài (-4.2, 1.05, -11.4)
     const woodenFishGroup = new THREE.Group();
-    woodenFishGroup.position.set(-2.4, 1.05, -5.2);
+    woodenFishGroup.position.set(-4.2, 1.05, -11.4);
 
     const tableWoodMat = new THREE.MeshStandardMaterial({ color: 0x5c260e, roughness: 0.45 });
     const cushionRedMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.5 });
@@ -694,23 +700,61 @@ export class Environment {
   }
 
   _buildMeditationCushions() {
-    // Blueprint: 12 chiếc Bồ đoàn xếp thành 2 hàng để user click ngồi thiền/gõ mõ/tụng kinh
-    const cushionMat = new THREE.MeshStandardMaterial({
-      color: 0xb8732a,
-      roughness: 0.65
+    // 12 chiếc Bồ Đoàn Tròn Xếp Múi đặt trên Thảm Vuông Đỏ Viền Vàng (như ảnh mẫu Chibi Đạo Tràng)
+    const rugRedMat = new THREE.MeshStandardMaterial({
+      color: 0x7c201a,
+      roughness: 0.78
     });
-    const borderMat = new THREE.MeshStandardMaterial({
-      color: 0xd4af37,
-      metalness: 0.4,
-      roughness: 0.4
+    const rugGoldBorderMat = new THREE.MeshStandardMaterial({
+      color: 0xc9a038,
+      metalness: 0.35,
+      roughness: 0.48
+    });
+    const rugInnerTrimMat = new THREE.MeshStandardMaterial({
+      color: 0x54130e,
+      roughness: 0.82
+    });
+    const cushionMat = new THREE.MeshStandardMaterial({
+      color: 0xa67c46,
+      roughness: 0.62
+    });
+    const pleatMat = new THREE.MeshStandardMaterial({
+      color: 0x876132,
+      roughness: 0.68
     });
 
     for (const c of CUSHION_COORDS) {
       const cushionGroup = new THREE.Group();
       cushionGroup.position.set(c.x, c.y, c.z);
 
-      const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.74, 0.18, 20), cushionMat);
-      pad.position.y = 0.09;
+      // 1. Thảm lễ Phật hình vuông viền vàng bên dưới (Square Red-Gold Bordered Mat)
+      const outerGoldRug = new THREE.Mesh(
+        new THREE.BoxGeometry(1.56, 0.022, 1.56),
+        rugGoldBorderMat
+      );
+      outerGoldRug.position.y = 0.011;
+      outerGoldRug.receiveShadow = true;
+      cushionGroup.add(outerGoldRug);
+
+      const midDarkTrim = new THREE.Mesh(
+        new THREE.BoxGeometry(1.42, 0.026, 1.42),
+        rugInnerTrimMat
+      );
+      midDarkTrim.position.y = 0.014;
+      midDarkTrim.receiveShadow = true;
+      cushionGroup.add(midDarkTrim);
+
+      const innerRedRug = new THREE.Mesh(
+        new THREE.BoxGeometry(1.32, 0.03, 1.32),
+        rugRedMat
+      );
+      innerRedRug.position.y = 0.016;
+      innerRedRug.receiveShadow = true;
+      cushionGroup.add(innerRedRug);
+
+      // 2. Đệm Bồ Đoàn Tròn phồng êm ái (Plump Round Meditation Cushion)
+      const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.58, 0.66, 0.16, 28), cushionMat);
+      pad.position.y = 0.095;
       pad.castShadow = true;
       pad.receiveShadow = true;
       pad.userData = {
@@ -723,10 +767,24 @@ export class Environment {
       };
       cushionGroup.add(pad);
 
-      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.69, 0.04, 8, 24), borderMat);
-      rim.rotation.x = Math.PI / 2;
-      rim.position.y = 0.15;
-      cushionGroup.add(rim);
+      // 12 Múi xếp ly hướng tâm trên mặt Bồ Đoàn (Radial Pleats)
+      for (let p = 0; p < 12; p++) {
+        const angle = (p / 12) * Math.PI * 2;
+        const pleat = new THREE.Mesh(
+          new THREE.CapsuleGeometry(0.016, 0.46, 4, 8),
+          pleatMat
+        );
+        pleat.position.set(Math.cos(angle) * 0.28, 0.172, Math.sin(angle) * 0.28);
+        pleat.rotation.y = -angle;
+        pleat.rotation.z = Math.PI / 2 - 0.06;
+        cushionGroup.add(pleat);
+      }
+
+      // Nút tâm Bồ Đoàn
+      const centerButton = new THREE.Mesh(new THREE.SphereGeometry(0.065, 12, 10), pleatMat);
+      centerButton.scale.set(1, 0.45, 1);
+      centerButton.position.y = 0.175;
+      cushionGroup.add(centerButton);
 
       this.group.add(cushionGroup);
       this.cushionMeshes.push(pad);

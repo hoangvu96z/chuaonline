@@ -1,6 +1,101 @@
 // frontend/src/world/AvatarManager.js
 import * as THREE from 'three';
 import { getRealmInfo } from '../data/sutras.js';
+import { CUSHION_COORDS } from './Environment.js';
+
+// Danh sách Đạo Hữu Chibi Đồng Tu ngồi thiền tịnh tâm trong Chánh Điện (như ảnh mẫu)
+const AMBIENT_CHIBI_COMPANIONS = [
+  {
+    socketId: 'npc-chibi-1',
+    cushionIndex: 1,
+    dharmaName: 'Văn Nhân Hiệp',
+    provinceCode: 'HN',
+    robeColor: '#769bb0',
+    avatarStyle: 'CU_SI_AO_LAM',
+    meritPoints: 620,
+    realmLevel: 7
+  },
+  {
+    socketId: 'npc-chibi-3',
+    cushionIndex: 3,
+    dharmaName: 'Hoa Yên Vũ Đoan',
+    provinceCode: 'DN',
+    robeColor: '#6f95ab',
+    avatarStyle: 'CU_SI_AO_LAM',
+    meritPoints: 510,
+    realmLevel: 6
+  },
+  {
+    socketId: 'npc-chibi-5',
+    cushionIndex: 5,
+    dharmaName: 'Mộng Gia Nam Châu',
+    provinceCode: 'SG',
+    robeColor: '#6f95ab',
+    avatarStyle: 'CHU_TANG_CA_SA',
+    meritPoints: 650,
+    realmLevel: 7
+  },
+  {
+    socketId: 'npc-chibi-6',
+    cushionIndex: 6,
+    dharmaName: 'Khả Khoa Đạo',
+    provinceCode: 'CT',
+    robeColor: '#d8d5cc',
+    avatarStyle: 'CHU_TANG_CA_SA',
+    meritPoints: 1500,
+    realmLevel: 9
+  },
+  {
+    socketId: 'npc-chibi-8',
+    cushionIndex: 8,
+    dharmaName: 'Sen Hào Lực',
+    provinceCode: 'HUE',
+    robeColor: '#dcd9d0',
+    avatarStyle: 'CHU_TANG_CA_SA',
+    meritPoints: 120,
+    realmLevel: 2
+  },
+  {
+    socketId: 'npc-chibi-9',
+    cushionIndex: 9,
+    dharmaName: 'Nhẫn Tân Mai',
+    provinceCode: 'SG',
+    robeColor: '#7ca1b5',
+    avatarStyle: 'CHU_TANG_CA_SA',
+    meritPoints: 520,
+    realmLevel: 6
+  },
+  {
+    socketId: 'npc-chibi-12',
+    cushionIndex: 12,
+    dharmaName: 'Thanh Diên Thường Nghi',
+    provinceCode: 'HP',
+    robeColor: '#6d93a8',
+    avatarStyle: 'CHU_TANG_CA_SA',
+    meritPoints: 240,
+    realmLevel: 3
+  },
+  {
+    socketId: 'npc-chibi-13',
+    cushionIndex: 13,
+    dharmaName: 'Tuyến Trang Liêm',
+    provinceCode: 'LD',
+    robeColor: '#d8d5cc',
+    avatarStyle: 'CHU_TANG_CA_SA',
+    meritPoints: 90,
+    realmLevel: 1
+  },
+  {
+    socketId: 'npc-chibi-15',
+    cushionIndex: 15,
+    dharmaName: 'Chiêu Công Đức',
+    provinceCode: 'QN',
+    robeColor: '#7298ad',
+    avatarStyle: 'CU_SI_AO_LAM',
+    meritPoints: 80,
+    realmLevel: 1
+  }
+];
 
 export class AvatarManager {
   constructor(scene) {
@@ -8,25 +103,84 @@ export class AvatarManager {
     this.avatars = new Map(); // socketId -> AvatarEntry
     this.localSocketId = null;
 
-    // Shared geometries for High-CCU optimization
+    // Tạo texture hào quang Chibi tỏa sáng dịu nhẹ quanh đầu & thân (Soft Radial Aura Glow)
+    this.chibiAuraTexture = this._createChibiAuraTexture();
+
+    // Shared geometries for Chibi proportions (1:1.15 head-to-body ratio)
     this.sharedGeos = {
-      robeStanding: new THREE.CylinderGeometry(0.32, 0.46, 1.15, 14),
-      robeSitting: new THREE.CylinderGeometry(0.38, 0.56, 0.68, 14),
-      head: new THREE.SphereGeometry(0.28, 16, 16),
-      bead: new THREE.SphereGeometry(0.036, 8, 8),
-      arm: new THREE.CylinderGeometry(0.08, 0.09, 0.55, 8),
-      broomPole: new THREE.CylinderGeometry(0.03, 0.03, 1.45, 6),
-      broomHead: new THREE.ConeGeometry(0.25, 0.48, 8),
-      sutraDesk: new THREE.BoxGeometry(0.65, 0.26, 0.36),
-      sutraScroll: new THREE.BoxGeometry(0.46, 0.03, 0.24),
-      woodenFish: new THREE.SphereGeometry(0.11, 10, 10),
-      lotusHalo: new THREE.RingGeometry(0.58, 0.78, 24)
+      head: new THREE.SphereGeometry(0.43, 28, 24),
+      ear: new THREE.SphereGeometry(0.105, 14, 12),
+      eye: new THREE.SphereGeometry(0.038, 10, 10),
+      blush: new THREE.SphereGeometry(0.065, 10, 10),
+      hairCap: new THREE.SphereGeometry(0.446, 28, 24, 0, Math.PI * 2, 0, Math.PI * 0.66),
+      mainBun: new THREE.SphereGeometry(0.185, 20, 18),
+      sideBun: new THREE.SphereGeometry(0.125, 14, 14),
+      bunRing: new THREE.TorusGeometry(0.145, 0.024, 8, 20),
+      robeStanding: new THREE.CylinderGeometry(0.28, 0.5, 0.88, 24),
+      robeSitting: new THREE.CylinderGeometry(0.3, 0.54, 0.68, 24),
+      innerSkirt: new THREE.CylinderGeometry(0.46, 0.56, 0.16, 24),
+      innerCollar: new THREE.TorusGeometry(0.25, 0.048, 10, 20),
+      sashMain: new THREE.TorusGeometry(0.41, 0.088, 12, 28),
+      sashBorder: new THREE.TorusGeometry(0.415, 0.092, 10, 28),
+      bead: new THREE.SphereGeometry(0.052, 10, 10),
+      sleeve: new THREE.CapsuleGeometry(0.115, 0.28, 8, 14),
+      hand: new THREE.SphereGeometry(0.088, 12, 12),
+      broomPole: new THREE.CylinderGeometry(0.028, 0.028, 1.35, 6),
+      broomHead: new THREE.ConeGeometry(0.24, 0.45, 8),
+      sutraDesk: new THREE.BoxGeometry(0.62, 0.22, 0.34),
+      sutraScroll: new THREE.BoxGeometry(0.44, 0.03, 0.22),
+      woodenFish: new THREE.SphereGeometry(0.1, 10, 10),
+      lotusHalo: new THREE.RingGeometry(0.56, 0.72, 24),
+      selfPointer: new THREE.ConeGeometry(0.11, 0.22, 4)
     };
 
     this.sharedMats = {
-      skin: new THREE.MeshStandardMaterial({ color: 0xf2ccb7, roughness: 0.65 }),
-      hair: new THREE.MeshStandardMaterial({ color: 0x262220, roughness: 0.8 }),
-      beads: new THREE.MeshStandardMaterial({ color: 0x5c3317, roughness: 0.4 }),
+      skin: new THREE.MeshStandardMaterial({
+        color: 0xf5cdb6,
+        roughness: 0.42,
+        metalness: 0.03,
+        emissive: 0x2e150b,
+        emissiveIntensity: 0.12
+      }),
+      blush: new THREE.MeshStandardMaterial({
+        color: 0xf2948a,
+        roughness: 0.48,
+        emissive: 0x36100c,
+        emissiveIntensity: 0.1
+      }),
+      eyeDark: new THREE.MeshStandardMaterial({ color: 0x1e1410, roughness: 0.18 }),
+      eyeSparkle: new THREE.MeshBasicMaterial({ color: 0xffffff }),
+      hair: new THREE.MeshStandardMaterial({
+        color: 0x332218,
+        roughness: 0.36,
+        metalness: 0.08,
+        emissive: 0x120a06,
+        emissiveIntensity: 0.1
+      }),
+      whiteInner: new THREE.MeshStandardMaterial({
+        color: 0xf2efe9,
+        roughness: 0.55
+      }),
+      goldSash: new THREE.MeshStandardMaterial({
+        color: 0xe8c448,
+        roughness: 0.34,
+        metalness: 0.32,
+        emissive: 0x3b2c04,
+        emissiveIntensity: 0.16
+      }),
+      goldSashTrim: new THREE.MeshStandardMaterial({
+        color: 0xc89622,
+        roughness: 0.38,
+        metalness: 0.42
+      }),
+      beadsCream: new THREE.MeshStandardMaterial({
+        color: 0xe3bc91,
+        roughness: 0.38,
+        metalness: 0.08,
+        emissive: 0x291a0a,
+        emissiveIntensity: 0.1
+      }),
+      preceptDot: new THREE.MeshBasicMaterial({ color: 0xc89d7c }),
       broomPole: new THREE.MeshStandardMaterial({ color: 0x8b6914, roughness: 0.8 }),
       broomStraw: new THREE.MeshStandardMaterial({ color: 0xc2a649, roughness: 0.9 }),
       deskWood: new THREE.MeshStandardMaterial({ color: 0x4a2511, roughness: 0.6 }),
@@ -43,27 +197,83 @@ export class AvatarManager {
         emissive: 0x3b0d04,
         emissiveIntensity: 0.25
       }),
-      kasayaSash: new THREE.MeshStandardMaterial({
-        color: 0xe67e22,
-        roughness: 0.4,
-        metalness: 0.25
-      }),
       lotusHat: new THREE.MeshStandardMaterial({
-        color: 0xd4af37,
-        roughness: 0.3,
-        metalness: 0.65
+        color: 0xe5be3e,
+        roughness: 0.28,
+        metalness: 0.6
       }),
       lotusHalo: new THREE.MeshBasicMaterial({
-        color: 0xffd166,
+        color: 0xffe484,
         side: THREE.DoubleSide,
         transparent: true,
-        opacity: 0.75
+        opacity: 0.65
+      }),
+      selfPointer: new THREE.MeshBasicMaterial({
+        color: 0xffe066
       })
     };
+
+    // Khởi tạo các Đạo Hữu Chibi Đồng Tu ngồi thiền sẵn trong Chánh Điện
+    this._initAmbientCompanions();
+  }
+
+  _createChibiAuraTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createRadialGradient(64, 64, 14, 64, 64, 62);
+    grad.addColorStop(0, 'rgba(255, 246, 210, 0.58)');
+    grad.addColorStop(0.55, 'rgba(255, 232, 165, 0.28)');
+    grad.addColorStop(0.82, 'rgba(255, 220, 130, 0.08)');
+    grad.addColorStop(1, 'rgba(255, 220, 130, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 128, 128);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.needsUpdate = true;
+    return tex;
+  }
+
+  _initAmbientCompanions() {
+    for (const comp of AMBIENT_CHIBI_COMPANIONS) {
+      const coord = CUSHION_COORDS[comp.cushionIndex];
+      if (!coord) continue;
+      const entry = this._createAvatarMesh({
+        ...comp,
+        x: coord.x,
+        z: coord.z,
+        rotY: Math.PI,
+        state: 'SIT',
+        isAmbientNPC: true
+      });
+      this.avatars.set(comp.socketId, entry);
+      this.scene.add(entry.root);
+    }
+  }
+
+  _syncAmbientCompanionVisibility() {
+    // Ẩn NPC đồng tu nếu có người chơi thật đang ngồi đúng chiếc Bồ Đoàn đó
+    const occupiedCushions = new Set();
+    for (const entry of this.avatars.values()) {
+      if (!entry.isAmbientNPC && entry.cushionIndex !== null && entry.cushionIndex !== undefined) {
+        occupiedCushions.add(entry.cushionIndex);
+      }
+    }
+    for (const entry of this.avatars.values()) {
+      if (entry.isAmbientNPC) {
+        const isTaken = occupiedCushions.has(entry.cushionIndex);
+        entry.root.visible = !isTaken;
+      }
+    }
   }
 
   setLocalSocketId(socketId) {
     this.localSocketId = socketId;
+    const local = this.avatars.get(socketId);
+    if (local) {
+      if (local.selfPointerMesh) local.selfPointerMesh.visible = true;
+      this._updateNameplateSprite(local);
+    }
   }
 
   getLocalAvatar() {
@@ -82,9 +292,13 @@ export class AvatarManager {
       this.scene.add(entry.root);
     }
 
+    if (typeof playerData.cushionIndex === 'number' || playerData.cushionIndex === null) {
+      entry.cushionIndex = playerData.cushionIndex;
+    }
+
     // Update target transform for 60FPS linear interpolation (THREE.Vector3.lerp)
     if (typeof playerData.x === 'number' && typeof playerData.z === 'number') {
-      const groundY = this._computeGroundHeight(playerData.x, playerData.z, playerData.cushionIndex);
+      const groundY = this._computeGroundHeight(playerData.x, playerData.z, entry.cushionIndex);
       entry.targetPos.set(playerData.x, groundY, playerData.z);
     }
     if (typeof playerData.rotY === 'number') {
@@ -99,8 +313,8 @@ export class AvatarManager {
       this._applyAvatarStyle(entry, playerData.avatarStyle);
     }
     if (playerData.robeColor && playerData.robeColor !== entry.robeColor) {
-      entry.robeColor = playerData.robeColor;
-      entry.robeMat.color.set(playerData.robeColor);
+      entry.robeColor = this._normalizeChibiRobeColor(playerData.robeColor);
+      entry.robeMat.color.set(entry.robeColor);
     }
     if (
       (playerData.dharmaName && playerData.dharmaName !== entry.dharmaName) ||
@@ -115,7 +329,20 @@ export class AvatarManager {
       this._updateNameplateSprite(entry);
     }
 
+    if (entry.selfPointerMesh) {
+      entry.selfPointerMesh.visible = entry.socketId === this.localSocketId;
+    }
+
+    this._syncAmbientCompanionVisibility();
     return entry;
+  }
+
+  _normalizeChibiRobeColor(hexColor) {
+    // Chuyển màu nâu sẫm mặc định cũ sang tông xanh lam nhạt Chibi dịu mắt (như ảnh mẫu)
+    if (!hexColor || hexColor === '#5c6b73' || hexColor === '#d4a359') {
+      return '#6f95ab';
+    }
+    return hexColor;
   }
 
   syncRoomPlayers(playersList) {
@@ -124,7 +351,6 @@ export class AvatarManager {
       activeIds.add(p.socketId);
       const isLocal = p.socketId === this.localSocketId;
       if (isLocal && this.avatars.has(p.socketId)) {
-        // For local player, keep local customization & immediate movement while syncing server merit/realm
         const localEntry = this.avatars.get(p.socketId);
         if (
           (typeof p.meritPoints === 'number' && p.meritPoints > localEntry.meritPoints) ||
@@ -139,12 +365,13 @@ export class AvatarManager {
       }
     }
 
-    // Remove disconnected players
+    // Remove disconnected real players (preserve ambient companions)
     for (const [sockId, entry] of this.avatars.entries()) {
-      if (!activeIds.has(sockId) && sockId !== this.localSocketId) {
+      if (!entry.isAmbientNPC && !activeIds.has(sockId) && sockId !== this.localSocketId) {
         this.removePlayer(sockId);
       }
     }
+    this._syncAmbientCompanionVisibility();
   }
 
   removePlayer(socketId) {
@@ -159,6 +386,7 @@ export class AvatarManager {
     if (entry.nameplateMat) entry.nameplateMat.dispose();
     if (entry.robeMat) entry.robeMat.dispose();
     this.avatars.delete(socketId);
+    this._syncAmbientCompanionVisibility();
   }
 
   _computeGroundHeight(x = 0, z = 8, cushionIndex = null) {
@@ -185,168 +413,372 @@ export class AvatarManager {
     const bodyGroup = new THREE.Group();
     root.add(bodyGroup);
 
-    const robeColor = data.robeColor || '#5c6b73';
+    const robeColor = this._normalizeChibiRobeColor(data.robeColor);
     const robeMat = new THREE.MeshStandardMaterial({
       color: robeColor,
-      roughness: 0.72
+      roughness: 0.58,
+      metalness: 0.05
     });
 
-    // Standing robe
-    const robeStanding = new THREE.Mesh(this.sharedGeos.robeStanding, robeMat);
-    robeStanding.position.y = 0.58;
-    robeStanding.castShadow = true;
-    robeStanding.receiveShadow = true;
-    bodyGroup.add(robeStanding);
+    // 1. Áo Lam Chibi Xếp Ly Mũm Mĩm (Plump Bell-Shaped Pleated Chibi Robe)
+    const standingRobeGroup = new THREE.Group();
+    const robeStandingMain = new THREE.Mesh(this.sharedGeos.robeStanding, robeMat);
+    robeStandingMain.position.y = 0.48;
+    robeStandingMain.castShadow = true;
+    robeStandingMain.receiveShadow = true;
+    standingRobeGroup.add(robeStandingMain);
 
-    // Sitting robe (hidden unless SIT or CHANT)
-    const robeSitting = new THREE.Mesh(this.sharedGeos.robeSitting, robeMat);
-    robeSitting.position.y = 0.34;
-    robeSitting.castShadow = true;
-    robeSitting.visible = false;
-    bodyGroup.add(robeSitting);
+    const standingInnerSkirt = new THREE.Mesh(this.sharedGeos.innerSkirt, this.sharedMats.whiteInner);
+    standingInnerSkirt.position.y = 0.09;
+    standingRobeGroup.add(standingInnerSkirt);
 
-    // Head
+    // Các nếp xếp ly dọc ôm sát tà áo dưới (không nhô đầu lên vai)
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      const pleat = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.018, 0.042, 0.68, 8),
+        robeMat
+      );
+      pleat.position.set(Math.cos(a) * 0.37, 0.38, Math.sin(a) * 0.37);
+      pleat.rotation.z = Math.cos(a) * 0.24;
+      pleat.rotation.x = -Math.sin(a) * 0.24;
+      standingRobeGroup.add(pleat);
+    }
+    bodyGroup.add(standingRobeGroup);
+
+    // Tư thế Ngồi Thiền Chibi tròn trịa đáng yêu (Sitting Chibi Robe)
+    const sittingRobeGroup = new THREE.Group();
+    const robeSittingMain = new THREE.Mesh(this.sharedGeos.robeSitting, robeMat);
+    robeSittingMain.position.y = 0.36;
+    robeSittingMain.castShadow = true;
+    robeSittingMain.receiveShadow = true;
+    sittingRobeGroup.add(robeSittingMain);
+
+    const sittingInnerSkirt = new THREE.Mesh(this.sharedGeos.innerSkirt, this.sharedMats.whiteInner);
+    sittingInnerSkirt.scale.set(1.06, 0.85, 1.06);
+    sittingInnerSkirt.position.y = 0.07;
+    sittingRobeGroup.add(sittingInnerSkirt);
+
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      const pleat = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.018, 0.046, 0.52, 8),
+        robeMat
+      );
+      pleat.position.set(Math.cos(a) * 0.4, 0.28, Math.sin(a) * 0.4);
+      pleat.rotation.z = Math.cos(a) * 0.33;
+      pleat.rotation.x = -Math.sin(a) * 0.33;
+      sittingRobeGroup.add(pleat);
+    }
+    sittingRobeGroup.visible = false;
+    bodyGroup.add(sittingRobeGroup);
+
+    // 2. Cổ Áo Lót Trắng + Dải Y Lụa Vàng Vắt Chéo Vai + Chuỗi Tràng Hạt Bồ Đề To (Upper Torso Details)
+    const torsoDecorGroup = new THREE.Group();
+    torsoDecorGroup.position.y = 0.86;
+
+    // Cổ áo lót trắng tinh khôi
+    const whiteCollar = new THREE.Mesh(this.sharedGeos.innerCollar, this.sharedMats.whiteInner);
+    whiteCollar.rotation.x = Math.PI / 2;
+    whiteCollar.position.y = 0.02;
+    torsoDecorGroup.add(whiteCollar);
+
+    // Dải Y Lụa Vàng Vắt Chéo Từ Vai Trái Xuống Hông Phải (Ôm trọn lưng & ngực áo như ảnh mẫu)
+    const sashGroup = new THREE.Group();
+    sashGroup.position.set(0.03, -0.26, 0);
+    sashGroup.rotation.z = -0.44;
+
+    const sashBand = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.36, 0.46, 0.145, 28),
+      this.sharedMats.goldSash
+    );
+    sashBand.scale.set(1.05, 1.0, 1.04);
+    sashGroup.add(sashBand);
+
+    const sashTopEdge = new THREE.Mesh(
+      new THREE.TorusGeometry(0.37, 0.018, 8, 28),
+      this.sharedMats.goldSashTrim
+    );
+    sashTopEdge.rotation.x = Math.PI / 2;
+    sashTopEdge.position.y = 0.07;
+    sashGroup.add(sashTopEdge);
+
+    const sashBotEdge = new THREE.Mesh(
+      new THREE.TorusGeometry(0.46, 0.018, 8, 28),
+      this.sharedMats.goldSashTrim
+    );
+    sashBotEdge.rotation.x = Math.PI / 2;
+    sashBotEdge.position.y = -0.07;
+    sashGroup.add(sashBotEdge);
+
+    torsoDecorGroup.add(sashGroup);
+
+    // Chuỗi Tràng Hạt Bồ Đề Hạt Tròn To Đeo Cổ (Chunky Cream-Wood Prayer Beads)
+    const beadsRingGroup = new THREE.Group();
+    beadsRingGroup.position.y = 0.04;
+    const beadCount = 16;
+    for (let i = 0; i < beadCount; i++) {
+      const a = (i / beadCount) * Math.PI * 2;
+      const bead = new THREE.Mesh(this.sharedGeos.bead, this.sharedMats.beadsCream);
+      bead.position.set(
+        Math.cos(a) * 0.29,
+        -Math.abs(Math.sin(a)) * 0.05,
+        Math.sin(a) * 0.29
+      );
+      beadsRingGroup.add(bead);
+    }
+    torsoDecorGroup.add(beadsRingGroup);
+    bodyGroup.add(torsoDecorGroup);
+
+    // 3. Đầu Chibi To Tròn Đáng Yêu + Đôi Tai Tròn + Má Hồng + Tóc Búi Củ Tỏi (Chibi Head Group)
     const headGroup = new THREE.Group();
-    headGroup.position.y = 1.38;
+    headGroup.position.y = 1.28;
+
+    // Vòng Hào Quang Chibi tỏa sáng dịu nhẹ quanh đầu (Soft Glowing Chibi Head Aura)
+    const headAuraSprite = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: this.chibiAuraTexture,
+        transparent: true,
+        depthWrite: false
+      })
+    );
+    headAuraSprite.scale.set(1.45, 1.45, 1);
+    headAuraSprite.position.set(0, 0.02, -0.05);
+    headGroup.add(headAuraSprite);
+
+    // Khuôn đầu Chibi bầu bĩnh
     const headMesh = new THREE.Mesh(this.sharedGeos.head, this.sharedMats.skin);
+    headMesh.scale.set(1.08, 0.96, 1.04);
     headMesh.castShadow = true;
     headGroup.add(headMesh);
 
-    // Top-knot / hair bun (Cư sĩ)
-    const bun = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 10), this.sharedMats.hair);
-    bun.position.set(0, 0.26, -0.05);
-    headGroup.add(bun);
+    // Đôi tai tròn Chibi hai bên đầu (Cute Chubby Round Ears)
+    for (const side of [-1, 1]) {
+      const ear = new THREE.Mesh(this.sharedGeos.ear, this.sharedMats.skin);
+      ear.scale.set(0.68, 1.08, 0.82);
+      ear.position.set(side * 0.45, -0.03, 0.0);
+      ear.castShadow = true;
+      headGroup.add(ear);
 
-    // Chú Tiểu Twin Side Buns (Tóc trái đào hai bên)
+      // Đôi má hồng phúng phính (Rosy Chibi Blush)
+      const blush = new THREE.Mesh(this.sharedGeos.blush, this.sharedMats.blush);
+      blush.scale.set(1.25, 0.78, 0.45);
+      blush.position.set(side * 0.23, -0.07, 0.41);
+      headGroup.add(blush);
+
+      // Đôi mắt Chibi to tròn long lanh
+      const eye = new THREE.Mesh(this.sharedGeos.eye, this.sharedMats.eyeDark);
+      eye.scale.set(1.0, 1.15, 0.6);
+      eye.position.set(side * 0.16, 0.03, 0.425);
+      headGroup.add(eye);
+
+      const sparkle = new THREE.Mesh(
+        new THREE.SphereGeometry(0.013, 6, 6),
+        this.sharedMats.eyeSparkle
+      );
+      sparkle.position.set(side * 0.16 + 0.012, 0.045, 0.445);
+      headGroup.add(sparkle);
+    }
+
+    // Mũi nhỏ & miệng cười Chibi hiền hòa
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 8), this.sharedMats.skin);
+    nose.position.set(0, -0.02, 0.45);
+    headGroup.add(nose);
+
+    const smileArc = new THREE.Mesh(
+      new THREE.TorusGeometry(0.055, 0.01, 6, 12, Math.PI * 0.75),
+      this.sharedMats.eyeDark
+    );
+    smileArc.rotation.z = -Math.PI * 0.88;
+    smileArc.position.set(0, -0.065, 0.435);
+    headGroup.add(smileArc);
+
+    // 6 chấm giới hương trên trán Chú Tiểu / Tu Sĩ (6 Precept Dots)
+    const preceptDotsGroup = new THREE.Group();
+    for (const rowY of [0.22, 0.27]) {
+      for (const colX of [-0.055, 0, 0.055]) {
+        const dot = new THREE.Mesh(
+          new THREE.SphereGeometry(0.012, 6, 6),
+          this.sharedMats.preceptDot
+        );
+        dot.position.set(colX, rowY, 0.39);
+        preceptDotsGroup.add(dot);
+      }
+    }
+    headGroup.add(preceptDotsGroup);
+
+    // Mái Tóc Nâu Đen Bóng Mượt Ôm Trọn Sau Đầu + Búi Tóc Củ Tỏi Tròn Xinh (Full Chibi Hair Cap & Bun)
+    const fullHairGroup = new THREE.Group();
+    const hairCap = new THREE.Mesh(this.sharedGeos.hairCap, this.sharedMats.hair);
+    hairCap.scale.set(1.09, 0.98, 1.05);
+    hairCap.rotation.x = -0.34;
+    hairCap.castShadow = true;
+    fullHairGroup.add(hairCap);
+
+    // Hai mái tóc trước trán mềm mại
+    for (const side of [-1, 1]) {
+      const frontBang = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.075, 0.22, 6, 10),
+        this.sharedMats.hair
+      );
+      frontBang.position.set(side * 0.24, 0.16, 0.33);
+      frontBang.rotation.z = side * 0.82;
+      frontBang.rotation.y = side * -0.35;
+      fullHairGroup.add(frontBang);
+    }
+
+    // Búi tóc củ tỏi tròn to phía sau đỉnh đầu (Main Chibi Top-Back Bun)
+    const mainBunGroup = new THREE.Group();
+    const mainBun = new THREE.Mesh(this.sharedGeos.mainBun, this.sharedMats.hair);
+    mainBun.scale.set(1.08, 0.92, 1.05);
+    mainBun.position.set(0, 0.24, -0.24);
+    mainBun.castShadow = true;
+    mainBunGroup.add(mainBun);
+
+    const bunGoldRing = new THREE.Mesh(this.sharedGeos.bunRing, this.sharedMats.goldSash);
+    bunGoldRing.position.set(0, 0.19, -0.19);
+    bunGoldRing.rotation.x = Math.PI / 2 - 0.55;
+    mainBunGroup.add(bunGoldRing);
+    fullHairGroup.add(mainBunGroup);
+
+    // Búi tóc đôi Na Tra / Chú Tiểu hai bên (Twin Side Buns)
     const twinBunsGroup = new THREE.Group();
-    const leftBun = new THREE.Mesh(new THREE.SphereGeometry(0.085, 8, 8), this.sharedMats.hair);
-    leftBun.position.set(-0.24, 0.16, 0);
-    const rightBun = new THREE.Mesh(new THREE.SphereGeometry(0.085, 8, 8), this.sharedMats.hair);
-    rightBun.position.set(0.24, 0.16, 0);
-    twinBunsGroup.add(leftBun, rightBun);
+    for (const side of [-1, 1]) {
+      const sBun = new THREE.Mesh(this.sharedGeos.sideBun, this.sharedMats.hair);
+      sBun.position.set(side * 0.38, 0.22, -0.08);
+      twinBunsGroup.add(sBun);
+    }
     twinBunsGroup.visible = false;
-    headGroup.add(twinBunsGroup);
+    fullHairGroup.add(twinBunsGroup);
 
-    // Lotus Crown Hat (Mão Sen Vàng cho Phật Tử / Bạch Y)
+    headGroup.add(fullHairGroup);
+
+    // Mão Sen Vàng nhỏ xinh trên đỉnh đầu (Lotus Crown)
     const lotusHatGroup = new THREE.Group();
-    const hatBase = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.27, 0.14, 12), this.sharedMats.lotusHat);
-    hatBase.position.y = 0.23;
-    const hatTop = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.22, 8), this.sharedMats.lotusHat);
-    hatTop.position.y = 0.36;
+    const hatBase = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.16, 0.2, 0.11, 12),
+      this.sharedMats.lotusHat
+    );
+    hatBase.position.set(0, 0.42, -0.06);
+    const hatTop = new THREE.Mesh(
+      new THREE.ConeGeometry(0.13, 0.16, 8),
+      this.sharedMats.lotusHat
+    );
+    hatTop.position.set(0, 0.52, -0.06);
     lotusHatGroup.add(hatBase, hatTop);
     lotusHatGroup.visible = false;
     headGroup.add(lotusHatGroup);
 
     bodyGroup.add(headGroup);
 
-    // Kasaya Sash (Y Cà Sa đắp chéo vai cho Tu Sĩ)
-    const kasayaSash = new THREE.Mesh(
-      new THREE.TorusGeometry(0.36, 0.065, 8, 20),
-      this.sharedMats.kasayaSash
-    );
-    kasayaSash.position.set(0, 0.84, 0.02);
-    kasayaSash.rotation.set(0.65, 0.35, -0.55);
-    kasayaSash.visible = false;
-    bodyGroup.add(kasayaSash);
-
-    // Prayer Beads Necklace (Chuỗi tràng hạt đeo cổ)
-    const beadsGroup = new THREE.Group();
-    beadsGroup.position.y = 1.12;
-    const beadCount = 14;
-    for (let i = 0; i < beadCount; i++) {
-      const a = (i / beadCount) * Math.PI * 2;
-      const bead = new THREE.Mesh(this.sharedGeos.bead, this.sharedMats.beads);
-      bead.position.set(Math.cos(a) * 0.25, -Math.cos(a) * 0.04, Math.sin(a) * 0.25);
-      beadsGroup.add(bead);
-    }
-    bodyGroup.add(beadsGroup);
-
-    // Clasped Hands (Tay chắp búp sen lễ Phật)
+    // 4. Đôi Tay Áo Phồng Mũm Mĩm & Bàn Tay Chibi Tròn Nhỏ Chắp Búp Sen (Chibi Sleeves & Hands)
     const handsGroup = new THREE.Group();
-    handsGroup.position.set(0, 0.88, 0.32);
-    const leftArm = new THREE.Mesh(this.sharedGeos.arm, robeMat);
-    leftArm.position.set(-0.18, 0, -0.1);
-    leftArm.rotation.z = -0.5;
-    leftArm.rotation.x = 0.6;
-    handsGroup.add(leftArm);
+    handsGroup.position.set(0, 0.58, 0.14);
 
-    const rightArm = new THREE.Mesh(this.sharedGeos.arm, robeMat);
-    rightArm.position.set(0.18, 0, -0.1);
-    rightArm.rotation.z = 0.5;
-    rightArm.rotation.x = 0.6;
-    handsGroup.add(rightArm);
+    for (const side of [-1, 1]) {
+      const sleeve = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.085, 0.145, 0.34, 16),
+        robeMat
+      );
+      sleeve.position.set(side * 0.34, -0.04, -0.06);
+      sleeve.rotation.z = side * 0.28;
+      sleeve.rotation.x = -0.38;
+      sleeve.castShadow = true;
+      handsGroup.add(sleeve);
 
-    const palms = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 10), this.sharedMats.skin);
-    palms.scale.set(0.7, 1.3, 1.0);
-    palms.position.set(0, 0.05, 0.08);
-    handsGroup.add(palms);
+      // 4 hạt nút gỗ/vàng trang trí dọc mép ngoài tay áo (như ảnh mẫu)
+      for (let b = 0; b < 4; b++) {
+        const sleeveBead = new THREE.Mesh(
+          new THREE.SphereGeometry(0.025, 8, 8),
+          this.sharedMats.beadsCream
+        );
+        sleeveBead.position.set(
+          side * (0.41 + b * 0.015),
+          0.04 - b * 0.055,
+          -0.1 - b * 0.01
+        );
+        handsGroup.add(sleeveBead);
+      }
+
+      const chibiHand = new THREE.Mesh(this.sharedGeos.hand, this.sharedMats.skin);
+      chibiHand.scale.set(0.95, 1.05, 1.1);
+      chibiHand.position.set(side * 0.065, -0.02, 0.22);
+      handsGroup.add(chibiHand);
+    }
     bodyGroup.add(handsGroup);
 
-    // Accessory 1: Bamboo Broom for SWEEP state (Chổi tre quét lá đa)
+    // 5. Phụ kiện Chổi Tre khi Quét Lá Đa
     const broomGroup = new THREE.Group();
-    broomGroup.position.set(0.36, 0.75, 0.25);
+    broomGroup.position.set(0.38, 0.65, 0.22);
     const pole = new THREE.Mesh(this.sharedGeos.broomPole, this.sharedMats.broomPole);
     pole.rotation.z = 0.22;
     broomGroup.add(pole);
     const bristles = new THREE.Mesh(this.sharedGeos.broomHead, this.sharedMats.broomStraw);
-    bristles.position.set(-0.14, -0.68, 0);
+    bristles.position.set(-0.14, -0.62, 0);
     bristles.rotation.z = Math.PI + 0.22;
     broomGroup.add(bristles);
     broomGroup.visible = false;
     bodyGroup.add(broomGroup);
 
-    // Accessory 2: Sutra Desk, Glowing Sutra Book, Wooden Fish + Mallet & Lotus Aura for SIT / CHANT state
+    // 6. Phụ kiện Bàn Kinh, Mõ Cá Nhân & Vòng Hào Quang Đáy khi Ngồi Thiền / Tụng Kinh
     const chantPropsGroup = new THREE.Group();
     chantPropsGroup.visible = false;
 
     const desk = new THREE.Mesh(this.sharedGeos.sutraDesk, this.sharedMats.deskWood);
-    desk.position.set(0, 0.14, 0.62);
+    desk.position.set(0, 0.12, 0.66);
     desk.castShadow = true;
     chantPropsGroup.add(desk);
 
     const sutraBook = new THREE.Mesh(this.sharedGeos.sutraScroll, this.sharedMats.goldenSutra);
-    sutraBook.position.set(-0.12, 0.29, 0.62);
+    sutraBook.position.set(-0.11, 0.25, 0.66);
     chantPropsGroup.add(sutraBook);
 
     const woodenFish = new THREE.Mesh(this.sharedGeos.woodenFish, this.sharedMats.woodenFish);
-    woodenFish.position.set(0.22, 0.35, 0.62);
-    woodenFish.scale.set(1.38, 1.15, 1.32);
+    woodenFish.position.set(0.2, 0.3, 0.66);
+    woodenFish.scale.set(1.3, 1.1, 1.25);
     chantPropsGroup.add(woodenFish);
 
-    // Dùi Gõ Mõ cá nhân trên bàn kinh (Personal Wooden Fish Striker Mallet)
     const personalMalletPivot = new THREE.Group();
-    personalMalletPivot.position.set(0.32, 0.42, 0.44);
+    personalMalletPivot.position.set(0.28, 0.36, 0.48);
     personalMalletPivot.rotation.set(-0.28, -0.35, 0);
     const malletHandle = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.016, 0.02, 0.28, 6),
+      new THREE.CylinderGeometry(0.015, 0.018, 0.25, 6),
       this.sharedMats.broomPole
     );
     malletHandle.rotation.x = Math.PI / 2;
-    malletHandle.position.z = 0.08;
+    malletHandle.position.z = 0.07;
     const malletTip = new THREE.Mesh(
-      new THREE.SphereGeometry(0.045, 8, 8),
+      new THREE.SphereGeometry(0.04, 8, 8),
       this.sharedMats.woodenFish
     );
-    malletTip.position.z = 0.22;
+    malletTip.position.z = 0.2;
     personalMalletPivot.add(malletHandle, malletTip);
     chantPropsGroup.add(personalMalletPivot);
 
     const lotusHalo = new THREE.Mesh(this.sharedGeos.lotusHalo, this.sharedMats.lotusHalo);
     lotusHalo.rotation.x = -Math.PI / 2;
-    lotusHalo.position.set(0, 0.03, 0);
+    lotusHalo.position.set(0, 0.025, 0);
     chantPropsGroup.add(lotusHalo);
 
     bodyGroup.add(chantPropsGroup);
 
-    // 3D Nameplate Sprite above head
+    // 7. Mũi tên pha lê vàng nhỏ nhấp nhô trên đầu nhân vật của chính mình (như ảnh mẫu)
+    const selfPointerMesh = new THREE.Mesh(this.sharedGeos.selfPointer, this.sharedMats.selfPointer);
+    selfPointerMesh.rotation.x = Math.PI;
+    selfPointerMesh.position.set(0, 1.72, 0);
+    selfPointerMesh.visible = data.socketId === this.localSocketId;
+    root.add(selfPointerMesh);
+
+    // 8. Nhãn Pháp Danh & Cấp Độ nổi thanh thoát trên đầu (Không đóng khung đen thô)
     const nameplateSprite = new THREE.Sprite();
-    nameplateSprite.position.set(0, 2.15, 0);
-    nameplateSprite.scale.set(2.8, 0.72, 1);
+    nameplateSprite.position.set(0, 1.98, 0);
+    nameplateSprite.scale.set(2.15, 0.56, 1);
     root.add(nameplateSprite);
 
     const entry = {
       socketId: data.socketId,
       userId: data.userId,
+      isAmbientNPC: Boolean(data.isAmbientNPC),
       dharmaName: data.dharmaName || 'Thiện Tâm',
       provinceCode: data.provinceCode || 'SG',
       robeColor,
@@ -358,20 +790,22 @@ export class AvatarManager {
       root,
       bodyGroup,
       robeMat,
-      robeStanding,
-      robeSitting,
+       robeStanding: standingRobeGroup,
+      robeSitting: sittingRobeGroup,
+      torsoDecorGroup,
       headGroup,
-      bun,
+      fullHairGroup,
+      mainBunGroup,
       twinBunsGroup,
+      preceptDotsGroup,
       lotusHatGroup,
-      kasayaSash,
-      beadsGroup,
       handsGroup,
       broomGroup,
       chantPropsGroup,
       lotusHalo,
       woodenFish,
       personalMalletPivot,
+      selfPointerMesh,
       nameplateSprite,
       nameplateTexture: null,
       nameplateMat: null,
@@ -379,7 +813,7 @@ export class AvatarManager {
       chatBubbleTimer: 0,
       customSitRotY: null,
       targetPos: root.position.clone(),
-      targetRotY: data.rotY || 0,
+      targetRotY: data.rotY ?? Math.PI,
       bowTimer: 0,
       prostrateTimer: 0
     };
@@ -392,32 +826,33 @@ export class AvatarManager {
 
   _applyAvatarStyle(entry, styleCode = 'CU_SI_AO_LAM') {
     entry.avatarStyle = styleCode;
-    // Reset all style accessories first
-    if (entry.bun) entry.bun.visible = false;
+    if (entry.fullHairGroup) entry.fullHairGroup.visible = true;
+    if (entry.mainBunGroup) entry.mainBunGroup.visible = true;
     if (entry.twinBunsGroup) entry.twinBunsGroup.visible = false;
     if (entry.lotusHatGroup) entry.lotusHatGroup.visible = false;
-    if (entry.kasayaSash) entry.kasayaSash.visible = false;
+    if (entry.preceptDotsGroup) entry.preceptDotsGroup.visible = false;
     entry.bodyGroup.scale.set(1, 1, 1);
 
     switch (styleCode) {
-      case 'CHU_TANG_CA_SA': // Tu Sĩ Đắp Y Cà Sa (Đầu tròn không búi tóc + Y Cà Sa cam vàng)
-        if (entry.kasayaSash) entry.kasayaSash.visible = true;
+      case 'CHU_TANG_CA_SA': // Chibi Tiểu Tăng Đầu Trọc Đáng Yêu (như Mộng Gia Nam Châu / Khả Khoa Đạo)
+      case 'MONK_GOLD':
+        if (entry.fullHairGroup) entry.fullHairGroup.visible = false;
+        if (entry.preceptDotsGroup) entry.preceptDotsGroup.visible = true;
         break;
-      case 'PHAT_TU_AO_TRANG': // Phật Tử Đội Mão Sen Vàng
-        if (entry.bun) entry.bun.visible = true;
+      case 'PHAT_TU_AO_TRANG': // Phật Tử Tóc Búi + Mão Sen Vàng
         if (entry.lotusHatGroup) entry.lotusHatGroup.visible = true;
         break;
-      case 'CHU_TIEU': // Chú Tiểu Tóc Trái Đào (Dáng nhỏ nhắn dễ thương)
+      case 'CHU_TIEU': // Chú Tiểu Tóc Trái Đào Đôi
+        if (entry.mainBunGroup) entry.mainBunGroup.visible = false;
         if (entry.twinBunsGroup) entry.twinBunsGroup.visible = true;
-        entry.bodyGroup.scale.set(0.86, 0.84, 0.86);
+        entry.bodyGroup.scale.set(0.92, 0.9, 0.92);
         break;
-      case 'BACH_Y_HIEN_GIA': // Bạch Y Hiền Giả (Mão Sen + Y Cà Sa Hộ Pháp)
+      case 'BACH_Y_HIEN_GIA':
         if (entry.lotusHatGroup) entry.lotusHatGroup.visible = true;
-        if (entry.kasayaSash) entry.kasayaSash.visible = true;
         break;
-      case 'CU_SI_AO_LAM':
+      case 'CU_SI_AO_LAM': // Cư Sĩ / Phật Tử Tóc Nâu Đen Búi Củ Tỏi Tròn Xinh (như Cúc Huệ Ngưng Uy / Hoa Yên Vũ Đoan)
+      case 'DEVOTEE_CLASSIC':
       default:
-        if (entry.bun) entry.bun.visible = true;
         break;
     }
   }
@@ -428,17 +863,23 @@ export class AvatarManager {
 
     entry.robeStanding.visible = !isSitting;
     entry.robeSitting.visible = isSitting;
-    entry.headGroup.position.y = isSitting ? 0.96 : 1.38;
-    entry.beadsGroup.position.y = isSitting ? 0.72 : 1.12;
-    entry.handsGroup.position.y = isSitting ? 0.56 : 0.88;
-    entry.nameplateSprite.position.y = isSitting ? 1.75 : 2.15;
+    entry.torsoDecorGroup.position.y = isSitting ? 0.66 : 0.86;
+    entry.headGroup.position.y = isSitting ? 1.06 : 1.28;
+    entry.handsGroup.position.y = isSitting ? 0.46 : 0.62;
+    entry.nameplateSprite.position.y = isSitting ? 1.78 : 2.02;
+    if (entry.selfPointerMesh) {
+      entry.selfPointerMesh.position.y = isSitting ? 1.52 : 1.76;
+    }
 
     entry.broomGroup.visible = newState === 'SWEEP';
-    entry.chantPropsGroup.visible = isSitting;
+    // Không hiện bàn gỗ chắn trước mặt khi ngồi Bồ Đoàn để thấy rõ dáng ngồi Chibi và thảm vuông đỏ vàng như ảnh mẫu
+    entry.chantPropsGroup.visible = newState === 'CHANT';
 
     if (isSitting) {
-      // Face customSitRotY if prostrating/sitting at Đài Quán Âm, otherwise towards Golden Buddha in Main Hall (Math.PI)
-      entry.targetRotY = entry.customSitRotY !== null && entry.customSitRotY !== undefined ? entry.customSitRotY : Math.PI;
+      entry.targetRotY =
+        entry.customSitRotY !== null && entry.customSitRotY !== undefined
+          ? entry.customSitRotY
+          : Math.PI;
     } else {
       entry.customSitRotY = null;
     }
@@ -447,32 +888,40 @@ export class AvatarManager {
   _updateNameplateSprite(entry) {
     const canvas = document.createElement('canvas');
     canvas.width = 384;
-    canvas.height = 96;
+    canvas.height = 104;
     const ctx = canvas.getContext('2d');
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Rounded background pill
-    ctx.fillStyle = 'rgba(20, 14, 10, 0.78)';
-    ctx.strokeStyle = '#d4af37';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.roundRect(8, 8, 368, 80, 18);
-    ctx.fill();
-    ctx.stroke();
-
-    // Dharma Name + Province Tag
     const isSelf = entry.socketId === this.localSocketId;
-    ctx.font = 'bold 26px "Noto Serif", Georgia, serif';
-    ctx.fillStyle = isSelf ? '#ffd700' : '#fff5e1';
-    ctx.textAlign = 'center';
-    ctx.fillText(`🪷 ${entry.dharmaName} [${entry.provinceCode}]`, 192, 44);
-
-    // Realm Title & Merit
     const realmInfo = getRealmInfo(entry.meritPoints || 0);
-    ctx.font = '20px system-ui, sans-serif';
-    ctx.fillStyle = '#f3c663';
-    ctx.fillText(`Tầng ${realmInfo.level}: ${realmInfo.title}`, 192, 74);
+    const levelNum = entry.realmLevel || realmInfo.level || 1;
+
+    // Đổ bóng chữ đậm nét trên nền trong suốt (Không dùng hộp đen to che khuất nhân vật như cũ)
+    ctx.textAlign = 'center';
+    ctx.lineJoin = 'round';
+    ctx.miterLimit = 2;
+
+    // Dòng 1: Pháp Danh trắng sáng viền tối mềm mại (như "Cúc Huệ Ngưng Uy", "Văn Nhân Hiệp" trong ảnh mẫu)
+    ctx.font = 'bold 30px "Noto Serif", "Be Vietnam Pro", system-ui, sans-serif';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.92)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 2;
+    ctx.strokeStyle = 'rgba(15, 10, 6, 0.92)';
+    ctx.lineWidth = 6;
+    const displayName = String(entry.dharmaName || 'Đạo Hữu').slice(0, 22);
+    ctx.strokeText(displayName, 192, 42);
+    ctx.fillStyle = isSelf ? '#fff3b0' : '#ffffff';
+    ctx.fillText(displayName, 192, 42);
+
+    // Dòng 2: "Cấp X" nhỏ gọn phía dưới
+    ctx.font = 'bold 21px system-ui, -apple-system, sans-serif';
+    ctx.lineWidth = 5;
+    const levelLabel = `Cấp ${levelNum}`;
+    ctx.strokeText(levelLabel, 192, 74);
+    ctx.fillStyle = isSelf ? '#ffd966' : '#f4e3c1';
+    ctx.fillText(levelLabel, 192, 74);
 
     if (entry.nameplateTexture) entry.nameplateTexture.dispose();
     const tex = new THREE.CanvasTexture(canvas);
@@ -492,20 +941,12 @@ export class AvatarManager {
     entry.nameplateTexture = tex;
   }
 
-  /**
-   * Trigger a respectful bow animation + floating 3D/DOM merit popup when knocking wooden fish or completing a sutra verse
-   */
   triggerBowAndPulse(socketId) {
     const entry = this.avatars.get(socketId);
     if (!entry) return;
     entry.bowTimer = 0.45;
   }
 
-  /**
-   * Trigger full Five-Point Prostration (Ngũ Thể Đầu Địa - Lạy Phật / Lạy Bồ Tát sát đất) animation
-   * @param {string} socketId
-   * @param {number|null} customRotY - Optional custom facing angle (e.g. facing Đài Quán Thế Âm Bồ Tát)
-   */
   triggerProstration(socketId, customRotY = null) {
     const entry = this.avatars.get(socketId);
     if (!entry) return;
@@ -515,9 +956,6 @@ export class AvatarManager {
     entry.prostrateTimer = 2.4;
   }
 
-  /**
-   * Show a simultaneous 3D-projected floating speech bubble above a player's head in the 3D scene
-   */
   showChatBubble(socketId, dharmaName, cleanText, durationSec = 7.5) {
     const entry = this.avatars.get(socketId);
     if (!entry) return;
@@ -551,8 +989,9 @@ export class AvatarManager {
           entry.chatBubbleEl.classList.add('fading');
         }
         const worldPos = entry.root.position.clone();
-        const isSitting = entry.state === 'SIT' || entry.state === 'CHANT' || entry.state === 'PROSTRATE';
-        worldPos.y += isSitting ? 2.35 : 2.75;
+        const isSitting =
+          entry.state === 'SIT' || entry.state === 'CHANT' || entry.state === 'PROSTRATE';
+        worldPos.y += isSitting ? 2.15 : 2.45;
         worldPos.project(camera);
 
         if (worldPos.z < 1) {
@@ -575,7 +1014,7 @@ export class AvatarManager {
     const local = this.getLocalAvatar();
     if (!local) return;
 
-    const clampedX = Math.max(-24, Math.min(24, x));
+    const clampedX = Math.max(-28, Math.min(28, x));
     const clampedZ = Math.max(-17, Math.min(42, z));
     const groundY = this._computeGroundHeight(clampedX, clampedZ, cushionIndex);
 
@@ -588,25 +1027,45 @@ export class AvatarManager {
     local.cushionIndex = cushionIndex;
     local.targetPos.set(clampedX, groundY, clampedZ);
     this._applyAvatarState(local, state);
+    this._syncAmbientCompanionVisibility();
   }
 
   update(dt, elapsed) {
     for (const entry of this.avatars.values()) {
+      if (!entry.root.visible) continue;
+
       // 1. Linear interpolation (THREE.Vector3.lerp) at 60 FPS
       const dist = entry.root.position.distanceTo(entry.targetPos);
       if (dist > 0.01) {
         const lerpSpeed = entry.socketId === this.localSocketId ? 7.5 : 8.5;
         entry.root.position.lerp(entry.targetPos, Math.min(1, dt * lerpSpeed));
 
-        // Walking bob animation
+        // Cute Chibi waddle & bounce when walking
         if (entry.state === 'WALK' || (entry.state === 'IDLE' && dist > 0.15)) {
-          entry.bodyGroup.position.y = Math.abs(Math.sin(elapsed * 11)) * 0.08;
+          entry.bodyGroup.position.y = Math.abs(Math.sin(elapsed * 12)) * 0.085;
+          entry.bodyGroup.rotation.z = Math.sin(elapsed * 12) * 0.045;
         }
       } else {
         entry.bodyGroup.position.y = 0;
+        entry.bodyGroup.rotation.z = 0;
         if (entry.state === 'WALK' && entry.socketId === this.localSocketId) {
           this._applyAvatarState(entry, 'IDLE');
         }
+      }
+
+      // Nhịp thở thiền định & gật nhẹ an tịnh cho các Đạo Hữu Chibi đang ngồi thiền
+      if (entry.state === 'SIT' && entry.prostrateTimer === 0 && entry.bowTimer === 0) {
+        const breath = Math.sin(elapsed * 2.2 + (entry.cushionIndex || 0)) * 0.015;
+        entry.headGroup.position.y = 1.06 + breath;
+      }
+
+      // Nhấp nhô mũi tên vàng trên đầu nhân vật chính
+      if (entry.selfPointerMesh && entry.selfPointerMesh.visible) {
+        const isSitting =
+          entry.state === 'SIT' || entry.state === 'CHANT' || entry.state === 'PROSTRATE';
+        const basePtrY = isSitting ? 1.54 : 1.78;
+        entry.selfPointerMesh.position.y = basePtrY + Math.sin(elapsed * 4.2) * 0.05;
+        entry.selfPointerMesh.rotation.y = elapsed * 1.8;
       }
 
       // 2. Smooth rotation interpolation
@@ -628,14 +1087,11 @@ export class AvatarManager {
       if (entry.prostrateTimer > 0) {
         entry.prostrateTimer = Math.max(0, entry.prostrateTimer - dt);
         const progress = 1 - entry.prostrateTimer / 2.4;
-        // Phase 1 (0..0.25): Raise clasped hands to forehead
-        // Phase 2 (0.25..0.75): Deep prostration touching forehead to lotus mat
-        // Phase 3 (0.75..1.0): Rise back up gracefully
         const prostrateCurve = Math.sin(progress * Math.PI);
-        entry.bodyGroup.rotation.x = prostrateCurve * 0.95;
-        entry.bodyGroup.position.y = -prostrateCurve * 0.16;
-        entry.handsGroup.position.y = 0.56 + Math.sin(progress * Math.PI * 2) * 0.18;
-        entry.handsGroup.position.z = 0.32 + prostrateCurve * 0.25;
+        entry.bodyGroup.rotation.x = prostrateCurve * 0.92;
+        entry.bodyGroup.position.y = -prostrateCurve * 0.14;
+        entry.handsGroup.position.y = 0.46 + Math.sin(progress * Math.PI * 2) * 0.16;
+        entry.handsGroup.position.z = 0.22 + prostrateCurve * 0.22;
         if (entry.lotusHalo) {
           entry.lotusHalo.scale.setScalar(1 + prostrateCurve * 0.38);
         }
@@ -645,19 +1101,19 @@ export class AvatarManager {
       } else if (entry.bowTimer > 0) {
         entry.bowTimer = Math.max(0, entry.bowTimer - dt);
         const bowPhase = Math.sin((entry.bowTimer / 0.45) * Math.PI);
-        entry.bodyGroup.rotation.x = bowPhase * 0.28;
+        entry.bodyGroup.rotation.x = bowPhase * 0.26;
         if (entry.woodenFish) {
           const s = 1 + bowPhase * 0.28;
-          entry.woodenFish.scale.set(1.38 * s, 1.15 * s, 1.32 * s);
+          entry.woodenFish.scale.set(1.3 * s, 1.1 * s, 1.25 * s);
         }
         if (entry.personalMalletPivot) {
           entry.personalMalletPivot.rotation.x = -0.28 + bowPhase * 0.72;
         }
       } else {
         entry.bodyGroup.rotation.x = 0;
-        entry.handsGroup.position.z = 0.32;
+        entry.handsGroup.position.z = 0.22;
         if (entry.woodenFish) {
-          entry.woodenFish.scale.set(1.38, 1.15, 1.32);
+          entry.woodenFish.scale.set(1.3, 1.1, 1.25);
         }
         if (entry.personalMalletPivot) {
           entry.personalMalletPivot.rotation.x = -0.28;
