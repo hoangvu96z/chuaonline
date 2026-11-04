@@ -139,6 +139,33 @@ function saveLocalProfile(profile) {
   }
 }
 
+const CHAT_STORAGE_KEY = 'chua_online_chat_history_v1';
+
+function loadLocalChatHistory() {
+  try {
+    const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.slice(-40);
+      }
+    }
+  } catch (_) {
+    // ignore storage errors
+  }
+  return [];
+}
+
+function saveLocalChatHistory(messages) {
+  try {
+    if (Array.isArray(messages)) {
+      localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages.slice(-40)));
+    }
+  } catch (_) {
+    // ignore storage errors
+  }
+}
+
 // ============================================================================
 // MAIN APPLICATION CONTROLLER
 // ============================================================================
@@ -149,6 +176,8 @@ class ChuaOnlineApp {
     this.globalSession = null;
     this.lastFortune = null;
     this.prostrationCount = 0;
+    this._renderedChatKeys = new Set();
+    this._chatMessagesCache = [];
 
     // Initialize Audio, Music & Voice Engines
     this.zenAudio = new ZenAudio();
@@ -289,8 +318,7 @@ class ChuaOnlineApp {
           }
         }
 
-        if (Array.isArray(data.chatHistory) && !this._hasSyncedInitialChatHistory) {
-          this._hasSyncedInitialChatHistory = true;
+        if (Array.isArray(data.chatHistory)) {
           for (const msg of data.chatHistory) {
             this._handleIncomingChatMessage({ ...msg, skipBubble: true });
           }
@@ -444,6 +472,7 @@ class ChuaOnlineApp {
     this._updateUserCardUI();
     this._renderSutraLibraryCards();
     this._populateProfileModal();
+    this._initPersistentChatHistory();
 
     // 3D Raycast click handler
     this.templeScene.onInteractCallback = (raycaster) => {
@@ -855,12 +884,8 @@ class ChuaOnlineApp {
     const selectVoice = document.getElementById('select-voice-profile');
     selectVoice?.addEventListener('change', (e) => {
       const code = e.target.value;
-      const profile = this.dharmaVoice.setVoiceProfile(code);
+      const profile = this.sutraChanter.changeVoiceProfile(code);
       this.showToast(`🎙️ Đã chuyển giọng đọc kinh: ${profile.name}`);
-      // If currently chanting and not paused, re-read current verse with the new voice profile
-      if (this.sutraChanter.isChanting && !this.sutraChanter.isPaused) {
-        this.sutraChanter._readNextVerse();
-      }
     });
 
     // Pause / Resume Sutra Chanting Button
@@ -877,18 +902,11 @@ class ChuaOnlineApp {
       if (dlg && !dlg.open) dlg.showModal();
     });
 
-    document.getElementById('btn-stop-sutra')?.addEventListener('click', () => {
-      this.sutraChanter.stop();
-      this._syncPauseButtonUI(false);
-      document.getElementById('sutra-scroll-panel')?.setAttribute('hidden', '');
-      this.avatarManager.setLocalTargetPosition(
-        this.avatarManager.getLocalAvatar()?.root.position.x || 0,
-        this.avatarManager.getLocalAvatar()?.root.position.z || -6,
-        'IDLE',
-        null
-      );
-      this.socketClient.sendStateChange('IDLE', null);
-    });
+    const handleStopSutraClick = () => {
+      this._stopSutraChanting(true);
+    };
+    document.getElementById('btn-stop-sutra')?.addEventListener('click', handleStopSutraClick);
+    document.getElementById('btn-stop-sutra-inline')?.addEventListener('click', handleStopSutraClick);
 
     // Multi-User Chat Widget & Quick Greetings
     const chatWidget = document.getElementById('zen-chat-widget');
@@ -1195,6 +1213,50 @@ class ChuaOnlineApp {
     pauseBtn.textContent = isPaused ? '▶️ Tiếp Tục' : '⏸️ Tạm Dừng';
   }
 
+  _stopSutraChanting(showToastFeedback = true) {
+    this.sutraChanter.stop();
+    this.dharmaVoice.stop();
+    this._syncPauseButtonUI(false);
+    const scrollPanel = document.getElementById('sutra-scroll-panel');
+    scrollPanel?.setAttribute('hidden', '');
+
+    const local = this.avatarManager.getLocalAvatar();
+    const curX = local ? local.root.position.x : 0;
+    const curZ = local ? local.root.position.z : -4.6;
+    const curCushion = local?.cushionIndex ?? 3;
+
+    this.avatarManager.setLocalTargetPosition(curX, curZ, 'SIT', curCushion);
+    this.socketClient.sendStateChange('SIT', curCushion);
+    if (showToastFeedback) {
+      this.showToast('⏹️ Đã dừng trì tụng kinh.');
+    }
+  }
+
+  async _initPersistentChatHistory() {
+    // 1. Immediately restore cached chat messages from localStorage so chat room never appears empty on refresh
+    const cached = loadLocalChatHistory();
+    for (const msg of cached) {
+      this._handleIncomingChatMessage({ ...msg, skipBubble: true, skipStorageSave: true });
+    }
+
+    // 2. Fetch persistent chat history from backend REST endpoint to sync any messages from MySQL / server disk
+    try {
+      const res = await fetch(
+        `${this._getBackendBaseUrl()}/api/chat-history?roomId=${encodeURIComponent(this.currentRoomId || 'chanh-dien-1')}&limit=40`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.messages)) {
+          for (const msg of data.messages) {
+            this._handleIncomingChatMessage({ ...msg, skipBubble: true });
+          }
+        }
+      }
+    } catch (_) {
+      // Offline or fallback — already loaded from localStorage & socket
+    }
+  }
+
   _sendChatMessage(rawText) {
     const { cleaned, flagged } = filterSensitiveChatText(rawText);
     if (!cleaned) return;
@@ -1210,9 +1272,10 @@ class ChuaOnlineApp {
     if (toggleChatIcon) toggleChatIcon.textContent = '▾';
 
     // Always render immediately in local chat log & 3D bubble so it is 100% responsive even if server is syncing
-    const localMsgId = 'local-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+    const now = Date.now();
+    const localMsgId = 'local-' + now + '-' + Math.random().toString(36).slice(2, 6);
     this._lastLocalChatText = cleaned;
-    this._lastLocalChatTime = Date.now();
+    this._lastLocalChatTime = now;
     this._handleIncomingChatMessage({
       id: localMsgId,
       socketId: this.localSocketId,
@@ -1220,6 +1283,7 @@ class ChuaOnlineApp {
       provinceCode: this.profile.provinceCode,
       text: cleaned,
       flagged,
+      timestamp: now,
       isLocalImmediate: true
     });
 
@@ -1233,12 +1297,14 @@ class ChuaOnlineApp {
   }
 
   _handleIncomingChatMessage(msg) {
-    // Deduplicate echo from server if we already rendered local message within 3 seconds
+    if (!msg || !msg.text) return;
+
+    // Deduplicate echo from server if we already rendered local message within 4 seconds
     if (
       !msg.isLocalImmediate &&
-      msg.socketId === this.localSocketId &&
+      (msg.socketId === this.localSocketId || msg.dharmaName === this.profile.dharmaName) &&
       msg.text === this._lastLocalChatText &&
-      Date.now() - (this._lastLocalChatTime || 0) < 3000
+      Date.now() - (this._lastLocalChatTime || 0) < 4000
     ) {
       return;
     }
@@ -1247,6 +1313,37 @@ class ChuaOnlineApp {
     const author = msg.dharmaName || 'Đạo hữu';
     const prov = msg.provinceCode || 'SG';
     const { cleaned } = filterSensitiveChatText(msg.text || '');
+    if (!cleaned) return;
+
+    // Deduplicate by message ID or (author + text + 5-second timestamp bucket)
+    const tsBucket = msg.timestamp ? Math.floor(Number(msg.timestamp) / 5000) : 0;
+    const dedupKey = msg.id && !String(msg.id).startsWith('local-')
+      ? `id:${msg.id}`
+      : `sig:${author}:${cleaned}:${tsBucket}`;
+    const contentSig = `sig:${author}:${cleaned}:${tsBucket}`;
+
+    if (this._renderedChatKeys.has(dedupKey) || (tsBucket > 0 && this._renderedChatKeys.has(contentSig))) {
+      return;
+    }
+    this._renderedChatKeys.add(dedupKey);
+    if (tsBucket > 0) this._renderedChatKeys.add(contentSig);
+
+    // Persist to localStorage cache so refreshing the browser never loses the chat room history
+    const cacheEntry = {
+      id: msg.id || `chat-${Date.now()}`,
+      dharmaName: author,
+      provinceCode: prov,
+      roomId: msg.roomId || this.currentRoomId || 'chanh-dien-1',
+      text: cleaned,
+      timestamp: msg.timestamp || Date.now()
+    };
+    this._chatMessagesCache.push(cacheEntry);
+    if (this._chatMessagesCache.length > 40) {
+      this._chatMessagesCache = this._chatMessagesCache.slice(-40);
+    }
+    if (!msg.skipStorageSave) {
+      saveLocalChatHistory(this._chatMessagesCache);
+    }
 
     // If a remote user in the room sends a live message, ensure their avatar exists in 3D space so their bubble appears
     if (!msg.skipBubble && msg.socketId && msg.socketId !== this.localSocketId) {
@@ -1266,12 +1363,14 @@ class ChuaOnlineApp {
           state: 'IDLE'
         });
       }
-      // Also auto-expand the chat panel if collapsed so the user sees incoming room messages
-      const chatWidget = document.getElementById('zen-chat-widget');
-      chatWidget?.classList.remove('collapsed');
-      document.getElementById('btn-toggle-chat')?.setAttribute('aria-expanded', 'true');
-      const toggleChatIcon = document.getElementById('chat-toggle-icon');
-      if (toggleChatIcon) toggleChatIcon.textContent = '▾';
+      // Also auto-expand the chat panel on desktop if collapsed so the user sees incoming room messages
+      if (window.innerWidth > 768) {
+        const chatWidget = document.getElementById('zen-chat-widget');
+        chatWidget?.classList.remove('collapsed');
+        document.getElementById('btn-toggle-chat')?.setAttribute('aria-expanded', 'true');
+        const toggleChatIcon = document.getElementById('chat-toggle-icon');
+        if (toggleChatIcon) toggleChatIcon.textContent = '▾';
+      }
     }
 
     // 1. Append to Chat Log Panel
@@ -1286,7 +1385,7 @@ class ChuaOnlineApp {
       textEl.textContent = ` ${cleaned}`;
       row.append(authorEl, textEl);
       list.appendChild(row);
-      while (list.children.length > 40) {
+      while (list.children.length > 50) {
         list.removeChild(list.firstChild);
       }
       list.scrollTop = list.scrollHeight;
@@ -1696,6 +1795,14 @@ class ChuaOnlineApp {
     // Show Floating Golden Sutra Scroll UI
     const scrollPanel = document.getElementById('sutra-scroll-panel');
     scrollPanel?.removeAttribute('hidden');
+
+    // On mobile screens, collapse chat widget while chanting so sutra scroll has full visibility
+    if (window.innerWidth <= 768) {
+      document.getElementById('zen-chat-widget')?.classList.add('collapsed');
+      document.getElementById('btn-toggle-chat')?.setAttribute('aria-expanded', 'false');
+      const toggleChatIcon = document.getElementById('chat-toggle-icon');
+      if (toggleChatIcon) toggleChatIcon.textContent = '▴';
+    }
 
     const modeBadge = document.getElementById('scroll-mode-badge');
     if (modeBadge) {

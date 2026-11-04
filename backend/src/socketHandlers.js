@@ -439,6 +439,9 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
       };
 
       roomManager.recordRoomChat(socket.id, chatPayload);
+      db.saveChatMessage(chatPayload).catch((err) => {
+        console.warn('[Socket] saveChatMessage error:', err.message);
+      });
       if (room) {
         io.to(room.id).emit('chat_message', chatPayload);
       } else {

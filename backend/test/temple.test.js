@@ -44,8 +44,8 @@ function waitForEvent(socket, eventName, timeoutMs = 6000, filterFn = null) {
 // SUITE 1: FRONTEND DATA & AUDIO MODULES
 // ============================================================================
 describe('Suite 1: Frontend Data & Audio Modules', () => {
-  it('1.1 should have all 12 canonical sutras and 3 prostration vows with required properties and verses', () => {
-    assert.strictEqual(SUTRA_LIBRARY.length, 12, 'SUTRA_LIBRARY must contain exactly 12 sutras');
+  it('1.1 should have all 18 full-length canonical sutras and 3 prostration vows with required properties and verses', () => {
+    assert.strictEqual(SUTRA_LIBRARY.length, 18, 'SUTRA_LIBRARY must contain 18 full-length sutras');
 
     const expectedSutraIds = [
       'bat-nha-tam-kinh',
@@ -59,14 +59,20 @@ describe('Suite 1: Frontend Data & Audio Modules', () => {
       'kinh-vu-lan',
       'sam-hoi-sau-can',
       'thap-chu',
-      'kinh-phap-cu'
+      'kinh-phap-cu',
+      'kinh-dia-tang',
+      'kinh-kim-cang',
+      'kinh-phuoc-duc',
+      'kinh-chuyen-phap-luan',
+      'kinh-vo-luong-tho',
+      'sam-quy-mang'
     ];
 
     for (const sutraId of expectedSutraIds) {
       const sutra = SUTRA_LIBRARY.find((s) => s.id === sutraId);
       assert.ok(sutra, `Sutra with ID "${sutraId}" must exist`);
       assert.ok(typeof sutra.title === 'string' && sutra.title.length > 0, `${sutraId} title missing`);
-      assert.ok(Array.isArray(sutra.verses) && sutra.verses.length > 0, `${sutraId} must have verses`);
+      assert.ok(Array.isArray(sutra.verses) && sutra.verses.length >= 16, `${sutraId} must be a full-length sutra with at least 16 verses`);
       assert.ok(typeof sutra.meritPerVerse === 'number' && sutra.meritPerVerse > 0, `${sutraId} meritPerVerse invalid`);
       assert.ok(typeof sutra.completionBonus === 'number' && sutra.completionBonus > 0, `${sutraId} completionBonus invalid`);
       assert.ok(typeof sutra.tempoMs === 'number' && sutra.tempoMs > 0, `${sutraId} tempoMs invalid`);
@@ -214,7 +220,7 @@ describe('Suite 1: Frontend Data & Audio Modules', () => {
     assert.strictEqual(chanter.verseIndex, 0);
 
     // Simulate wooden fish knocks to step through words and verses
-    let maxKnocks = 50;
+    let maxKnocks = 400;
     while (chanter.isChanting && maxKnocks > 0) {
       chanter.manualKnockVerse();
       maxKnocks--;
@@ -248,8 +254,9 @@ describe('Suite 1: Frontend Data & Audio Modules', () => {
       playGreatBell: () => {}
     };
     const mockVoice = {
-      speakVerse: (text, onEnd, onWord) => {
-        spokenCalls.push({ text, onEnd, onWord });
+      setVoiceProfile: (id) => ({ id, name: id }),
+      speakVerse: (text, onEnd, onWord, opts) => {
+        spokenCalls.push({ text, onEnd, onWord, opts });
       },
       pause: () => {},
       resume: () => {},
@@ -271,8 +278,15 @@ describe('Suite 1: Frontend Data & Audio Modules', () => {
     assert.ok(!spokenCalls[0].text.includes('3 lần'), 'Must never read literal "(3 lần)"');
     assert.strictEqual(chanter.repeatRound, 0);
 
-    // Trigger onEnd of Round 1 -> should advance repeatRound to 1 and remain on verseIndex 0
-    if (spokenCalls[0].onEnd) spokenCalls[0].onEnd();
+    // Switch voice profile mid-verse -> old onEnd callback must be invalidated and new speakVerse started
+    const staleOnEnd = spokenCalls[0].onEnd;
+    chanter.changeVoiceProfile('SU_CO_THANH_NHA');
+    assert.strictEqual(spokenCalls.length, 2, 'Should trigger fresh speakVerse with new voice profile');
+    if (staleOnEnd) staleOnEnd(); // Stale callback from canceled utterance must be ignored!
+    assert.strictEqual(chanter.repeatRound, 0, 'Stale onEnd must not advance repeatRound');
+
+    // Trigger active onEnd of Round 1 -> should advance repeatRound to 1 and remain on verseIndex 0
+    if (spokenCalls[1].onEnd) spokenCalls[1].onEnd();
     assert.strictEqual(chanter.repeatRound, 1);
     assert.strictEqual(chanter.verseIndex, 0);
 
@@ -283,6 +297,7 @@ describe('Suite 1: Frontend Data & Audio Modules', () => {
     assert.strictEqual(chanter.isPaused, false);
 
     chanter.stop();
+    assert.strictEqual(chanter.isChanting, false);
   });
 
   it('1.7 should verify ZenMusicPlayer tracks and YouTube ID extraction', () => {
@@ -939,6 +954,16 @@ describe('Suite 4: Full End-to-End Socket.io & REST API Integration', () => {
     assert.strictEqual(chatMsg.dharmaName, 'Thích Trí Thiền');
     assert.strictEqual(chatMsg.flagged, true);
     assert.strictEqual(chatMsg.text, 'Nam Mô A Di Đà Phật ***');
+
+    // Verify persistent chat history REST endpoint returns the stored message
+    const histRes = await fetch(`${baseUrl}/api/chat-history?roomId=chanh-dien-1`);
+    assert.strictEqual(histRes.status, 200);
+    const histJson = await histRes.json();
+    assert.ok(Array.isArray(histJson.messages) && histJson.messages.length > 0);
+    assert.ok(
+      histJson.messages.some((m) => m.text === 'Nam Mô A Di Đà Phật ***' && m.dharmaName === 'Thích Trí Thiền'),
+      'Persistent chat history must include the sanitized message'
+    );
   });
 
   it('4.12 should award +8 merit on plant_bodhi_tree and +6 merit on feed_koi_fish', async () => {

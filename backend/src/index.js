@@ -59,6 +59,14 @@ export async function createTempleServer(options = {}) {
   const roomManager = new RoomManager(io, meritBatcher, maxRoomCapacity);
   const sutraScheduler = new SutraScheduler(io);
 
+  // Pre-seed persistent chat history into chanh-dien-1 so rooms never lose chat on restart
+  try {
+    const initialChats = await db.getRecentChatMessages('chanh-dien-1', 40);
+    roomManager.seedRoomChatHistory('chanh-dien-1', initialChats);
+  } catch (err) {
+    console.warn('[Server] Initial chat seed warning:', err.message);
+  }
+
   registerSocketHandlers(io, {
     db,
     roomManager,
@@ -127,6 +135,32 @@ export async function createTempleServer(options = {}) {
       }
       const wishes = await db.getActiveWishes(30);
       res.json({ wishes });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/chat-history', async (req, res) => {
+    try {
+      const roomId = String(req.query.roomId || 'chanh-dien-1').slice(0, 32);
+      const limit = Math.min(80, Math.max(5, Number(req.query.limit || 40)));
+      const dbMessages = await db.getRecentChatMessages(roomId, limit);
+      const room = roomManager.rooms.get(roomId);
+      const roomMessages = room?.chatHistory || [];
+
+      // Merge and deduplicate by id
+      const mergedMap = new Map();
+      for (const m of [...dbMessages, ...roomMessages]) {
+        if (m && m.text) {
+          const key = m.id || `${m.dharmaName}:${m.text}:${m.timestamp || 0}`;
+          mergedMap.set(key, m);
+        }
+      }
+      const messages = Array.from(mergedMap.values())
+        .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))
+        .slice(-limit);
+
+      res.json({ roomId, messages });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }

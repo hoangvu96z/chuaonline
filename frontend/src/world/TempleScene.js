@@ -23,19 +23,21 @@ export class TempleScene {
     this.orbitPitch = 0.35; // Góc nhìn từ trên cao nhìn rõ 35 Bồ Đoàn Chibi (5 hàng x 7 cột) & Tượng Phật
     this.orbitDistance = 8.2;
 
-    // Renderer setup
+    // Renderer setup (cap pixelRatio at 1.5 on mobile screens to prevent WebGL memory crashes)
+    const isMobileScreen = window.innerWidth <= 768;
     this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
+      antialias: !isMobileScreen,
       powerPreference: 'high-performance'
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileScreen ? 1.5 : 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.22;
 
     this.container.innerHTML = '';
+    this.renderer.domElement.style.touchAction = 'none';
     this.container.appendChild(this.renderer.domElement);
 
     // Lighting & Day/Night cycle state
@@ -70,8 +72,9 @@ export class TempleScene {
     this.dirLight = new THREE.DirectionalLight(0xffe4b8, 1.35);
     this.dirLight.position.set(20, 36, 22);
     this.dirLight.castShadow = true;
-    this.dirLight.shadow.mapSize.width = 2048;
-    this.dirLight.shadow.mapSize.height = 2048;
+    const shadowRes = window.innerWidth <= 768 ? 1024 : 2048;
+    this.dirLight.shadow.mapSize.width = shadowRes;
+    this.dirLight.shadow.mapSize.height = shadowRes;
     this.dirLight.shadow.camera.near = 1;
     this.dirLight.shadow.camera.far = 120;
     const d = 38;
@@ -304,15 +307,21 @@ export class TempleScene {
     const dom = this.renderer.domElement;
 
     window.addEventListener('resize', () => {
+      const mobileNow = window.innerWidth <= 768;
       this.camera.aspect = window.innerWidth / window.innerHeight;
       this.camera.updateProjectionMatrix();
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobileNow ? 1.5 : 2));
       this.renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
+    this.downPointer = { x: 0, y: 0 };
+
     dom.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0 && e.button !== 2) return;
+      if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 2) return;
       this.isDragging = true;
       this.dragMoved = false;
+      this.downPointer.x = e.clientX;
+      this.downPointer.y = e.clientY;
       this.prevPointer.x = e.clientX;
       this.prevPointer.y = e.clientY;
     });
@@ -321,13 +330,21 @@ export class TempleScene {
       if (!this.isDragging) return;
       const dx = e.clientX - this.prevPointer.x;
       const dy = e.clientY - this.prevPointer.y;
-      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+      const totalDx = e.clientX - this.downPointer.x;
+      const totalDy = e.clientY - this.downPointer.y;
+      const tapThreshold = e.pointerType === 'touch' ? 12 : 5;
+      if (Math.abs(totalDx) > tapThreshold || Math.abs(totalDy) > tapThreshold) {
         this.dragMoved = true;
       }
       this.orbitAngle -= dx * 0.0065;
       this.orbitPitch = Math.max(0.15, Math.min(1.25, this.orbitPitch + dy * 0.0055));
       this.prevPointer.x = e.clientX;
       this.prevPointer.y = e.clientY;
+    });
+
+    window.addEventListener('pointercancel', () => {
+      this.isDragging = false;
+      this.lastPinchDist = null;
     });
 
     window.addEventListener('pointerup', (e) => {

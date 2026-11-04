@@ -1,9 +1,10 @@
 /**
  * CHÙA ONLINE 3D - Dharma Voice AI (Web Speech API + Multi-Voice Profiles + Resilient Karaoke Engine)
  * Features:
- * - 4 selectable Voice Profiles (Thầy Trụ Trì Trầm Ấm, Sư Cô Thanh Nhã, Chú Tiểu Minh Tâm, Đại Chúng Tịnh Độ)
+ * - 4 selectable Voice Profiles (Thầy Trụ Trì Trầm Ấm, Sư Cô Thanh Nhã, Chú Tiểu Trong Trẻo, Đại Chúng Trang Nghiêm)
  * - Automatic strip of "(3 lần)" instruction text so TTS never reads the literal words "ba lần"
- * - Pause & Resume support (`pause()`, `resume()`)
+ * - Session-token guarded speech lifecycle so changing voice profiles, pausing, or stopping never triggers stale callbacks
+ * - Pause & Resume support (`pause()`, `resume()`) from exact word boundary
  * - Automatic fallback timer for unsupported browsers or disabled audio
  * - Anti-hang watchdog timeout guaranteeing callback delivery across all OSes
  * - Synthesized Karaoke word boundary progress for fluid golden text highlighting
@@ -14,28 +15,28 @@ export const VOICE_PROFILES = [
     id: 'SU_ONG_TRAM_AM',
     name: '🧔‍♂️ Thầy Trụ Trì (Trầm Ấm)',
     rate: 0.78,
-    pitch: 0.65,
+    pitch: 0.62,
     preferGender: 'male'
   },
   {
     id: 'SU_CO_THANH_NHA',
     name: '👩‍🦰 Sư Cô (Thanh Nhã)',
-    rate: 0.85,
-    pitch: 1.18,
+    rate: 0.86,
+    pitch: 1.22,
     preferGender: 'female'
   },
   {
     id: 'CHU_TIEU_TRONG_TREO',
     name: '👶 Chú Tiểu (Trong Trẻo)',
-    rate: 0.94,
-    pitch: 1.38,
+    rate: 0.95,
+    pitch: 1.45,
     preferGender: 'female'
   },
   {
     id: 'DAI_CHUNG_TRANG_NGHIEM',
     name: '☸️ Pháp Hội (Trang Nghiêm)',
     rate: 0.82,
-    pitch: 0.85,
+    pitch: 0.88,
     preferGender: 'any'
   }
 ];
@@ -57,8 +58,12 @@ export class DharmaVoice {
     this.watchdogTimer = null;
     this.fallbackTimer = null;
     this.karaokeInterval = null;
+    this.speakDelayTimer = null;
 
-    // State for resuming after pause
+    // Monotonic session ID to invalidate stale utterance callbacks when switching voices or stopping
+    this._speakSessionId = 0;
+
+    // State for resuming after pause or mid-verse voice change
     this._activeText = '';
     this._activeOnEnd = null;
     this._activeOnWord = null;
@@ -72,9 +77,12 @@ export class DharmaVoice {
 
     const findVoice = () => {
       try {
-        const voices = this.synth.getVoices();
+        const voices = this.synth.getVoices() || [];
         this.availableViVoices = voices.filter(
-          (v) => v.lang === 'vi-VN' || v.lang === 'vi_VN' || v.lang.toLowerCase().startsWith('vi')
+          (v) =>
+            v.lang === 'vi-VN' ||
+            v.lang === 'vi_VN' ||
+            String(v.lang || '').toLowerCase().startsWith('vi')
         );
         this.preferredVoice = this.availableViVoices[0] || null;
       } catch {
@@ -126,49 +134,82 @@ export class DharmaVoice {
     return Number.isFinite(count) && count >= 1 && count <= 10 ? count : 1;
   }
 
+  _detachUtteranceAndCancel() {
+    if (this.currentUtterance) {
+      this.currentUtterance.onend = null;
+      this.currentUtterance.onerror = null;
+      this.currentUtterance = null;
+    }
+    if (this.synth) {
+      try {
+        this.synth.cancel();
+      } catch {
+        // Ignore cancel errors
+      }
+    }
+  }
+
   /**
    * Speak a verse of Buddhist scripture with karaoke synchronization and fail-safe completion.
    * @param {string} text - Verse scripture text
    * @param {Function} [onEndCallback] - Guaranteed completion callback
    * @param {Function} [onWordBoundary] - Callback for Karaoke ({ wordIndex, word, charIndex, totalWords })
-   * @param {number} [startWordIndex=0] - Word index to start from (used when resuming from pause)
+   * @param {number} [startWordIndex=0] - Word index to start from (used when resuming from pause or voice switch)
    */
   speakVerse(text, onEndCallback = () => {}, onWordBoundary = () => {}, startWordIndex = 0) {
-    this.stop();
+    const wasSynthBusy = Boolean(this.synth && (this.synth.speaking || this.synth.pending));
+    this._clearAllTimers();
+    this._detachUtteranceAndCancel();
+
+    const sessionId = ++this._speakSessionId;
 
     const spokenText = DharmaVoice.stripRepeatInstruction(text);
     if (!spokenText) {
+      this.isSpeaking = false;
+      this.isPaused = false;
       onEndCallback();
       return;
     }
 
+    const words = spokenText.split(/\s+/).filter(Boolean);
+    const safeStartIdx = Math.max(0, Math.min(startWordIndex, Math.max(0, words.length - 1)));
+
     this._activeText = spokenText;
     this._activeOnEnd = onEndCallback;
     this._activeOnWord = onWordBoundary;
+    this._currentWordIdx = safeStartIdx;
     this.isSpeaking = true;
     this.isPaused = false;
 
     const profile = this.getCurrentProfile();
-    const words = spokenText.split(/\s+/).filter(Boolean);
-    const remainingWords = words.slice(startWordIndex);
+    const remainingWords = words.slice(safeStartIdx);
     const remainingText = remainingWords.join(' ');
     const speedFactor = 0.82 / (profile.rate || 0.82);
-    const estimatedDurationMs = Math.max(1800, Math.round(remainingText.length * 72 * speedFactor));
+    const estimatedDurationMs = Math.max(1500, Math.round(remainingText.length * 68 * speedFactor));
 
     let completed = false;
     const finish = () => {
-      if (completed || this.isPaused) return;
+      if (completed || this.isPaused || !this.isSpeaking || sessionId !== this._speakSessionId) {
+        return;
+      }
       completed = true;
       this.isSpeaking = false;
       this._clearAllTimers();
+      if (this.currentUtterance) {
+        this.currentUtterance.onend = null;
+        this.currentUtterance.onerror = null;
+        this.currentUtterance = null;
+      }
       onEndCallback();
     };
 
     // Setup Karaoke Word Boundary Ticker
-    const wordIntervalMs = Math.max(110, Math.floor(estimatedDurationMs / Math.max(1, remainingWords.length)));
-    this._currentWordIdx = startWordIndex;
+    const wordIntervalMs = Math.max(
+      105,
+      Math.floor(estimatedDurationMs / Math.max(1, remainingWords.length))
+    );
 
-    if (words.length > 0 && startWordIndex < words.length) {
+    if (words.length > 0 && safeStartIdx < words.length) {
       onWordBoundary({
         wordIndex: this._currentWordIdx,
         word: words[this._currentWordIdx],
@@ -178,7 +219,7 @@ export class DharmaVoice {
     }
 
     this.karaokeInterval = setInterval(() => {
-      if (this.isPaused) return;
+      if (this.isPaused || !this.isSpeaking || sessionId !== this._speakSessionId) return;
       this._currentWordIdx++;
       if (this._currentWordIdx < words.length) {
         onWordBoundary({
@@ -187,11 +228,9 @@ export class DharmaVoice {
           charIndex: spokenText.indexOf(words[this._currentWordIdx]),
           totalWords: words.length
         });
-      } else {
-        if (this.karaokeInterval) {
-          clearInterval(this.karaokeInterval);
-          this.karaokeInterval = null;
-        }
+      } else if (this.karaokeInterval) {
+        clearInterval(this.karaokeInterval);
+        this.karaokeInterval = null;
       }
     }, wordIntervalMs);
 
@@ -201,57 +240,72 @@ export class DharmaVoice {
       return;
     }
 
-    try {
-      const utterance = new window.SpeechSynthesisUtterance(remainingText);
-      utterance.lang = 'vi-VN';
-      utterance.rate = profile.rate;
-      utterance.pitch = profile.pitch;
-
-      if (this.availableViVoices.length > 1) {
-        const idx = VOICE_PROFILES.findIndex((p) => p.id === profile.id);
-        utterance.voice = this.availableViVoices[idx % this.availableViVoices.length] || this.preferredVoice;
-      } else if (this.preferredVoice) {
-        utterance.voice = this.preferredVoice;
-      }
-
-      utterance.onend = () => {
-        if (!this.isPaused) finish();
-      };
-
-      utterance.onerror = () => {
-        if (!completed && !this.isPaused) {
-          finish();
+    const startBrowserUtterance = () => {
+      if (sessionId !== this._speakSessionId || this.isPaused || !this.isSpeaking) return;
+      try {
+        if (this.availableViVoices.length === 0 && this.synth) {
+          this._initVoices();
         }
-      };
+        const utterance = new window.SpeechSynthesisUtterance(remainingText);
+        utterance.lang = 'vi-VN';
+        utterance.rate = profile.rate;
+        utterance.pitch = profile.pitch;
 
-      this.currentUtterance = utterance;
+        if (this.availableViVoices.length > 1) {
+          const idx = Math.max(0, VOICE_PROFILES.findIndex((p) => p.id === profile.id));
+          utterance.voice =
+            this.availableViVoices[idx % this.availableViVoices.length] || this.preferredVoice;
+        } else if (this.preferredVoice) {
+          utterance.voice = this.preferredVoice;
+        }
 
-      const watchdogMs = estimatedDurationMs + 1100;
-      this.watchdogTimer = setTimeout(() => {
-        finish();
-      }, watchdogMs);
+        utterance.onend = () => {
+          if (sessionId === this._speakSessionId && !this.isPaused && this.isSpeaking) {
+            finish();
+          }
+        };
 
-      if (this.synth.paused) {
-        this.synth.resume();
+        utterance.onerror = (evt) => {
+          const errType = String(evt?.error || '').toLowerCase();
+          if (errType === 'canceled' || errType === 'interrupted') {
+            return;
+          }
+          if (sessionId === this._speakSessionId && !completed && !this.isPaused && this.isSpeaking) {
+            finish();
+          }
+        };
+
+        this.currentUtterance = utterance;
+
+        const watchdogMs = estimatedDurationMs + 1100;
+        this.watchdogTimer = setTimeout(() => {
+          finish();
+        }, watchdogMs);
+
+        if (this.synth.paused) {
+          this.synth.resume();
+        }
+        this.synth.speak(utterance);
+      } catch (err) {
+        console.warn('DharmaVoice speak failed, using fallback timer:', err);
+        this.fallbackTimer = setTimeout(finish, estimatedDurationMs);
       }
-      this.synth.speak(utterance);
-    } catch (err) {
-      console.warn('DharmaVoice speak failed, using fallback timer:', err);
-      this.fallbackTimer = setTimeout(finish, estimatedDurationMs);
+    };
+
+    // If synth was busy right before cancel(), wait 35ms so Chrome/Safari doesn't drop the new utterance
+    if (wasSynthBusy) {
+      this.speakDelayTimer = setTimeout(startBrowserUtterance, 35);
+    } else {
+      startBrowserUtterance();
     }
   }
 
   pause() {
     if (!this.isSpeaking || this.isPaused) return;
     this.isPaused = true;
+    this._speakSessionId++;
     this._clearAllTimers();
-    if (this.synth) {
-      try {
-        this.synth.cancel();
-      } catch {
-        // ignore
-      }
-    }
+    this._detachUtteranceAndCancel();
   }
 
   resume() {
@@ -266,21 +320,22 @@ export class DharmaVoice {
   }
 
   stop() {
+    this._speakSessionId++;
     this.isSpeaking = false;
     this.isPaused = false;
+    this._activeText = '';
+    this._activeOnEnd = null;
+    this._activeOnWord = null;
+    this._currentWordIdx = 0;
     this._clearAllTimers();
-
-    if (this.synth) {
-      try {
-        this.synth.cancel();
-      } catch {
-        // Ignore cancel errors
-      }
-    }
-    this.currentUtterance = null;
+    this._detachUtteranceAndCancel();
   }
 
   _clearAllTimers() {
+    if (this.speakDelayTimer) {
+      clearTimeout(this.speakDelayTimer);
+      this.speakDelayTimer = null;
+    }
     if (this.watchdogTimer) {
       clearTimeout(this.watchdogTimer);
       this.watchdogTimer = null;

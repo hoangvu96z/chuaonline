@@ -41,17 +41,18 @@
 ---
 
 ### 3. Tụng Kinh Karaoke 4 Giọng Đọc & Đài Nhạc Thiền / YouTube
-- **12 Bộ Kinh Phật Giáo Chính Thống (`sutras.js`):** Bát Nhã Tâm Kinh, Chú Đại Bi, Kinh Từ Bi (Metta Sutta), Kinh Phước Đức, Kinh Pháp Cú, Sám Hối Sáu Căn, Niệm Phật A Di Đà...
-- **Tụng Kinh Karaoke & Xử Lý Lặp Câu (`SutraChanter.js` & `DharmaVoice.js`):**
-  - Hỗ trợ **Tạm dừng / Tiếp tục (`⏸️ Tạm Dừng`)** và **4 giọng đọc Pháp Âm** (*Thầy Trầm Ấm*, *Sư Cô Thanh Nhã*, *Chú Tiểu Minh Tâm*, *Cư Sĩ Điềm Đạm*).
+- **18 Bộ Kinh Phật Giáo Toàn Văn Đầy Đủ (`sutras.js`):** Bát Nhã Tâm Kinh (Kệ Khai Kinh & Tán), Chú Đại Bi (Đầy Đủ 84 Câu), Kinh Từ Bi (Metta Sutta), Pháp Âm Niệm Phật & Lục Tự Di Đà, Kệ Phổ Hiền & Hồi Hướng, Kinh Dược Sư (Đầy Đủ 12 Đại Nguyện), Kinh Phật Thuyết A Di Đà, Kinh Phổ Môn Quán Thế Âm, Kinh Vu Lan Báo Hiếu & Mười Ân Cha Mẹ, Sám Hối Sáu Căn & Hồng Danh 35 Phật, Thập Chú Toàn Văn, Kinh Pháp Cú (24 Bài Kệ), Kinh Địa Tạng Bồ Tát Bổn Nguyện, Kinh Kim Cang Bát Nhã, Kinh Phước Đức (Mangala Sutta), Kinh Chuyển Pháp Luân (Tứ Diệu Đế & Bát Chánh Đạo), Kinh Đại Thừa Vô Lượng Thọ (48 Đại Nguyện), và Sám Quy Mạng Mười Phương Tam Bảo.
+- **Tụng Kinh Karaoke, Chuyển Giọng Mượt Mà & Điều Khiển Dừng/Tạm Dừng (`SutraChanter.js` & `DharmaVoice.js`):**
+  - Hỗ trợ **Tạm dừng / Tiếp tục (`⏸️ Tạm Dừng`)**, **Dừng hẳn (`⏹️ Dừng Tụng`)**, và **4 giọng đọc Pháp Âm** (*Thầy Trụ Trì Trầm Ấm*, *Sư Cô Thanh Nhã*, *Chú Tiểu Trong Trẻo*, *Đại Chúng Trang Nghiêm*) có thể chuyển đổi tức thì ngay giữa câu kinh mà không bị chồng âm hay kẹt bộ đếm.
   - Tự động nhận diện các câu kinh có hậu tố `(3 lần)` để đọc lặp lại toàn bộ câu kinh đủ 3 lần thay vì đọc nguyên chữ `"3 lần"`.
 - **Đài Nhạc Thiền & YouTube (`ZenMusicPlayer.js`):** Tích hợp 5 bản nhạc thiền Web Audio API tổng hợp và trình phát nhạc tịnh tâm trực tiếp từ link YouTube.
 
 ---
 
-### 4. Phòng Chat Đạo Tràng Ái Ngữ & Kiến Trúc Đa Người Chơi Chịu Tải Cao
+### 4. Phòng Chat Đạo Tràng Ái Ngữ Lưu Trữ Bền Vững & Kiến Trúc Đa Người Chơi Chịu Tải Cao
 - **Auto Room Sharding (`RoomManager.js`):** Tự động phân luồng tối đa **60 đạo hữu / Đạo Tràng** (`chanh-dien-1`, `chanh-dien-2`...) và phát gói tin đồng bộ vị trí nén ở tần suất `10Hz` (`100ms/tick`).
-- **Đạo Tràng Ái Ngữ (`chatFilter.js`):** Chat thời gian thực giữa các đạo hữu trong cùng phòng kèm bong bóng thoại 3D trên đầu nhân vật và bộ lọc tự động quét từ nhạy cảm.
+- **Đạo Tràng Ái Ngữ Lưu Trữ 3 Lớp (`db.js`, `socketHandlers.js`, `main.js`):** Chat thời gian thực giữa các đạo hữu trong cùng phòng kèm bong bóng thoại 3D trên đầu nhân vật, bộ lọc tự động quét từ nhạy cảm, và lưu trữ lịch sử trò chuyện bền vững trên **MySQL (`chat_messages`) + File JSON (`persistent_chat_history.json`) + `localStorage`** kết hợp API `GET /api/chat-history` để không bao giờ mất tin nhắn khi tải lại trang hay khởi động lại máy chủ.
+- **Tối Ưu Hóa Mobile Web (`TempleScene.js`, `style.css`):** Hỗ trợ cảm ứng chạm xoay/nhấp 3D ổn định (`touch-action: none`, `100dvh`, chống tự động phóng to trên iOS Safari, tự động thu gọn khung chat khi mở cuộn kinh trên màn hình nhỏ).
 - **Write-Behind Merit Batcher (`MeritBatcher.js`):** Cộng dồn Công Đức trên RAM và ghi gộp xuống PostgreSQL mỗi 30 giây (`UNNEST` batch update), kết hợp bảng xếp hạng **63 Tỉnh Thành Việt Nam** và **9 Cảnh Giới Tu Tập**.
 
 ---
