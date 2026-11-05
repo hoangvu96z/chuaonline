@@ -1328,39 +1328,7 @@ export class ChurchEnvironment {
     hostElevateGroup.add(hostGlowRing);
     bodyGroup.add(hostElevateGroup);
 
-    // Floating Nameplate above Đức Cha Chủ Tế
-    const nameCanvas = document.createElement('canvas');
-    nameCanvas.width = 460;
-    nameCanvas.height = 84;
-    const nctx = nameCanvas.getContext('2d');
-    nctx.fillStyle = 'rgba(24, 12, 18, 0.88)';
-    nctx.strokeStyle = '#ffd700';
-    nctx.lineWidth = 3;
-    if (nctx.roundRect) {
-      nctx.roundRect(4, 4, 452, 76, 16);
-    } else {
-      nctx.rect(4, 4, 452, 76);
-    }
-    nctx.fill();
-    nctx.stroke();
-    nctx.fillStyle = '#fde047';
-    nctx.font = 'bold 21px sans-serif';
-    nctx.textAlign = 'center';
-    nctx.fillText('✝️ ĐỨC CHA GIUSE — CHỦ TẾ THÁNH LỄ', 230, 34);
-    nctx.fillStyle = '#f8fafc';
-    nctx.font = '16px sans-serif';
-    nctx.fillText('Nhấn vào Đức Cha để nhận Phép Lành Trọng Thể', 230, 62);
-
-    const nameTex = new THREE.CanvasTexture(nameCanvas);
-    nameTex.colorSpace = THREE.SRGBColorSpace;
-    const nameSprite = new THREE.Sprite(
-      new THREE.SpriteMaterial({ map: nameTex, transparent: true, depthWrite: false })
-    );
-    nameSprite.position.set(0, 2.38, 0);
-    nameSprite.scale.set(2.65, 0.48, 1);
-    bishopRoot.add(nameSprite);
-
-    // Generous click hitbox for Đức Cha Chủ Tế
+    // Generous click hitbox for Đức Cha Chủ Tế (no floating popup above his head!)
     const bishopHitbox = new THREE.Mesh(
       new THREE.BoxGeometry(1.4, 2.6, 1.2),
       new THREE.MeshBasicMaterial({ visible: false })
@@ -1489,78 +1457,46 @@ export class ChurchEnvironment {
     centerJesusShrine.add(backdropArch);
 
     // Stepped Carrara Marble & Gold Throne Pedestal rising behind the Tabernacle
-    const throneBase = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1.72, 1.45), marbleMat);
-    throneBase.position.y = 0.86;
+    const throneBase = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1.18, 1.45), marbleMat);
+    throneBase.position.y = 0.59;
     throneBase.castShadow = true;
     throneBase.receiveShadow = true;
     throneBase.userData = centerJesusHitData;
     this.interactiveMeshes.push(throneBase);
     centerJesusShrine.add(throneBase);
 
-    const throneGoldCrown = new THREE.Mesh(new THREE.BoxGeometry(2.68, 0.18, 1.58), goldMat);
-    throneGoldCrown.position.y = 1.75;
+    const throneGoldCrown = new THREE.Mesh(new THREE.BoxGeometry(2.68, 0.16, 1.58), goldMat);
+    throneGoldCrown.position.y = 1.22;
     centerJesusShrine.add(throneGoldCrown);
 
     // 3D Sculpted Wooden & Gold Sanctuary Cross rising behind the 3D Statue of Jesus
-    const crossBeamV = new THREE.Mesh(new THREE.BoxGeometry(0.46, 6.4, 0.26), walnutCrossMat);
-    crossBeamV.position.set(0, 4.55, -0.58);
+    const crossBeamV = new THREE.Mesh(new THREE.BoxGeometry(0.46, 5.8, 0.26), walnutCrossMat);
+    crossBeamV.position.set(0, 3.95, -0.58);
     crossBeamV.castShadow = true;
     centerJesusShrine.add(crossBeamV);
 
-    const crossBeamH = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.44, 0.26), walnutCrossMat);
-    crossBeamH.position.set(0, 5.85, -0.58);
+    const crossBeamH = new THREE.Mesh(new THREE.BoxGeometry(3.3, 0.42, 0.26), walnutCrossMat);
+    crossBeamH.position.set(0, 5.15, -0.58);
     crossBeamH.castShadow = true;
     centerJesusShrine.add(crossBeamH);
 
-    const crossGoldTrimV = new THREE.Mesh(new THREE.BoxGeometry(0.54, 6.48, 0.18), goldMat);
-    crossGoldTrimV.position.set(0, 4.55, -0.62);
+    const crossGoldTrimV = new THREE.Mesh(new THREE.BoxGeometry(0.54, 5.88, 0.18), goldMat);
+    crossGoldTrimV.position.set(0, 3.95, -0.62);
     centerJesusShrine.add(crossGoldTrimV);
 
-    const crossGoldTrimH = new THREE.Mesh(new THREE.BoxGeometry(3.48, 0.52, 0.18), goldMat);
-    crossGoldTrimH.position.set(0, 5.85, -0.62);
+    const crossGoldTrimH = new THREE.Mesh(new THREE.BoxGeometry(3.38, 0.5, 0.18), goldMat);
+    crossGoldTrimH.position.set(0, 5.15, -0.62);
     centerJesusShrine.add(crossGoldTrimH);
 
     // Monumental 3D Sculpted Statue of Jesus Christ (/models/nhatho/jesus_statue.glb)
-    const centerJesusStatue = this._createSculptedJesusStatue(1.92, centerJesusHitData, false);
-    centerJesusStatue.position.set(0, 1.84, 0.15);
+    const centerJesusStatue = this._createSculptedJesusStatue(1.68, centerJesusHitData, false);
+    centerJesusStatue.position.set(0, 1.28, 0.15);
     centerJesusShrine.add(centerJesusStatue);
 
     // Directional Accent Light from upper-left to bring out deep 3D sculpted relief of Jesus Christ
-    const jesusSpotlight = new THREE.PointLight(0xffe8b0, 1.65, 14);
-    jesusSpotlight.position.set(-2.4, 6.2, 2.6);
+    const jesusSpotlight = new THREE.PointLight(0xffe8b0, 1.15, 14);
+    jesusSpotlight.position.set(-2.8, 6.2, 2.4);
     centerJesusShrine.add(jesusSpotlight);
-
-    // Floating Golden Banner above the Central 3D Statue of Jesus Christ
-    const jesusBannerCanvas = document.createElement('canvas');
-    jesusBannerCanvas.width = 560;
-    jesusBannerCanvas.height = 88;
-    const jbCtx = jesusBannerCanvas.getContext('2d');
-    jbCtx.fillStyle = 'rgba(28, 12, 18, 0.9)';
-    jbCtx.strokeStyle = '#ffd700';
-    jbCtx.lineWidth = 3.5;
-    if (jbCtx.roundRect) {
-      jbCtx.roundRect(5, 5, 550, 78, 16);
-    } else {
-      jbCtx.rect(5, 5, 550, 78);
-    }
-    jbCtx.fill();
-    jbCtx.stroke();
-    jbCtx.fillStyle = '#fde047';
-    jbCtx.font = 'bold 22px Georgia, serif';
-    jbCtx.textAlign = 'center';
-    jbCtx.fillText('✝️ TƯỢNG ĐỨC CHÚA GIÊSU — THÁNH TÂM CỨU ĐỘ', 280, 36);
-    jbCtx.fillStyle = '#f8fafc';
-    jbCtx.font = '16px sans-serif';
-    jbCtx.fillText('Lạy Rất Thánh Trái Tim Đức Chúa Giêsu, xin thương xót chúng con', 280, 65);
-
-    const jesusBannerTex = new THREE.CanvasTexture(jesusBannerCanvas);
-    jesusBannerTex.colorSpace = THREE.SRGBColorSpace;
-    const jesusBannerSprite = new THREE.Sprite(
-      new THREE.SpriteMaterial({ map: jesusBannerTex, transparent: true, depthWrite: false })
-    );
-    jesusBannerSprite.position.set(0, 6.55, 0.35);
-    jesusBannerSprite.scale.set(4.1, 0.64, 1);
-    centerJesusShrine.add(jesusBannerSprite);
 
     this.group.add(centerJesusShrine);
 
@@ -1796,11 +1732,11 @@ export class ChurchEnvironment {
     };
 
     const marbleIvoryMat = new THREE.MeshStandardMaterial({
-      color: 0xeee6d8,
-      roughness: 0.46,
-      metalness: 0.14,
-      emissive: 0x261c10,
-      emissiveIntensity: 0.05,
+      color: 0xdfd3c0,
+      roughness: 0.52,
+      metalness: 0.16,
+      emissive: 0x1c140a,
+      emissiveIntensity: 0.02,
       side: THREE.DoubleSide
     });
     const goldMat = new THREE.MeshStandardMaterial({
@@ -1865,26 +1801,6 @@ export class ChurchEnvironment {
       haloGroup.add(ray);
     }
     group.add(haloGroup);
-
-    // Glowing Sacred Heart Emblem on Jesus's Chest
-    const sacredHeart = new THREE.Mesh(
-      new THREE.SphereGeometry(0.052, 12, 12),
-      new THREE.MeshBasicMaterial({ color: 0xff2442 })
-    );
-    sacredHeart.position.set(0.02, 1.58, 0.24);
-    group.add(sacredHeart);
-
-    const heartHalo = new THREE.Mesh(
-      new THREE.RingGeometry(0.055, 0.095, 20),
-      new THREE.MeshBasicMaterial({
-        color: 0xffd700,
-        side: THREE.DoubleSide,
-        transparent: true,
-        opacity: 0.8
-      })
-    );
-    heartHalo.position.set(0.02, 1.58, 0.25);
-    group.add(heartHalo);
 
     if (includeMercyRays) {
       const redRayMat = new THREE.MeshBasicMaterial({
@@ -2476,38 +2392,6 @@ export class ChurchEnvironment {
       });
     }
 
-    // 6. Floating Banner above Sanctuary Choir & Organ Area
-    const choirCanvas = document.createElement('canvas');
-    choirCanvas.width = 480;
-    choirCanvas.height = 84;
-    const cctx = choirCanvas.getContext('2d');
-    cctx.fillStyle = 'rgba(18, 28, 52, 0.88)';
-    cctx.strokeStyle = '#ffd700';
-    cctx.lineWidth = 3;
-    if (cctx.roundRect) {
-      cctx.roundRect(4, 4, 472, 76, 16);
-    } else {
-      cctx.rect(4, 4, 472, 76);
-    }
-    cctx.fill();
-    cctx.stroke();
-    cctx.fillStyle = '#fde047';
-    cctx.font = 'bold 20px sans-serif';
-    cctx.textAlign = 'center';
-    cctx.fillText('🎼 CA ĐOÀN THÁNH GIA & ĐÀN ĐẠI QUẢN CẦM', 240, 34);
-    cctx.fillStyle = '#e2e8f0';
-    cctx.font = '15px sans-serif';
-    cctx.fillText('Nhấn vào Ca Đoàn để Bật / Đổi Thánh Ca Hợp Xướng', 240, 62);
-
-    const choirTex = new THREE.CanvasTexture(choirCanvas);
-    choirTex.colorSpace = THREE.SRGBColorSpace;
-    const choirSprite = new THREE.Sprite(
-      new THREE.SpriteMaterial({ map: choirTex, transparent: true, depthWrite: false })
-    );
-    choirSprite.position.set(0.1, 2.75, 0);
-    choirSprite.scale.set(3.1, 0.54, 1);
-    choirGroup.add(choirSprite);
-
     // Generous interactive hitbox for the whole Choir & Organ Stall
     const choirHitbox = new THREE.Mesh(
       new THREE.BoxGeometry(6.2, 2.8, 3.2),
@@ -2959,38 +2843,6 @@ export class ChurchEnvironment {
     });
     chaDiepPavilion.add(chaDiepPortraitGroup);
 
-    // Overhead Golden Nameplate Banner for Đài Thánh Cả Giuse & Cha Diệp
-    const shrineBannerCanvas = document.createElement('canvas');
-    shrineBannerCanvas.width = 560;
-    shrineBannerCanvas.height = 88;
-    const sbCtx = shrineBannerCanvas.getContext('2d');
-    sbCtx.fillStyle = 'rgba(24, 16, 12, 0.9)';
-    sbCtx.strokeStyle = '#ffd700';
-    sbCtx.lineWidth = 3.5;
-    if (sbCtx.roundRect) {
-      sbCtx.roundRect(5, 5, 550, 78, 16);
-    } else {
-      sbCtx.rect(5, 5, 550, 78);
-    }
-    sbCtx.fill();
-    sbCtx.stroke();
-    sbCtx.fillStyle = '#fde047';
-    sbCtx.font = 'bold 21px Georgia, serif';
-    sbCtx.textAlign = 'center';
-    sbCtx.fillText('🙏 ĐÀI CHA TRƯƠNG BỬU DIỆP & TƯỢNG THÁNH CẢ GIUSE', 280, 36);
-    sbCtx.fillStyle = '#f8fafc';
-    sbCtx.font = '15px sans-serif';
-    sbCtx.fillText('Nhấn vào Chân Dung Cha Bửu Diệp hoặc Tượng Thánh Giuse để khấn nguyện', 280, 65);
-
-    const shrineBannerTex = new THREE.CanvasTexture(shrineBannerCanvas);
-    shrineBannerTex.colorSpace = THREE.SRGBColorSpace;
-    const shrineBannerSprite = new THREE.Sprite(
-      new THREE.SpriteMaterial({ map: shrineBannerTex, transparent: true, depthWrite: false })
-    );
-    shrineBannerSprite.position.set(0, 4.38, 1.15);
-    shrineBannerSprite.scale.set(4.1, 0.62, 1);
-    chaDiepPavilion.add(shrineBannerSprite);
-
     this._addFloralBouquet(chaDiepPavilion, -2.35, 0.86, 0.35, 0xfacc15);
     this._addFloralBouquet(chaDiepPavilion, 0.0, 0.86, 0.42, 0xffffff);
     this._addFloralBouquet(chaDiepPavilion, 2.35, 0.86, 0.35, 0xf43f5e);
@@ -3416,38 +3268,6 @@ export class ChurchEnvironment {
     bHalo.position.set(0, 1.92, -0.12);
     bernadetteGroup.add(bHalo);
     grottoGroup.add(bernadetteGroup);
-
-    // 8. Carved Stone Arch Plaque above the Grotto Cavern (Facing -Z toward the courtyard!)
-    const plaqueCanvas = document.createElement('canvas');
-    plaqueCanvas.width = 640;
-    plaqueCanvas.height = 96;
-    const pctx = plaqueCanvas.getContext('2d');
-    pctx.fillStyle = 'rgba(22, 32, 48, 0.9)';
-    pctx.strokeStyle = '#ffd700';
-    pctx.lineWidth = 4;
-    if (pctx.roundRect) {
-      pctx.roundRect(6, 6, 628, 84, 18);
-    } else {
-      pctx.rect(6, 6, 628, 84);
-    }
-    pctx.fill();
-    pctx.stroke();
-    pctx.fillStyle = '#fde047';
-    pctx.font = 'bold 24px Georgia, serif';
-    pctx.textAlign = 'center';
-    pctx.fillText('🌹 HANG ĐÁ ĐỨC MẸ LỘ ĐỨC — VÔ NHIỄM NGUYÊN TỘI', 320, 40);
-    pctx.fillStyle = '#f1f5f9';
-    pctx.font = '17px sans-serif';
-    pctx.fillText('"Ta là Đấng Vô Nhiễm Nguyên Tội — Hãy ăn năn đền tội và lần hạt Mân Côi"', 320, 72);
-
-    const plaqueTex = new THREE.CanvasTexture(plaqueCanvas);
-    plaqueTex.colorSpace = THREE.SRGBColorSpace;
-    const plaqueSprite = new THREE.Sprite(
-      new THREE.SpriteMaterial({ map: plaqueTex, transparent: true, depthWrite: false })
-    );
-    plaqueSprite.position.set(0, 6.65, -0.35);
-    plaqueSprite.scale.set(5.2, 0.78, 1);
-    grottoGroup.add(plaqueSprite);
 
     // 9. Multi-Stream Cascading Miracle Spring Waterfall on Cliff Face into the Reflection Pool
     const dropMat = new THREE.MeshBasicMaterial({
