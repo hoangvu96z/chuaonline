@@ -5,3 +5,4 @@ dist/
 *.log
 coverage/
 backend/data/*.json
+backend/data/tts-cache/

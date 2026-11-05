@@ -190,6 +190,18 @@ export class SutraChanter {
     const verse = this._getVerseObject(this.verseIndex);
     const totalVerses = this.currentSutra.verses.length;
 
+    // Tải trước (prefetch) 2 câu kinh tiếp theo để giọng đọc Neural phát liền mạch không độ trễ
+    if (this.voice && typeof this.voice.prefetchVerse === 'function') {
+      if (this.verseIndex + 1 < totalVerses) {
+        const nextV1 = this._getVerseObject(this.verseIndex + 1);
+        this.voice.prefetchVerse(nextV1.text);
+      }
+      if (this.verseIndex + 2 < totalVerses) {
+        const nextV2 = this._getVerseObject(this.verseIndex + 2);
+        this.voice.prefetchVerse(nextV2.text);
+      }
+    }
+
     // Điểm chuông gia trì (khánh ngân) ở các câu có đánh dấu bell: true (hoặc lần đầu của câu lặp 3 lần)
     if (!skipBell && startWordIndex === 0 && verse.bell && this.repeatRound === 0 && this.audio) {
       this.audio.playMeditationBell();
@@ -340,6 +352,18 @@ export class SutraChanter {
 
     const verse = this._getVerseObject(this.verseIndex);
     const totalVerses = this.currentSutra.verses.length;
+
+    // Tải trước (prefetch) 2 câu kinh tiếp theo để giọng đọc Neural phát liền mạch không độ trễ
+    if (this.voice && typeof this.voice.prefetchVerse === 'function') {
+      if (this.verseIndex + 1 < totalVerses) {
+        const nextV1 = this._getVerseObject(this.verseIndex + 1);
+        this.voice.prefetchVerse(nextV1.text);
+      }
+      if (this.verseIndex + 2 < totalVerses) {
+        const nextV2 = this._getVerseObject(this.verseIndex + 2);
+        this.voice.prefetchVerse(nextV2.text);
+      }
+    }
     if (this.currentVerseWords.length === 0) {
       this.currentVerseWords = verse.text.trim().split(/\s+/).filter(Boolean);
     }

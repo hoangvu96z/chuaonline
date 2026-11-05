@@ -16,8 +16,10 @@ export const VOICE_PROFILES = [
     rate: 0.78,
     pitch: 0.62,
     preferGender: 'male',
-    warmthDb: 3.8,
-    reverbWet: 0.17
+    playbackRate: 0.90,
+    detuneCents: -220,
+    warmthDb: 4.4,
+    reverbWet: 0.19
   },
   {
     id: 'SU_CO_THANH_NHA',
@@ -25,6 +27,8 @@ export const VOICE_PROFILES = [
     rate: 0.86,
     pitch: 1.22,
     preferGender: 'female',
+    playbackRate: 0.95,
+    detuneCents: 25,
     warmthDb: 2.0,
     reverbWet: 0.15
   },
@@ -34,6 +38,8 @@ export const VOICE_PROFILES = [
     rate: 0.95,
     pitch: 1.45,
     preferGender: 'female',
+    playbackRate: 1.03,
+    detuneCents: 190,
     warmthDb: 1.2,
     reverbWet: 0.12
   },
@@ -43,8 +49,10 @@ export const VOICE_PROFILES = [
     rate: 0.82,
     pitch: 0.88,
     preferGender: 'any',
-    warmthDb: 3.2,
-    reverbWet: 0.22
+    playbackRate: 0.93,
+    detuneCents: -115,
+    warmthDb: 3.5,
+    reverbWet: 0.23
   }
 ];
 
@@ -486,11 +494,19 @@ export class DharmaVoice {
         throw new Error('AudioContext or AudioBuffer unavailable');
       }
 
-      const actualDurationMs = Math.max(900, Math.round(audioBuffer.duration * 1000));
+      const pbRate = profile.playbackRate || 0.90;
+      const detune = profile.detuneCents || 0;
+      const effectiveRate = pbRate * Math.pow(2, detune / 1200);
+      const actualDurationMs = Math.max(
+        900,
+        Math.round((audioBuffer.duration / Math.max(0.5, effectiveRate)) * 1000)
+      );
       this._startKaraokeTicker(words, actualDurationMs, spokenText, onWordBoundary, sessionId);
 
       const source = ctx.createBufferSource();
       source.buffer = audioBuffer;
+      if (source.playbackRate) source.playbackRate.value = pbRate;
+      if (source.detune) source.detune.value = detune;
 
       const warmthEq = ctx.createBiquadFilter();
       warmthEq.type = 'lowshelf';

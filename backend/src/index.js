@@ -17,6 +17,7 @@ import { ChurchRoomManager } from './churchRoomManager.js';
 import { LiturgyScheduler } from './liturgyScheduler.js';
 import { registerChurchSocketHandlers } from './churchSocketHandlers.js';
 import { synthesizeVietnameseNeuralTts, getNeuralTtsCacheStats } from './neuralTtsService.js';
+import { preRecordAllSacredAudio } from './preRecordTts.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -111,7 +112,8 @@ export async function createTempleServer(options = {}) {
       globalSutra: sutraScheduler.getCurrentSessionInfo(),
       globalLiturgy: liturgyScheduler.getCurrentSessionInfo(),
       bufferedMeritUsers: meritBatcher.userMeritBuffer.size,
-      bufferedGraceUsers: graceBatcher.userGraceBuffer.size
+      bufferedGraceUsers: graceBatcher.userGraceBuffer.size,
+      ttsCache: getNeuralTtsCacheStats()
     });
   });
 
@@ -235,7 +237,8 @@ export async function createTempleServer(options = {}) {
       dbStatus,
       rooms: churchRoomManager.getStats(),
       globalLiturgy: liturgyScheduler.getCurrentSessionInfo(),
-      bufferedGraceUsers: graceBatcher.userGraceBuffer.size
+      bufferedGraceUsers: graceBatcher.userGraceBuffer.size,
+      ttsCache: getNeuralTtsCacheStats()
     });
   });
 
@@ -384,6 +387,10 @@ if (isMain) {
           db.isUsingMemory() ? 'In-Memory Fallback' : 'MySQL Online'
         })`
       );
+      // Ensure all 460+ Catholic & Buddhist liturgical verses are pre-recorded on disk
+      preRecordAllSacredAudio().catch((err) => {
+        console.warn('[PreRecordTTS] Background warm-up warning:', err?.message);
+      });
     });
   });
 }

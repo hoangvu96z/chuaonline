@@ -1259,8 +1259,14 @@ export class NhaThoOnlineApp {
     };
 
     const targetInfo = targetMap[targetKey] || targetMap.ALTAR;
-    const prayerList = GENUFLECTION_PRAYERS[targetKey] || GENUFLECTION_PRAYERS.ALTAR;
-    const prayerText = prayerList[(this.genuflectionCount - 1) % prayerList.length];
+    const prayerEntry = Array.isArray(GENUFLECTION_PRAYERS)
+      ? GENUFLECTION_PRAYERS[(this.genuflectionCount - 1) % GENUFLECTION_PRAYERS.length]
+      : null;
+    const prayerText =
+      typeof prayerEntry === 'string'
+        ? prayerEntry
+        : prayerEntry?.text ||
+          'Nhân danh Cha và Con và Thánh Thần. Amen. Chúng con thờ lạy và ngợi khen Chúa Giêsu Thánh Thể.';
 
     // Move & trigger 3D Genuflect + Sign of the Cross animation
     this.avatarManager.moveLocalAvatarTo(targetInfo.x, targetInfo.z, 'GENUFLECT');

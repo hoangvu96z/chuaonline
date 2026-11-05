@@ -21,8 +21,10 @@ export const LECTOR_VOICE_PROFILES = [
     rate: 0.78,
     pitch: 0.68,
     preferGender: 'male',
-    warmthDb: 3.8,
-    reverbWet: 0.17
+    playbackRate: 0.92,
+    detuneCents: -210,
+    warmthDb: 4.2,
+    reverbWet: 0.18
   },
   {
     id: 'SOEUR_CA_TRUONG_THANH_NHA',
@@ -30,6 +32,8 @@ export const LECTOR_VOICE_PROFILES = [
     rate: 0.85,
     pitch: 1.16,
     preferGender: 'female',
+    playbackRate: 0.96,
+    detuneCents: 20,
     warmthDb: 2.0,
     reverbWet: 0.15
   },
@@ -39,6 +43,8 @@ export const LECTOR_VOICE_PROFILES = [
     rate: 0.94,
     pitch: 1.35,
     preferGender: 'female',
+    playbackRate: 1.02,
+    detuneCents: 180,
     warmthDb: 1.2,
     reverbWet: 0.12
   },
@@ -48,8 +54,10 @@ export const LECTOR_VOICE_PROFILES = [
     rate: 0.82,
     pitch: 0.86,
     preferGender: 'any',
-    warmthDb: 3.2,
-    reverbWet: 0.22
+    playbackRate: 0.94,
+    detuneCents: -110,
+    warmthDb: 3.4,
+    reverbWet: 0.23
   }
 ];
 
@@ -402,7 +410,13 @@ export class LectorVoice {
         throw new Error('AudioContext or AudioBuffer unavailable');
       }
 
-      const actualDurationMs = Math.max(900, Math.round(audioBuffer.duration * 1000));
+      const pbRate = profile.playbackRate || 0.92;
+      const detune = profile.detuneCents || 0;
+      const effectiveRate = pbRate * Math.pow(2, detune / 1200);
+      const actualDurationMs = Math.max(
+        900,
+        Math.round((audioBuffer.duration / Math.max(0.5, effectiveRate)) * 1000)
+      );
       // Đồng bộ lại tốc độ chữ Karaoke khớp chính xác với thời lượng giọng đọc Neural thực tế
       this._startKaraokeTicker(
         words,
@@ -415,6 +429,8 @@ export class LectorVoice {
 
       const source = ctx.createBufferSource();
       source.buffer = audioBuffer;
+      if (source.playbackRate) source.playbackRate.value = pbRate;
+      if (source.detune) source.detune.value = detune;
 
       // Chuỗi lọc âm thanh Warm Baritone EQ + Cathedral Hall Reverb
       // 1) Low-shelf filter tại 185Hz tăng độ dày, trầm ấm của lồng ngực Cha Chủ Tế
