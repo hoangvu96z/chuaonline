@@ -187,6 +187,18 @@ export class RosaryGuide {
 
     const verse = this._getVerseObject(this.verseIndex);
 
+    // Tải trước (prefetch) câu kinh tiếp theo để giọng đọc Neural phát liền mạch không độ trễ
+    if (this.voice && typeof this.voice.prefetchVerse === 'function') {
+      if (this.verseIndex + 1 < this.currentPrayer.verses.length) {
+        const nextV1 = this._getVerseObject(this.verseIndex + 1);
+        this.voice.prefetchVerse(nextV1.text);
+      }
+      if (this.verseIndex + 2 < this.currentPrayer.verses.length) {
+        const nextV2 = this._getVerseObject(this.verseIndex + 2);
+        this.voice.prefetchVerse(nextV2.text);
+      }
+    }
+
     // Ngân Chuông Cung Thánh ở các câu có đánh dấu chime: true (khi bắt đầu câu)
     if (verse.chime && this.repeatRound === 0 && this.audio) {
       this.audio.playSanctuaryChime();

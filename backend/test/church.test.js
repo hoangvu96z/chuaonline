@@ -510,4 +510,29 @@ describe('Church Suite 4: Full End-to-End Socket.io & REST API Integration', () 
       assert.ok(stat.size > 50000, `Sacred artwork ${file} must be high-res (>50KB)`);
     }
   });
+
+  it('4.6 should synthesize warm Vietnamese Neural TTS via /api/nhatho/tts with LRU caching', async () => {
+    const ttsRes = await fetch(
+      `${baseUrl}/api/nhatho/tts?profile=CHA_CHU_TE_TRAM_AM&text=${encodeURIComponent(
+        'Nhân danh Cha và Con và Thánh Thần. Amen.'
+      )}`
+    );
+    assert.strictEqual(ttsRes.status, 200);
+    assert.strictEqual(ttsRes.headers.get('content-type'), 'audio/mpeg');
+    const mp3Buf = Buffer.from(await ttsRes.arrayBuffer());
+    assert.ok(mp3Buf.length > 5000, `Expected MP3 bytes > 5KB, got ${mp3Buf.length}`);
+
+    // Second request should hit in-memory LRU cache instantaneously
+    const t0 = Date.now();
+    const ttsCachedRes = await fetch(
+      `${baseUrl}/api/nhatho/tts?profile=CHA_CHU_TE_TRAM_AM&text=${encodeURIComponent(
+        'Nhân danh Cha và Con và Thánh Thần. Amen.'
+      )}`
+    );
+    const elapsedMs = Date.now() - t0;
+    assert.strictEqual(ttsCachedRes.status, 200);
+    const cachedBuf = Buffer.from(await ttsCachedRes.arrayBuffer());
+    assert.strictEqual(cachedBuf.length, mp3Buf.length);
+    assert.ok(elapsedMs < 150, `Cached Neural TTS response should be <150ms, took ${elapsedMs}ms`);
+  });
 });

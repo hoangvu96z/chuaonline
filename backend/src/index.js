@@ -16,6 +16,7 @@ import { GraceBatcher } from './graceBatcher.js';
 import { ChurchRoomManager } from './churchRoomManager.js';
 import { LiturgyScheduler } from './liturgyScheduler.js';
 import { registerChurchSocketHandlers } from './churchSocketHandlers.js';
+import { synthesizeVietnameseNeuralTts, getNeuralTtsCacheStats } from './neuralTtsService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -296,6 +297,42 @@ export async function createTempleServer(options = {}) {
       res.status(500).json({ ok: false, error: err.message });
     }
   });
+
+  // ==========================================================================
+  // VIETNAMESE NEURAL TTS ENDPOINTS (Microsoft Azure / Edge Neural Voices)
+  // ==========================================================================
+  const handleNeuralTtsRequest = async (req, res) => {
+    try {
+      const text = String(req.query?.text || req.body?.text || '').trim();
+      const profile = String(
+        req.query?.profile ||
+          req.body?.profile ||
+          (isChurchRequest(req) ? 'CHA_CHU_TE_TRAM_AM' : 'SU_ONG_TRAM_AM')
+      ).trim();
+
+      if (!text) {
+        return res.status(400).json({ ok: false, error: 'Missing text parameter' });
+      }
+
+      const mp3Buffer = await synthesizeVietnameseNeuralTts(text, profile);
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Content-Length', String(mp3Buffer.length));
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.setHeader('X-Neural-Voice-Profile', profile);
+      return res.send(mp3Buffer);
+    } catch (err) {
+      return res.status(502).json({
+        ok: false,
+        error: err?.message || 'Neural TTS synthesis unavailable',
+        cache: getNeuralTtsCacheStats()
+      });
+    }
+  };
+
+  app.get('/api/nhatho/tts', handleNeuralTtsRequest);
+  app.post('/api/nhatho/tts', handleNeuralTtsRequest);
+  app.get('/api/tts', handleNeuralTtsRequest);
+  app.post('/api/tts', handleNeuralTtsRequest);
 
   // Serve built frontend static files in production if available
   const frontendDist = path.resolve(__dirname, '../../frontend/dist');
