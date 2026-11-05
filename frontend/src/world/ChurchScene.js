@@ -33,17 +33,26 @@ export class ChurchScene {
     this.orbitPitch = 0.08; // Low eye-level pitch inside the Nave so the Choir Loft does not block the High Altar
     this.orbitDistance = 12.2;
 
-    // Renderer setup
+    // Renderer setup (optimized pixelRatio & on-demand PCFShadowMap for 60 FPS on Desktop & Mobile)
+    const isMobile =
+      window.innerWidth <= 820 ||
+      (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    this.isMobile = isMobile;
+
     this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      powerPreference: 'high-performance'
+      antialias: !isMobile,
+      powerPreference: 'high-performance',
+      stencil: false
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.25 : 1.5));
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    this.renderer.shadowMap.autoUpdate = false;
+    this.renderer.shadowMap.needsUpdate = true;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.22;
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     if (this.container) {
       this.container.innerHTML = '';
@@ -99,24 +108,24 @@ export class ChurchScene {
     this.hemiLight = new THREE.HemisphereLight(0xfff3d1, 0x475569, 0.76);
     this.scene.add(this.hemiLight);
 
-    // Warm sun / silver moon DirectionalLight
-    this.dirLight = new THREE.DirectionalLight(0xfff3d1, 1.42);
+    // Warm sun / silver moon DirectionalLight (1024x1024 static shadow map updated on demand)
+    this.dirLight = new THREE.DirectionalLight(0xfff3d1, 1.48);
     this.dirLight.position.set(22, 38, 22);
     this.dirLight.castShadow = true;
-    this.dirLight.shadow.mapSize.width = 2048;
-    this.dirLight.shadow.mapSize.height = 2048;
-    this.dirLight.shadow.camera.near = 1;
-    this.dirLight.shadow.camera.far = 130;
-    const d = 42;
+    this.dirLight.shadow.mapSize.width = 1024;
+    this.dirLight.shadow.mapSize.height = 1024;
+    this.dirLight.shadow.camera.near = 2;
+    this.dirLight.shadow.camera.far = 115;
+    const d = 34;
     this.dirLight.shadow.camera.left = -d;
     this.dirLight.shadow.camera.right = d;
     this.dirLight.shadow.camera.top = d;
     this.dirLight.shadow.camera.bottom = -d;
-    this.dirLight.shadow.bias = -0.0005;
+    this.dirLight.shadow.bias = -0.0006;
     this.scene.add(this.dirLight);
 
     // -------------------------------------------------------------------------
-    // 1. 6 Colored Stained-Glass Nave Lights & Floor Light Pools
+    // 1. 6 Colored Stained-Glass Floor Light Pools & God-Ray Beams (Zero-Light-Cost Additive Meshes)
     // -------------------------------------------------------------------------
     const stainedGlassConfigs = [
       { x: -10.5, z: -5, color: LITURGICAL_PALETTE.RUBY_RED, poolX: -7.2 },
@@ -128,17 +137,10 @@ export class ChurchScene {
     ];
 
     const poolTexture = this._createStainedGlassPoolTexture();
+    const sharedPoolGeo = new THREE.PlaneGeometry(4.4, 3.2);
+    const sharedBeamGeo = new THREE.CylinderGeometry(0.45, 1.65, 7.6, 12, 1, true);
 
     for (const cfg of stainedGlassConfigs) {
-      const sgLight = new THREE.PointLight(cfg.color, 2.2, 16, 1.35);
-      sgLight.position.set(cfg.x, 5.2, cfg.z);
-      this.scene.add(sgLight);
-      this.stainedGlassLights.push({
-        light: sgLight,
-        dayIntensity: 2.35,
-        nightIntensity: 0.95
-      });
-
       // Stained-glass colored light pool projected onto the marble nave floor
       const poolMat = new THREE.MeshBasicMaterial({
         map: poolTexture,
@@ -148,7 +150,7 @@ export class ChurchScene {
         blending: THREE.AdditiveBlending,
         depthWrite: false
       });
-      const poolMesh = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 3.2), poolMat);
+      const poolMesh = new THREE.Mesh(sharedPoolGeo, poolMat);
       poolMesh.rotation.x = -Math.PI / 2;
       poolMesh.position.set(cfg.poolX, 1.065, cfg.z);
       this.scene.add(poolMesh);
@@ -168,8 +170,7 @@ export class ChurchScene {
         side: THREE.DoubleSide,
         depthWrite: false
       });
-      const beamGeo = new THREE.CylinderGeometry(0.45, 1.65, 7.6, 16, 1, true);
-      const beamMesh = new THREE.Mesh(beamGeo, beamMat);
+      const beamMesh = new THREE.Mesh(sharedBeamGeo, beamMat);
       const inwardSign = cfg.x < 0 ? 1 : -1;
       beamMesh.position.set(cfg.x + inwardSign * 1.9, 4.4, cfg.z);
       beamMesh.rotation.z = inwardSign * -0.46;
@@ -222,7 +223,7 @@ export class ChurchScene {
         depthWrite: false
       });
       const mesh = new THREE.Mesh(
-        new THREE.CylinderGeometry(rg.topR, rg.botR, rg.len, 20, 1, true),
+        new THREE.CylinderGeometry(rg.topR, rg.botR, rg.len, 16, 1, true),
         mat
       );
       mesh.position.set(rg.x, rg.y, rg.z);
@@ -237,118 +238,55 @@ export class ChurchScene {
     }
 
     // -------------------------------------------------------------------------
-    // 3. Sanctuary Altar, Tabernacle Lamp, Votive Candles, Bell Towers & Grotto
+    // 3. 4 Strategic Zone PointLights (Fixed count <= 4 for fast WebGL PBR shader loops!)
     // -------------------------------------------------------------------------
-    // Sanctuary High Altar warm golden chandelier light (0, 5.5, -18)
-    const sanctuaryAltarLight = new THREE.PointLight(0xffbb55, 2.8, 34, 1.15);
-    sanctuaryAltarLight.position.set(0, 5.5, -18);
+    // (1) Sanctuary High Altar, Jesus Statue & Side Retables Light (0, 6.2, -20.5)
+    const sanctuaryAltarLight = new THREE.PointLight(0xffcb78, 3.2, 34, 1.1);
+    sanctuaryAltarLight.position.set(0, 6.2, -20.5);
     this.scene.add(sanctuaryAltarLight);
     this.nightLights.push({
       light: sanctuaryAltarLight,
-      dayIntensity: 1.85,
-      nightIntensity: 3.8,
+      dayIntensity: 2.35,
+      nightIntensity: 4.2,
       flickerSpeed: 3.2,
-      flickerAmp: 0.1
-    });
-
-    // Nave Central Chandelier light for crisp visibility of pews & parishioners
-    const naveChandelierLight = new THREE.PointLight(0xffbb55, 2.4, 34, 1.2);
-    naveChandelierLight.position.set(0, 7.5, -9.5);
-    this.scene.add(naveChandelierLight);
-    this.nightLights.push({
-      light: naveChandelierLight,
-      dayIntensity: 1.45,
-      nightIntensity: 3.4,
-      flickerSpeed: 2.8,
       flickerAmp: 0.08
     });
 
-    // Tabernacle Eternal Red Sanctuary Lamp (Đèn Chầu Thánh Thể vĩnh cửu: 0xff2222 at (0, 3.8, -21))
-    this.tabernacleLampLight = new THREE.PointLight(0xff2222, 2.2, 14, 1.25);
-    this.tabernacleLampLight.position.set(0, 3.8, -21);
-    this.scene.add(this.tabernacleLampLight);
+    // (2) Nave Central Chandelier & Pews Light (0, 8.0, -9.5)
+    const naveChandelierLight = new THREE.PointLight(0xffcb78, 2.6, 34, 1.15);
+    naveChandelierLight.position.set(0, 8.0, -9.5);
+    this.scene.add(naveChandelierLight);
     this.nightLights.push({
-      light: this.tabernacleLampLight,
-      dayIntensity: 1.8,
-      nightIntensity: 2.8,
-      flickerSpeed: 4.5,
-      flickerAmp: 0.18
-    });
-
-    // Left & Right Votive Candle Stands (-6.5, 2.2, -10.5) and (6.5, 2.2, -10.5)
-    for (const vx of [-6.5, 6.5]) {
-      const votiveLight = new THREE.PointLight(0xffbb55, 2.0, 16, 1.3);
-      votiveLight.position.set(vx, 2.2, -10.5);
-      this.scene.add(votiveLight);
-      this.nightLights.push({
-        light: votiveLight,
-        dayIntensity: 1.25,
-        nightIntensity: 2.9,
-        flickerSpeed: 5.2,
-        flickerAmp: 0.14
-      });
-    }
-
-    // Twin Bell Tower Star Lights (12, 19, 2) and (-12, 19, 2)
-    for (const bx of [12, -12]) {
-      const bellTowerLight = new THREE.PointLight(0xffd97d, 1.8, 28, 1.25);
-      bellTowerLight.position.set(bx, 19, 2);
-      this.scene.add(bellTowerLight);
-      this.nightLights.push({
-        light: bellTowerLight,
-        dayIntensity: 0.4,
-        nightIntensity: 2.7,
-        flickerSpeed: 2.4,
-        flickerAmp: 0.06
-      });
-    }
-
-    // Lourdes Marian Grotto (Hang Đá Đức Mẹ Lộ Đức) luminous Marian Blue & Liturgical Gold glow at (0, 3.5, 32)
-    const grottoGoldLight = new THREE.PointLight(0xffcf6b, 2.2, 24, 1.2);
-    grottoGoldLight.position.set(0, 3.5, 32);
-    this.scene.add(grottoGoldLight);
-    this.nightLights.push({
-      light: grottoGoldLight,
-      dayIntensity: 1.1,
-      nightIntensity: 3.1,
-      flickerSpeed: 3.6,
-      flickerAmp: 0.1
-    });
-
-    const grottoMarianBlueLight = new THREE.PointLight(LITURGICAL_PALETTE.MARIAN_BLUE, 1.8, 22, 1.25);
-    grottoMarianBlueLight.position.set(0, 4.6, 33.5);
-    this.scene.add(grottoMarianBlueLight);
-    this.nightLights.push({
-      light: grottoMarianBlueLight,
-      dayIntensity: 0.85,
-      nightIntensity: 2.4,
-      flickerSpeed: 2.2,
+      light: naveChandelierLight,
+      dayIntensity: 1.75,
+      nightIntensity: 3.6,
+      flickerSpeed: 2.8,
       flickerAmp: 0.06
     });
 
-    // St. Joseph Shrine & Parish Courtyard warm path lanterns
-    const courtyardLanternCoords = [
-      [-16.5, 3.2, 15.0], // Đài Thánh Cả Giuse
-      [-7.5, 3.0, 4.0],
-      [7.5, 3.0, 4.0],
-      [-7.5, 3.0, 16.5],
-      [7.5, 3.0, 16.5],
-      [-8.5, 3.0, 26.5],
-      [8.5, 3.0, 26.5]
-    ];
+    // (3) Parish Courtyard, Bell Towers & Shrines Light (0, 8.5, 14.5)
+    const courtyardCenterLight = new THREE.PointLight(0xffcb78, 2.2, 42, 1.15);
+    courtyardCenterLight.position.set(0, 8.5, 14.5);
+    this.scene.add(courtyardCenterLight);
+    this.nightLights.push({
+      light: courtyardCenterLight,
+      dayIntensity: 0.95,
+      nightIntensity: 3.2,
+      flickerSpeed: 2.4,
+      flickerAmp: 0.05
+    });
 
-    for (const [lx, ly, lz] of courtyardLanternCoords) {
-      const pLight = new THREE.PointLight(0xffbb55, 1.4, 22, 1.3);
-      pLight.position.set(lx, ly, lz);
-      this.scene.add(pLight);
-      this.nightLights.push({
-        light: pLight,
-        dayIntensity: 0.45,
-        nightIntensity: 2.45,
-        flickerSpeed: 3.8,
-        flickerAmp: 0.07
-      });
-    }
+    // (4) Lourdes Marian Grotto & Reflection Pool Light (-1.0, 5.2, 33.5)
+    const grottoGoldLight = new THREE.PointLight(0xffd480, 2.8, 28, 1.15);
+    grottoGoldLight.position.set(-1.0, 5.2, 33.5);
+    this.scene.add(grottoGoldLight);
+    this.nightLights.push({
+      light: grottoGoldLight,
+      dayIntensity: 1.85,
+      nightIntensity: 3.6,
+      flickerSpeed: 3.4,
+      flickerAmp: 0.08
+    });
   }
 
   _createStainedGlassPoolTexture() {
@@ -506,7 +444,14 @@ export class ChurchScene {
       if (this.moonGroup) this.moonGroup.visible = false;
     }
 
+    this.requestShadowUpdate();
     return this.isNight;
+  }
+
+  requestShadowUpdate() {
+    if (this.renderer && this.renderer.shadowMap) {
+      this.renderer.shadowMap.needsUpdate = true;
+    }
   }
 
   toggleDayNight() {

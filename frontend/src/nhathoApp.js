@@ -135,7 +135,9 @@ export class NhaThoOnlineApp {
     // Initialize 3D Cathedral Scene, Environment, Parishioner/Clergy Avatars & Interactables
     const container = document.getElementById('temple-canvas-container');
     this.churchScene = new ChurchScene(container);
-    this.environment = new ChurchEnvironment(this.churchScene.scene);
+    this.environment = new ChurchEnvironment(this.churchScene.scene, () =>
+      this.churchScene.requestShadowUpdate()
+    );
     this.avatarManager = new ChurchAvatarManager(this.churchScene.scene, PEW_COORDS);
     this.interactables = new ChurchInteractables(this.churchScene.scene, this.environment);
 

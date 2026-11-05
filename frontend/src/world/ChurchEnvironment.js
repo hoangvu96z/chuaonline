@@ -26,8 +26,9 @@ export const PEW_COORDS = (() => {
 export const CUSHION_COORDS = PEW_COORDS;
 
 export class ChurchEnvironment {
-  constructor(scene) {
+  constructor(scene, onAssetLoaded = null) {
     this.scene = scene;
+    this.onAssetLoaded = onAssetLoaded;
     this.group = new THREE.Group();
     this.scene.add(this.group);
 
@@ -36,10 +37,11 @@ export class ChurchEnvironment {
     this.pewMeshes = [];
     this.cushionMeshes = this.pewMeshes;
 
-    // Texture Loader & GLTF 3D Statue Loader with cache
+    // Texture Loader & GLTF 3D Statue Loader with deduplicated Promise cache
     this.textureLoader = new THREE.TextureLoader();
     this.textureCache = new Map();
     this.gltfLoader = new GLTFLoader();
+    this.glbPromiseCache = new Map();
 
     // Animated references
     this.sacredHalo = null;
@@ -50,6 +52,7 @@ export class ChurchEnvironment {
     this.tabernacleLampMesh = null;
     this.tabernacleLampGlow = null;
     this.christmasLightMeshes = [];
+    this.christmasFairyMats = [];
     this.christmasStarMeshes = [];
 
     this.towerBellGroup = null;
@@ -197,7 +200,7 @@ export class ChurchEnvironment {
     velvetMatBoard.position.z = 0.01;
     retableGroup.add(velvetMatBoard);
 
-    // 2. High-Resolution Sacred Painting Plane (SRGBColorSpace, luminous museum clarity)
+    // 2. High-Resolution Sacred Painting Plane (SRGBColorSpace, self-illuminated museum clarity without extra PointLights)
     const artTex = this._loadSacredArtTexture(artPath);
     const paintingMat = new THREE.MeshStandardMaterial({
       map: artTex,
@@ -206,7 +209,7 @@ export class ChurchEnvironment {
       metalness: 0.04,
       emissive: 0xffffff,
       emissiveMap: artTex,
-      emissiveIntensity: 0.24
+      emissiveIntensity: 0.34
     });
 
     const paintingMesh = new THREE.Mesh(
@@ -341,13 +344,7 @@ export class ChurchEnvironment {
       retableGroup.add(plaqueMesh);
     }
 
-    // 6. Dedicated Picture Spotlight (PointLight) for Museum Illumination
-    if (addSpotlight) {
-      const spotLight = new THREE.PointLight(0xffe9b8, spotlightIntensity, 7.5, 1.4);
-      spotLight.position.set(0, height * 0.28, 1.35);
-      retableGroup.add(spotLight);
-    }
-
+    // Note: Retables use emissiveMap self-illumination + shared Sanctuary PointLight instead of per-frame PointLights
     return retableGroup;
   }
 
@@ -1493,11 +1490,6 @@ export class ChurchEnvironment {
     centerJesusStatue.position.set(0, 1.28, 0.15);
     centerJesusShrine.add(centerJesusStatue);
 
-    // Directional Accent Light from upper-left to bring out deep 3D sculpted relief of Jesus Christ
-    const jesusSpotlight = new THREE.PointLight(0xffe8b0, 1.15, 14);
-    jesusSpotlight.position.set(-2.8, 6.2, 2.4);
-    centerJesusShrine.add(jesusSpotlight);
-
     this.group.add(centerJesusShrine);
 
     // Radiant Golden Filigree Halo behind the Central 3D Statue of Jesus (this.sacredHalo)
@@ -1666,55 +1658,68 @@ export class ChurchEnvironment {
   }
 
   /**
-   * Helper to load a real high-resolution 3D scan statue (.glb) with automatic path fallback,
-   * replacing the fallback silhouette once loaded.
+   * Helper to load a real high-resolution 3D scan statue (.glb) with deduplicated Promise cache,
+   * geometry sharing via clone(true), and zero-cost hitbox raycasting.
    */
-  _load3DStatueGLB({ modelFilename, containerGroup, fallbackGroup, material, userData, offsetY = 0 }) {
+  _load3DStatueGLB({ modelFilename, containerGroup, fallbackGroup, material, offsetY = 0 }) {
     if (typeof window === 'undefined' || !this.gltfLoader) return;
 
-    const baseUrl =
-      typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL
-        ? import.meta.env.BASE_URL
-        : '/';
-    const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+    if (!this.glbPromiseCache.has(modelFilename)) {
+      const baseUrl =
+        typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL
+          ? import.meta.env.BASE_URL
+          : '/';
+      const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
 
-    const candidates = [
-      `/models/nhatho/${modelFilename}`,
-      `${normalizedBase}models/nhatho/${modelFilename}`,
-      `models/nhatho/${modelFilename}`
-    ];
+      const candidates = [
+        `/models/nhatho/${modelFilename}`,
+        `${normalizedBase}models/nhatho/${modelFilename}`,
+        `models/nhatho/${modelFilename}`
+      ];
 
-    const tryLoad = (idx) => {
-      if (idx >= candidates.length) return;
-      this.gltfLoader.load(
-        candidates[idx],
-        (gltf) => {
-          const model = gltf.scene;
-          model.position.set(0, offsetY, 0);
-          model.traverse((child) => {
-            if (child.isMesh) {
-              child.material = material;
-              child.castShadow = true;
-              child.receiveShadow = true;
-              if (userData) {
-                child.userData = userData;
-                this.interactiveMeshes.push(child);
-              }
-            }
-          });
-          if (fallbackGroup && fallbackGroup.parent === containerGroup) {
-            containerGroup.remove(fallbackGroup);
+      const loadPromise = new Promise((resolve, reject) => {
+        const tryLoad = (idx) => {
+          if (idx >= candidates.length) {
+            reject(new Error(`Failed to load ${modelFilename}`));
+            return;
           }
-          containerGroup.add(model);
-        },
-        undefined,
-        () => {
-          tryLoad(idx + 1);
-        }
-      );
-    };
+          this.gltfLoader.load(
+            candidates[idx],
+            (gltf) => resolve(gltf.scene),
+            undefined,
+            () => tryLoad(idx + 1)
+          );
+        };
+        tryLoad(0);
+      });
+      this.glbPromiseCache.set(modelFilename, loadPromise);
+    }
 
-    tryLoad(0);
+    this.glbPromiseCache
+      .get(modelFilename)
+      .then((templateScene) => {
+        const model = templateScene.clone(true);
+        model.position.set(0, offsetY, 0);
+        model.traverse((child) => {
+          if (child.isMesh) {
+            child.material = material;
+            // Rely on the statue's low-poly plinth & 12-segment cylinder hitbox for shadows & raycasting!
+            child.castShadow = false;
+            child.receiveShadow = false;
+            child.raycast = () => {};
+          }
+        });
+        if (fallbackGroup && fallbackGroup.parent === containerGroup) {
+          containerGroup.remove(fallbackGroup);
+        }
+        containerGroup.add(model);
+        if (typeof this.onAssetLoaded === 'function') {
+          this.onAssetLoaded();
+        }
+      })
+      .catch(() => {
+        // Keep lightweight fallbackGroup visible if offline
+      });
   }
 
   /**
@@ -2469,13 +2474,11 @@ export class ChurchEnvironment {
 
         for (let c = 0; c < 8; c++) {
           const cx = -0.7 + c * 0.2;
-          const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.038, 0.11, 10), redGlassMat);
+          const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.038, 0.11, 8), redGlassMat);
           cup.position.set(cx, tier.y + 0.08, tier.z);
-          cup.userData = tray.userData;
-          this.interactiveMeshes.push(cup);
           standGroup.add(cup);
 
-          const flame = new THREE.Mesh(new THREE.SphereGeometry(0.032, 8, 8), flameMat);
+          const flame = new THREE.Mesh(new THREE.SphereGeometry(0.032, 6, 6), flameMat);
           flame.scale.set(0.7, 1.55, 0.7);
           flame.position.set(cx, tier.y + 0.16, tier.z);
           standGroup.add(flame);
@@ -2835,12 +2838,14 @@ export class ChurchEnvironment {
       this.candleFlameMeshes.push(candleFlame);
     }
 
-    chaDiepPortraitGroup.traverse((child) => {
-      if (child.isMesh) {
-        child.userData = chaDiepHitData;
-        this.interactiveMeshes.push(child);
-      }
-    });
+    const chaDiepHitbox = new THREE.Mesh(
+      new THREE.BoxGeometry(2.2, 3.0, 0.8),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    chaDiepHitbox.position.set(0, 1.4, 0.1);
+    chaDiepHitbox.userData = chaDiepHitData;
+    this.interactiveMeshes.push(chaDiepHitbox);
+    chaDiepPortraitGroup.add(chaDiepHitbox);
     chaDiepPavilion.add(chaDiepPortraitGroup);
 
     this._addFloralBouquet(chaDiepPavilion, -2.35, 0.86, 0.35, 0xfacc15);
@@ -3112,18 +3117,27 @@ export class ChurchEnvironment {
       { x: 9.5, y: 0.7, z: 0.4, rx: 1.7, ry: 0.85, rz: 1.4, mat: mossyRockMat, rotZ: -0.1 }
     ];
 
+    const sharedBoulderGeo = new THREE.DodecahedronGeometry(1.0, 0);
     for (const b of mountainBoulders) {
-      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1.0, 0), b.mat);
+      const rock = new THREE.Mesh(sharedBoulderGeo, b.mat);
       rock.scale.set(b.rx, b.ry, b.rz);
       rock.position.set(b.x, b.y, b.z);
       if (b.rotZ) rock.rotation.z = b.rotZ;
       rock.rotation.y = (b.x * 0.37) % Math.PI;
-      rock.castShadow = true;
+      rock.castShadow = b.y > 3.5;
       rock.receiveShadow = true;
-      rock.userData = grottoHitData;
-      this.interactiveMeshes.push(rock);
       grottoGroup.add(rock);
     }
+
+    // Single low-poly bounding hitbox for the Lourdes Grotto mountain arch
+    const grottoArchHitbox = new THREE.Mesh(
+      new THREE.BoxGeometry(16.0, 8.5, 4.2),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    grottoArchHitbox.position.set(0, 4.2, 2.4);
+    grottoArchHitbox.userData = grottoHitData;
+    this.interactiveMeshes.push(grottoArchHitbox);
+    grottoGroup.add(grottoArchHitbox);
 
     // 3. Mediterranean Cypress & Pine Trees on the Lourdes Mountain Slopes (Cây Tùng Bách Xanh Trên Núi)
     const treePlacements = [
@@ -3179,11 +3193,6 @@ export class ChurchEnvironment {
     lourdesStatue.rotation.y = Math.PI; // Facing -Z toward the courtyard & camera!
     grottoGroup.add(lourdesStatue);
 
-    // Warm Golden Grotto Niche Spotlight illuminating Our Lady of Lourdes
-    const nicheLight = new THREE.PointLight(0xfff1c2, 2.6, 12);
-    nicheLight.position.set(-2.1, 4.4, -0.2);
-    grottoGroup.add(nicheLight);
-
     // Rotating 12-Star Halo behind Our Lady of Lourdes in the Niche (this.grottoHalo)
     const grottoHalo = new THREE.Group();
     grottoHalo.position.set(-2.1, 4.95, 1.25);
@@ -3235,7 +3244,7 @@ export class ChurchEnvironment {
       grottoAltarGroup.add(cStick);
 
       const cFlame = new THREE.Mesh(
-        new THREE.SphereGeometry(0.042, 8, 8),
+        new THREE.SphereGeometry(0.042, 6, 6),
         new THREE.MeshBasicMaterial({ color: 0xffd166 })
       );
       cFlame.scale.set(0.7, 1.6, 0.7);
@@ -3244,9 +3253,6 @@ export class ChurchEnvironment {
       this.candleFlameMeshes.push(cFlame);
     }
 
-    const cavernWarmLight = new THREE.PointLight(0xffb74d, 1.95, 10);
-    cavernWarmLight.position.set(0, 2.2, -0.5);
-    grottoAltarGroup.add(cavernWarmLight);
     grottoGroup.add(grottoAltarGroup);
 
     // 7. Real 3D Sculpted Statue of St. Bernadette Praying before Our Lady of Lourdes
@@ -3362,197 +3368,209 @@ export class ChurchEnvironment {
     }
   }
 
-  _createDecoratedChristmasTree(scale = 1.0, hasPointLight = false, seedIndex = 0) {
+  _createDecoratedChristmasTree(scale = 1.0, _hasPointLight = false, seedIndex = 0) {
     const group = new THREE.Group();
     group.scale.setScalar(scale);
 
-    const potMat = new THREE.MeshStandardMaterial({
-      color: 0x7f1d1d,
-      roughness: 0.45,
-      metalness: 0.25
-    });
-    const goldMat = new THREE.MeshStandardMaterial({
-      color: 0xffd700,
-      metalness: 0.88,
-      roughness: 0.14,
-      emissive: 0x6b4c00,
-      emissiveIntensity: 0.42
-    });
-    const trunkMat = new THREE.MeshStandardMaterial({
-      color: 0x4a2c11,
-      roughness: 0.85
-    });
-    const pineMatDark = new THREE.MeshStandardMaterial({
-      color: 0x0f5132,
-      roughness: 0.68,
-      metalness: 0.06
-    });
-    const pineMatLush = new THREE.MeshStandardMaterial({
-      color: 0x157347,
-      roughness: 0.62,
-      metalness: 0.08
-    });
-    const snowMat = new THREE.MeshStandardMaterial({
-      color: 0xf8fafc,
-      roughness: 0.35,
-      emissive: 0xe2e8f0,
-      emissiveIntensity: 0.15
-    });
+    // Initialize shared Christmas tree geometries & materials once across all 10 trees
+    if (!this._christmasShared) {
+      const potMat = new THREE.MeshStandardMaterial({
+        color: 0x7f1d1d,
+        roughness: 0.45,
+        metalness: 0.25
+      });
+      const goldMat = new THREE.MeshStandardMaterial({
+        color: 0xffd700,
+        metalness: 0.88,
+        roughness: 0.14,
+        emissive: 0x6b4c00,
+        emissiveIntensity: 0.42
+      });
+      const trunkMat = new THREE.MeshStandardMaterial({
+        color: 0x4a2c11,
+        roughness: 0.85
+      });
+      const pineMatDark = new THREE.MeshStandardMaterial({
+        color: 0x0f5132,
+        roughness: 0.68,
+        metalness: 0.06
+      });
+      const pineMatLush = new THREE.MeshStandardMaterial({
+        color: 0x157347,
+        roughness: 0.62,
+        metalness: 0.08
+      });
+      const snowMat = new THREE.MeshStandardMaterial({
+        color: 0xf8fafc,
+        roughness: 0.35,
+        emissive: 0xe2e8f0,
+        emissiveIntensity: 0.15
+      });
+
+      const baublePalette = [0xef4444, 0xfacc15, 0x38bdf8, 0xf43f5e, 0xc084fc, 0xffffff];
+      const baubleMats = baublePalette.map(
+        (c) =>
+          new THREE.MeshStandardMaterial({
+            color: c,
+            metalness: 0.82,
+            roughness: 0.16,
+            emissive: c,
+            emissiveIntensity: 0.24
+          })
+      );
+
+      // 3 Shared Twinkling Fairy Light Materials (updated in O(1) inside update() instead of 420 mesh matrices!)
+      const fairyPalette = [0xfef08a, 0x7dd3fc, 0xfda4af];
+      this.christmasFairyMats = fairyPalette.map(
+        (c) =>
+          new THREE.MeshBasicMaterial({
+            color: c,
+            transparent: true,
+            opacity: 0.92
+          })
+      );
+
+      const giftPalette = [0xdc2626, 0x2563eb, 0x16a34a];
+      const giftMats = giftPalette.map(
+        (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.35, metalness: 0.15 })
+      );
+
+      const tierConfigs = [
+        { y: 1.32, r: 1.26, h: 1.25 },
+        { y: 2.02, r: 1.0, h: 1.1 },
+        { y: 2.66, r: 0.74, h: 0.95 },
+        { y: 3.22, r: 0.46, h: 0.8 }
+      ];
+
+      this._christmasShared = {
+        potMat,
+        goldMat,
+        trunkMat,
+        pineMatDark,
+        pineMatLush,
+        snowMat,
+        baubleMats,
+        giftMats,
+        tierConfigs,
+        planterGeo: new THREE.CylinderGeometry(0.46, 0.38, 0.44, 12),
+        planterRimGeo: new THREE.TorusGeometry(0.46, 0.035, 8, 18),
+        snowBaseGeo: new THREE.CylinderGeometry(0.43, 0.43, 0.06, 12),
+        trunkGeo: new THREE.CylinderGeometry(0.14, 0.22, 1.2, 8),
+        tierConeGeos: tierConfigs.map((tc) => new THREE.ConeGeometry(tc.r, tc.h, 12)),
+        tierSnowGeos: tierConfigs.map((tc) => new THREE.TorusGeometry(tc.r * 0.92, 0.042, 6, 16)),
+        baubleGeo: new THREE.SphereGeometry(0.072, 8, 8),
+        bulbGeo: new THREE.SphereGeometry(0.048, 6, 6),
+        starCoreGeo: new THREE.OctahedronGeometry(0.24, 0),
+        starCrossGeo: new THREE.OctahedronGeometry(0.22, 0),
+        starHaloGeo: new THREE.SphereGeometry(0.32, 8, 8),
+        starHaloMat: new THREE.MeshBasicMaterial({
+          color: 0xfef08a,
+          transparent: true,
+          opacity: 0.38
+        }),
+        giftGeo: new THREE.BoxGeometry(0.32, 0.28, 0.32),
+        ribbon1Geo: new THREE.BoxGeometry(0.335, 0.295, 0.05),
+        ribbon2Geo: new THREE.BoxGeometry(0.05, 0.295, 0.335)
+      };
+    }
+
+    const S = this._christmasShared;
 
     // Decorative Red & Gold Planter Base
-    const planter = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.38, 0.44, 16), potMat);
+    const planter = new THREE.Mesh(S.planterGeo, S.potMat);
     planter.position.y = 0.22;
-    planter.castShadow = true;
     group.add(planter);
 
-    const planterRim = new THREE.Mesh(new THREE.TorusGeometry(0.46, 0.035, 10, 24), goldMat);
+    const planterRim = new THREE.Mesh(S.planterRimGeo, S.goldMat);
     planterRim.rotation.x = Math.PI / 2;
     planterRim.position.y = 0.43;
     group.add(planterRim);
 
-    const snowBase = new THREE.Mesh(new THREE.CylinderGeometry(0.43, 0.43, 0.06, 16), snowMat);
+    const snowBase = new THREE.Mesh(S.snowBaseGeo, S.snowMat);
     snowBase.position.y = 0.44;
     group.add(snowBase);
 
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.22, 1.2, 10), trunkMat);
+    const trunk = new THREE.Mesh(S.trunkGeo, S.trunkMat);
     trunk.position.y = 0.85;
     group.add(trunk);
 
-    // 6 Lush Layered Pine Cone Tiers with Snow-Frosted Scalloped Rims & Gold Tinsel Garlands
-    const tierConfigs = [
-      { y: 1.25, r: 1.28, h: 1.15 },
-      { y: 1.82, r: 1.08, h: 1.05 },
-      { y: 2.34, r: 0.88, h: 0.95 },
-      { y: 2.80, r: 0.68, h: 0.85 },
-      { y: 3.20, r: 0.48, h: 0.72 },
-      { y: 3.55, r: 0.28, h: 0.58 }
-    ];
-
-    const baublePalette = [0xef4444, 0xfacc15, 0x38bdf8, 0xf43f5e, 0xc084fc, 0xffffff];
-    const fairyPalette = [0xfef08a, 0xffedd5, 0x7dd3fc, 0xfda4af, 0x86efac];
-
-    for (let t = 0; t < tierConfigs.length; t++) {
-      const tc = tierConfigs[t];
+    // 4 Lush Layered Pine Cone Tiers with Snow Rims, Shared Baubles & Shared Twinkling Lights
+    for (let t = 0; t < S.tierConfigs.length; t++) {
+      const tc = S.tierConfigs[t];
       const cone = new THREE.Mesh(
-        new THREE.ConeGeometry(tc.r, tc.h, 14),
-        t % 2 === 0 ? pineMatDark : pineMatLush
+        S.tierConeGeos[t],
+        t % 2 === 0 ? S.pineMatDark : S.pineMatLush
       );
       cone.position.y = tc.y;
       cone.rotation.y = t * 0.45;
-      cone.castShadow = true;
-      cone.receiveShadow = true;
+      if (t === 0) cone.castShadow = true;
       group.add(cone);
 
-      // Frosted snow ring along the lower skirt of each tier
-      const snowSkirt = new THREE.Mesh(
-        new THREE.TorusGeometry(tc.r * 0.92, 0.045, 8, 20),
-        snowMat
-      );
+      const snowSkirt = new THREE.Mesh(S.tierSnowGeos[t], S.snowMat);
       snowSkirt.rotation.x = Math.PI / 2;
       snowSkirt.position.y = tc.y - tc.h * 0.44;
       group.add(snowSkirt);
 
-      // Metallic Baubles & Twinkling Fairy Lights around each tier
-      const count = Math.max(5, 10 - t);
+      const count = 6 - t;
       for (let b = 0; b < count; b++) {
         const angle = (b / count) * Math.PI * 2 + t * 0.55;
         const radius = tc.r * 0.84;
-        const by = tc.y - tc.h * 0.28 + (b % 2) * 0.12;
+        const by = tc.y - tc.h * 0.28 + (b % 2) * 0.1;
 
-        const bColor = baublePalette[(t + b + seedIndex) % baublePalette.length];
-        const baubleMat = new THREE.MeshStandardMaterial({
-          color: bColor,
-          metalness: 0.82,
-          roughness: 0.16,
-          emissive: bColor,
-          emissiveIntensity: 0.22
-        });
-        const bauble = new THREE.Mesh(new THREE.SphereGeometry(0.068, 10, 10), baubleMat);
+        const baubleMat = S.baubleMats[(t + b + seedIndex) % S.baubleMats.length];
+        const bauble = new THREE.Mesh(S.baubleGeo, baubleMat);
         bauble.position.set(Math.cos(angle) * radius, by, Math.sin(angle) * radius);
         group.add(bauble);
 
-        // Twinkling Warm & Multicolor Fairy Light Bulb
         const fAngle = angle + Math.PI / count;
         const fRadius = tc.r * 0.76;
-        const fColor = fairyPalette[(t * 3 + b + seedIndex) % fairyPalette.length];
-        const fairyMat = new THREE.MeshBasicMaterial({
-          color: fColor,
-          transparent: true,
-          opacity: 0.95
-        });
-        const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.042, 8, 8), fairyMat);
+        const fairyMat =
+          this.christmasFairyMats[(t + b + seedIndex) % this.christmasFairyMats.length];
+        const bulb = new THREE.Mesh(S.bulbGeo, fairyMat);
         bulb.position.set(
           Math.cos(fAngle) * fRadius,
           by + 0.11,
           Math.sin(fAngle) * fRadius
         );
-        bulb.userData = {
-          phase: (t * 5 + b + seedIndex * 1.7) * 0.9
-        };
         group.add(bulb);
-        this.christmasLightMeshes.push(bulb);
       }
     }
 
-    // Glowing 8-Pointed Star of Bethlehem Topper (Ngôi Sao Bêlem Đỉnh Cây Thông)
+    // Glowing 8-Pointed Star of Bethlehem Topper (Ngôi Sao Bêlem Đỉnh Cây Thông — Emissive Halo, 0 PointLights)
     const starGroup = new THREE.Group();
-    starGroup.position.y = 3.98;
+    starGroup.position.y = 3.74;
 
-    const starCore = new THREE.Mesh(new THREE.OctahedronGeometry(0.24, 0), goldMat);
+    const starCore = new THREE.Mesh(S.starCoreGeo, S.goldMat);
     starGroup.add(starCore);
 
-    const starCross = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), goldMat);
+    const starCross = new THREE.Mesh(S.starCrossGeo, S.goldMat);
     starCross.rotation.z = Math.PI / 4;
     starCross.rotation.y = Math.PI / 4;
     starGroup.add(starCross);
 
-    const starHalo = new THREE.Mesh(
-      new THREE.SphereGeometry(0.32, 12, 12),
-      new THREE.MeshBasicMaterial({
-        color: 0xfef08a,
-        transparent: true,
-        opacity: 0.38
-      })
-    );
+    const starHalo = new THREE.Mesh(S.starHaloGeo, S.starHaloMat);
     starGroup.add(starHalo);
-
-    if (hasPointLight) {
-      const starLight = new THREE.PointLight(0xffe58f, 1.45, 7.5);
-      starLight.position.set(0, 0.1, 0);
-      starGroup.add(starLight);
-    }
 
     group.add(starGroup);
     this.christmasStarMeshes.push(starGroup);
 
-    // 5 Wrapped Christmas Gift Boxes with Golden Ribbons around the base
-    const giftConfigs = [
-      { x: 0.56, z: 0.34, w: 0.34, h: 0.28, d: 0.34, c: 0xdc2626 },
-      { x: -0.54, z: 0.38, w: 0.30, h: 0.32, d: 0.30, c: 0x2563eb },
-      { x: 0.12, z: 0.64, w: 0.36, h: 0.24, d: 0.28, c: 0x16a34a },
-      { x: -0.26, z: -0.58, w: 0.32, h: 0.28, d: 0.32, c: 0x9333ea },
-      { x: 0.52, z: -0.42, w: 0.28, h: 0.26, d: 0.28, c: 0xe11d48 }
+    // 3 Wrapped Christmas Gift Boxes with Golden Ribbons around the base
+    const giftCoords = [
+      { x: 0.54, z: 0.34 },
+      { x: -0.52, z: 0.38 },
+      { x: 0.08, z: -0.56 }
     ];
-    for (const g of giftConfigs) {
-      const giftBox = new THREE.Mesh(
-        new THREE.BoxGeometry(g.w, g.h, g.d),
-        new THREE.MeshStandardMaterial({ color: g.c, roughness: 0.35, metalness: 0.15 })
-      );
-      giftBox.position.set(g.x, g.h / 2, g.z);
-      giftBox.castShadow = true;
+    for (let g = 0; g < giftCoords.length; g++) {
+      const gc = giftCoords[g];
+      const giftBox = new THREE.Mesh(S.giftGeo, S.giftMats[(g + seedIndex) % S.giftMats.length]);
+      giftBox.position.set(gc.x, 0.14, gc.z);
       group.add(giftBox);
 
-      const ribbon1 = new THREE.Mesh(
-        new THREE.BoxGeometry(g.w + 0.015, g.h + 0.015, 0.05),
-        goldMat
-      );
+      const ribbon1 = new THREE.Mesh(S.ribbon1Geo, S.goldMat);
       ribbon1.position.copy(giftBox.position);
       group.add(ribbon1);
 
-      const ribbon2 = new THREE.Mesh(
-        new THREE.BoxGeometry(0.05, g.h + 0.015, g.d + 0.015),
-        goldMat
-      );
+      const ribbon2 = new THREE.Mesh(S.ribbon2Geo, S.goldMat);
       ribbon2.position.copy(giftBox.position);
       group.add(ribbon2);
     }
@@ -3668,13 +3686,10 @@ export class ChurchEnvironment {
       flame.scale.set(0.7 * s, 1.55 * s, 0.7 * s);
     }
 
-    // 8. Twinkle Christmas Tree Fairy Lights & Rotate Star of Bethlehem Toppers
-    for (let i = 0; i < this.christmasLightMeshes.length; i++) {
-      const bulb = this.christmasLightMeshes[i];
-      const phase = bulb.userData.phase || i * 0.6;
-      const twinkle = 0.65 + 0.55 * Math.sin(elapsed * 5.2 + phase);
-      bulb.scale.setScalar(twinkle);
-      bulb.material.opacity = 0.45 + 0.55 * Math.max(0, Math.sin(elapsed * 5.2 + phase));
+    // 8. Twinkle Christmas Tree Fairy Lights in O(1) via 3 Shared Materials & Rotate Star Toppers
+    for (let i = 0; i < this.christmasFairyMats.length; i++) {
+      const mat = this.christmasFairyMats[i];
+      mat.opacity = 0.42 + 0.58 * Math.max(0, Math.sin(elapsed * 4.6 + i * 2.1));
     }
     for (let i = 0; i < this.christmasStarMeshes.length; i++) {
       const star = this.christmasStarMeshes[i];
