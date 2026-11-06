@@ -3366,422 +3366,835 @@ export class Environment {
 
   _buildMedicineBuddhaShrine() {
     // Đài Đức Phật Dược Sư Lưu Ly Quang Như Lai (-10.5, 0.05, 21.8)
-    // Biểu trưng cho Đông Phương Tịnh Lưu Ly Thế Giới - Tiêu Tai Diên Thọ, Thân Tâm An Lạc
+    // Điêu khắc 3D nguyên bản theo Mẫu Bộ Phật Dược Sư Phúc Đan 3D (https://phucdan3d.com/file-mau-bo-phat-duoc-su/):
+    // - Bệ Đá Tu Di 5 cấp chạm hoa văn mây xoắn, Pháp Luân & Lan Can Câu Lan tứ giác chạm lộng
+    // - Đài Sen Cánh Bầu dày dặn kèm đôi cuống mây xoắn chữ S hai bên đỡ Lá Đề
+    // - Lá Đề Hào Quang nhọn đỉnh chạm nổi hệ vân sóng đồng tâm, vòng cung 16 búp sen nổi & viền Lửa Tam Muội
+    // - Tôn tượng Đức Phật Dược Sư ngồi Kiết Già, ngực chạm nổi Chữ Vạn (卍), hai tay kết Ấn Dược Sư trước ngực, tóc xoắn ốc nổi rõ từng hạt
     const duocSuGroup = new THREE.Group();
     duocSuGroup.position.set(-10.5, 0.05, 21.8);
-    duocSuGroup.rotation.y = 0.28; // Hướng nhẹ về lối chính Sân Chùa để đạo hữu chiêm bái
+    duocSuGroup.rotation.y = 0.22; // Hướng về trung tâm Sân Chùa để đạo hữu chiêm bái rõ chính diện
 
-    const lapisDeepMat = new THREE.MeshStandardMaterial({
-      color: 0x1e3a8a,
-      roughness: 0.25,
-      metalness: 0.35,
-      emissive: 0x0c4a6e,
-      emissiveIntensity: 0.35
+    // Chất liệu Đá Bạch Ngọc Ngà Chạm Khắc CNC Cao Cấp (Sculpted Ivory-Alabaster Stone with Warm Relief Shading)
+    const ivoryStoneMat = new THREE.MeshStandardMaterial({
+      color: 0xe6e2d8,
+      roughness: 0.34,
+      metalness: 0.14,
+      emissive: 0x26231c,
+      emissiveIntensity: 0.14
     });
-    const lapisGlowMat = new THREE.MeshStandardMaterial({
-      color: 0x0284c7,
-      roughness: 0.18,
-      metalness: 0.45,
-      emissive: 0x38bdf8,
-      emissiveIntensity: 0.65
-    });
-    const sacredGoldMat = new THREE.MeshStandardMaterial({
-      color: 0xfbbf24,
-      roughness: 0.22,
-      metalness: 0.84,
-      emissive: 0x78350f,
-      emissiveIntensity: 0.24
-    });
-    const skinGoldMat = new THREE.MeshStandardMaterial({
-      color: 0xfde68a,
+    const highlightIvoryMat = new THREE.MeshStandardMaterial({
+      color: 0xf4f1e8,
       roughness: 0.26,
-      metalness: 0.52,
-      emissive: 0x0284c7,
-      emissiveIntensity: 0.16
+      metalness: 0.18,
+      emissive: 0x332e24,
+      emissiveIntensity: 0.18
     });
-    const whiteJadeMat = new THREE.MeshStandardMaterial({
-      color: 0xf8fafc,
-      roughness: 0.28,
+    const deepReliefMat = new THREE.MeshStandardMaterial({
+      color: 0xb8b2a4,
+      roughness: 0.48,
       metalness: 0.12
     });
-    const emeraldHerbMat = new THREE.MeshStandardMaterial({
-      color: 0x10b981,
-      roughness: 0.3,
-      metalness: 0.2,
-      emissive: 0x059669,
-      emissiveIntensity: 0.35
+    const darkCarveMat = new THREE.MeshStandardMaterial({
+      color: 0x5c574d,
+      roughness: 0.55
     });
 
-    // 1. Hồ Lưu Ly Bát Giác & Bệ Đá Bạch Ngọc dưới chân Đài Phật Dược Sư
-    const outerOctagon = new THREE.Mesh(
-      new THREE.CylinderGeometry(3.25, 3.5, 0.34, 8),
-      whiteJadeMat
-    );
-    outerOctagon.position.y = 0.17;
-    outerOctagon.receiveShadow = true;
-    duocSuGroup.add(outerOctagon);
+    // =========================================================================
+    // 1. BỆ ĐÁ TU DI ĐA TẦNG & LAN CAN CÂU LAN TỨ GIÁC CHẠM TRỔ (y = 0.0 -> 1.48)
+    // =========================================================================
+    const pedestalGroup = new THREE.Group();
 
-    const lapisWaterPool = new THREE.Mesh(
-      new THREE.CylinderGeometry(2.9, 2.9, 0.24, 16),
-      new THREE.MeshStandardMaterial({
-        color: 0x0369a1,
-        roughness: 0.14,
-        metalness: 0.72,
-        emissive: 0x0284c7,
-        emissiveIntensity: 0.4
-      })
-    );
-    lapisWaterPool.position.y = 0.25;
-    duocSuGroup.add(lapisWaterPool);
+    // Tầng 1: Đế Bát Giác Chữ Nhật Vát Góc chạm nổi hoa văn mây cuộn (y = 0.0 -> 0.34)
+    const basePlinthShape = new THREE.Shape();
+    const bw = 1.68;
+    const bd = 1.18;
+    const bev = 0.28;
+    basePlinthShape.moveTo(-bw + bev, -bd);
+    basePlinthShape.lineTo(bw - bev, -bd);
+    basePlinthShape.lineTo(bw, -bd + bev);
+    basePlinthShape.lineTo(bw, bd - bev);
+    basePlinthShape.lineTo(bw - bev, bd);
+    basePlinthShape.lineTo(-bw + bev, bd);
+    basePlinthShape.lineTo(-bw, bd - bev);
+    basePlinthShape.lineTo(-bw, -bd + bev);
+    basePlinthShape.closePath();
 
-    // 2. Đài Sen Ngọc Lưu Ly 3 Tầng nâng Tôn Tượng
-    const pedestalTier1 = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.55, 1.82, 0.62, 8),
-      lapisDeepMat
-    );
-    pedestalTier1.position.y = 0.62;
-    pedestalTier1.castShadow = true;
-    duocSuGroup.add(pedestalTier1);
+    const basePlinthGeo = new THREE.ExtrudeGeometry(basePlinthShape, {
+      depth: 0.30,
+      bevelEnabled: true,
+      bevelThickness: 0.04,
+      bevelSize: 0.04,
+      bevelSegments: 4
+    });
+    const basePlinth = new THREE.Mesh(basePlinthGeo, ivoryStoneMat);
+    basePlinth.rotation.x = Math.PI / 2;
+    basePlinth.position.y = 0.32;
+    basePlinth.castShadow = true;
+    basePlinth.receiveShadow = true;
+    pedestalGroup.add(basePlinth);
 
-    const pedestalTier2 = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.18, 1.42, 0.46, 16),
-      sacredGoldMat
-    );
-    pedestalTier2.position.y = 1.12;
-    pedestalTier2.castShadow = true;
-    duocSuGroup.add(pedestalTier2);
+    // Các cụm hoa văn mây cuộn & cánh sen chạm nổi dọc chân đế (như ảnh mẫu Phúc Đan 3D)
+    for (let i = -3; i <= 3; i++) {
+      const scrollBoss = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 10), highlightIvoryMat);
+      scrollBoss.scale.set(1.35, 0.85, 0.55);
+      scrollBoss.position.set(i * 0.42, 0.14, bd + 0.03);
+      pedestalGroup.add(scrollBoss);
 
-    const lotusSeat = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.32, 1.12, 0.38, 20),
-      lapisGlowMat
-    );
-    lotusSeat.position.y = 1.48;
-    lotusSeat.castShadow = true;
-    duocSuGroup.add(lotusSeat);
-
-    // 16 Cánh Sen Lưu Ly & Vàng Kim đan xen quanh tòa sen
-    for (let i = 0; i < 16; i++) {
-      const a = (i / 16) * Math.PI * 2;
-      const petalMat = i % 2 === 0 ? lapisGlowMat : sacredGoldMat;
-      const petal = new THREE.Mesh(new THREE.ConeGeometry(0.34, 0.78, 5), petalMat);
-      petal.scale.set(1.12, 1.0, 0.42);
-      petal.position.set(Math.cos(a) * 1.28, 1.56, Math.sin(a) * 1.28);
-      petal.rotation.y = -a + Math.PI / 2;
-      petal.rotation.x = 0.38;
-      duocSuGroup.add(petal);
+      const curlRing = new THREE.Mesh(
+        new THREE.TorusGeometry(0.085, 0.022, 8, 16, Math.PI * 1.4),
+        deepReliefMat
+      );
+      curlRing.position.set(i * 0.42, 0.15, bd + 0.055);
+      pedestalGroup.add(curlRing);
     }
 
-    // 3. Tôn Tượng Đức Phật Dược Sư Lưu Ly Quang Như Lai Ngồi Kiết Già
+    // Tầng 2 & 3: Hai bậc tam cấp giật cấp chạm hoa văn liên châu (y = 0.34 -> 0.68)
+    const stepTier1 = new THREE.Mesh(new THREE.BoxGeometry(2.86, 0.17, 1.96), ivoryStoneMat);
+    stepTier1.position.y = 0.42;
+    stepTier1.castShadow = true;
+    pedestalGroup.add(stepTier1);
+
+    const stepTier2 = new THREE.Mesh(new THREE.BoxGeometry(2.58, 0.17, 1.76), highlightIvoryMat);
+    stepTier2.position.y = 0.59;
+    stepTier2.castShadow = true;
+    pedestalGroup.add(stepTier2);
+
+    for (let i = -5; i <= 5; i++) {
+      const bead1 = new THREE.Mesh(new THREE.SphereGeometry(0.052, 10, 10), highlightIvoryMat);
+      bead1.position.set(i * 0.24, 0.42, 0.99);
+      pedestalGroup.add(bead1);
+
+      if (Math.abs(i) <= 4) {
+        const bead2 = new THREE.Mesh(new THREE.SphereGeometry(0.048, 10, 10), deepReliefMat);
+        bead2.position.set(i * 0.25, 0.59, 0.89);
+        pedestalGroup.add(bead2);
+      }
+    }
+
+    // Tầng 4: Cổ Bệ Tu Di thắt eo sâu chạm nổi Pháp Luân & Trụ Đỡ (y = 0.68 -> 1.12)
+    const waistCore = new THREE.Mesh(new THREE.BoxGeometry(2.12, 0.44, 1.42), deepReliefMat);
+    waistCore.position.y = 0.90;
+    waistCore.castShadow = true;
+    pedestalGroup.add(waistCore);
+
+    // Hoa văn Bánh Xe Pháp Luân & Hoa Sen chạm nổi chính giữa Cổ Bệ Tu Di
+    const dharmaRosette = new THREE.Mesh(
+      new THREE.TorusGeometry(0.16, 0.032, 10, 20),
+      highlightIvoryMat
+    );
+    dharmaRosette.position.set(0, 0.90, 0.73);
+    pedestalGroup.add(dharmaRosette);
+
+    const rosetteCenter = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 12), highlightIvoryMat);
+    rosetteCenter.position.set(0, 0.90, 0.74);
+    pedestalGroup.add(rosetteCenter);
+
+    // 6 Trụ đỡ chạm khắc ở cổ bệ Tu Di
+    for (const px of [-0.96, -0.58, -0.28, 0.28, 0.58, 0.96]) {
+      const waistPillar = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.055, 0.065, 0.42, 10),
+        ivoryStoneMat
+      );
+      waistPillar.position.set(px, 0.90, 0.72);
+      pedestalGroup.add(waistPillar);
+    }
+
+    // Tầng 5: Sàn Đài Thượng đua rộng & Lan Can Câu Lan Chạm Lộng 4 Góc (y = 1.12 -> 1.52)
+    const upperPlatform = new THREE.Mesh(new THREE.BoxGeometry(2.68, 0.18, 1.86), ivoryStoneMat);
+    upperPlatform.position.y = 1.21;
+    upperPlatform.castShadow = true;
+    pedestalGroup.add(upperPlatform);
+
+    // Hoa văn diềm rủ dưới sàn đài thượng
+    for (let i = -5; i <= 5; i++) {
+      const valance = new THREE.Mesh(new THREE.SphereGeometry(0.062, 10, 8), highlightIvoryMat);
+      valance.scale.set(1.2, 0.7, 0.5);
+      valance.position.set(i * 0.23, 1.20, 0.94);
+      pedestalGroup.add(valance);
+    }
+
+    // Hệ Lan Can Câu Lan (Balustrade) bao quanh mặt sàn đài thượng
+    const railY = 1.38;
+    const halfW = 1.24;
+    const halfD = 0.84;
+
+    // 8 Trụ lan can đầu búp sen (4 góc + 4 trụ giữa)
+    const postCoords = [
+      [-halfW, halfD],
+      [-0.45, halfD],
+      [0.45, halfD],
+      [halfW, halfD],
+      [-halfW, -halfD],
+      [halfW, -halfD],
+      [-halfW, 0],
+      [halfW, 0]
+    ];
+    for (const [px, pz] of postCoords) {
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.28, 0.09), highlightIvoryMat);
+      post.position.set(px, railY, pz);
+      pedestalGroup.add(post);
+
+      const postCap = new THREE.Mesh(new THREE.SphereGeometry(0.062, 10, 10), highlightIvoryMat);
+      postCap.scale.set(1, 1.25, 1);
+      postCap.position.set(px, railY + 0.17, pz);
+      pedestalGroup.add(postCap);
+    }
+
+    // Thanh lan can mặt trước & hai bên hông
+    const frontTopRail = new THREE.Mesh(
+      new THREE.BoxGeometry(halfW * 2, 0.045, 0.06),
+      highlightIvoryMat
+    );
+    frontTopRail.position.set(0, railY + 0.08, halfD);
+    pedestalGroup.add(frontTopRail);
+
+    const frontMidPanel = new THREE.Mesh(
+      new THREE.BoxGeometry(halfW * 1.94, 0.11, 0.035),
+      deepReliefMat
+    );
+    frontMidPanel.position.set(0, railY - 0.01, halfD);
+    pedestalGroup.add(frontMidPanel);
+
+    for (const side of [-1, 1]) {
+      const sideTopRail = new THREE.Mesh(
+        new THREE.BoxGeometry(0.06, 0.045, halfD * 2),
+        highlightIvoryMat
+      );
+      sideTopRail.position.set(side * halfW, railY + 0.08, 0);
+      pedestalGroup.add(sideTopRail);
+
+      const sideMidPanel = new THREE.Mesh(
+        new THREE.BoxGeometry(0.035, 0.11, halfD * 1.92),
+        deepReliefMat
+      );
+      sideMidPanel.position.set(side * halfW, railY - 0.01, 0);
+      pedestalGroup.add(sideMidPanel);
+    }
+
+    duocSuGroup.add(pedestalGroup);
+
+    // =========================================================================
+    // 2. ĐÀI SEN CÁNH BẦU DÀY DẶN & ĐÔI CUỐNG MÂY ĐỠ LÁ ĐỀ (y = 1.30 -> 1.84)
+    // =========================================================================
+    const lotusGroup = new THREE.Group();
+    lotusGroup.position.set(0, 1.30, 0.04);
+
+    const lotusCore = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.98, 0.78, 0.44, 28),
+      ivoryStoneMat
+    );
+    lotusCore.position.y = 0.22;
+    lotusCore.castShadow = true;
+    lotusGroup.add(lotusCore);
+
+    // Hình dáng Cánh Sen Bầu tròn đầy giống hệt mẫu Phúc Đan 3D
+    const plumpPetalShape = new THREE.Shape();
+    plumpPetalShape.moveTo(0, -0.22);
+    plumpPetalShape.bezierCurveTo(0.32, -0.20, 0.36, 0.12, 0, 0.30);
+    plumpPetalShape.bezierCurveTo(-0.36, 0.12, -0.32, -0.20, 0, -0.22);
+    const plumpPetalGeo = new THREE.ExtrudeGeometry(plumpPetalShape, {
+      depth: 0.075,
+      bevelEnabled: true,
+      bevelThickness: 0.055,
+      bevelSize: 0.045,
+      bevelSegments: 5
+    });
+
+    const lotusPetalCount = 10;
+    for (let i = 0; i < lotusPetalCount; i++) {
+      const a = (i / lotusPetalCount) * Math.PI * 2;
+      const pWrap = new THREE.Group();
+      pWrap.rotation.y = -a + Math.PI / 2;
+
+      const petal = new THREE.Mesh(plumpPetalGeo, highlightIvoryMat);
+      petal.position.set(0, 0.24, 0.88);
+      petal.rotation.x = -0.26;
+      petal.castShadow = true;
+      pWrap.add(petal);
+      lotusGroup.add(pWrap);
+    }
+
+    // Đôi Cuống Mây Liên Hoa Xoắn Chữ S hai bên đài sen đỡ lấy Lá Đề (như ảnh mẫu Phúc Đan 3D)
+    for (const side of [-1, 1]) {
+      const stemCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(side * 0.82, 0.12, 0.12),
+        new THREE.Vector3(side * 1.08, 0.28, 0.04),
+        new THREE.Vector3(side * 0.96, 0.56, -0.08),
+        new THREE.Vector3(side * 0.78, 0.46, -0.02)
+      ]);
+      const stemTube = new THREE.Mesh(
+        new THREE.TubeGeometry(stemCurve, 20, 0.068, 10, false),
+        highlightIvoryMat
+      );
+      stemTube.castShadow = true;
+      lotusGroup.add(stemTube);
+    }
+
+    duocSuGroup.add(lotusGroup);
+
+    // =========================================================================
+    // 3. LÁ ĐỀ HÀO QUANG VÂN SÓNG, BÚP SEN NỔI & VIỀN LỬA TAM MUỘI (y = 1.50 -> 5.28)
+    // =========================================================================
+    const mandorlaGroup = new THREE.Group();
+    mandorlaGroup.position.set(0, 1.55, -0.34);
+
+    // Tấm nền Lá Đề nhọn đỉnh (Pointed Bodhi-Leaf Backplate)
+    const leafOuterShape = new THREE.Shape();
+    leafOuterShape.moveTo(0, 0.0);
+    leafOuterShape.bezierCurveTo(1.28, 0.05, 1.54, 1.15, 1.32, 2.15);
+    leafOuterShape.bezierCurveTo(1.08, 2.95, 0.42, 3.42, 0, 3.78);
+    leafOuterShape.bezierCurveTo(-0.42, 3.42, -1.08, 2.95, -1.32, 2.15);
+    leafOuterShape.bezierCurveTo(-1.54, 1.15, -1.28, 0.05, 0, 0.0);
+
+    const leafBackGeo = new THREE.ExtrudeGeometry(leafOuterShape, {
+      depth: 0.14,
+      bevelEnabled: true,
+      bevelThickness: 0.04,
+      bevelSize: 0.04,
+      bevelSegments: 4
+    });
+    const leafBackMesh = new THREE.Mesh(leafBackGeo, ivoryStoneMat);
+    leafBackMesh.position.z = -0.08;
+    leafBackMesh.castShadow = true;
+    leafBackMesh.receiveShadow = true;
+    mandorlaGroup.add(leafBackMesh);
+
+    // Lòng Lá Đề chạm trũng sâu tạo độ tương phản bóng đổ cho các đường vân sóng
+    const leafInnerShape = new THREE.Shape();
+    leafInnerShape.moveTo(0, 0.18);
+    leafInnerShape.bezierCurveTo(0.95, 0.22, 1.12, 1.08, 0.96, 1.88);
+    leafInnerShape.bezierCurveTo(0.76, 2.52, 0.28, 2.86, 0, 3.08);
+    leafInnerShape.bezierCurveTo(-0.28, 2.86, -0.76, 2.52, -0.96, 1.88);
+    leafInnerShape.bezierCurveTo(-1.12, 1.08, -0.95, 0.22, 0, 0.18);
+
+    const leafInnerGeo = new THREE.ExtrudeGeometry(leafInnerShape, {
+      depth: 0.08,
+      bevelEnabled: true,
+      bevelThickness: 0.025,
+      bevelSize: 0.025,
+      bevelSegments: 3
+    });
+    const leafInnerMesh = new THREE.Mesh(leafInnerGeo, deepReliefMat);
+    leafInnerMesh.position.z = 0.03;
+    mandorlaGroup.add(leafInnerMesh);
+
+    // Hệ 9 Đường Vân Sóng Hào Quang Đồng Tâm Hình Lá Đề (Concentric Wavy Ribbed Rays như ảnh mẫu Phúc Đan 3D)
+    for (let r = 1; r <= 9; r++) {
+      const scaleF = 0.34 + r * 0.068;
+      const waveOffset = (r % 2 === 0 ? 1 : -1) * 0.025;
+      const ribCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(-0.88 * scaleF, 0.28 + r * 0.02, 0.13),
+        new THREE.Vector3(-1.05 * scaleF + waveOffset, 0.95 * scaleF + 0.35, 0.135),
+        new THREE.Vector3(-0.92 * scaleF - waveOffset, 1.72 * scaleF + 0.38, 0.135),
+        new THREE.Vector3(-0.46 * scaleF, 2.38 * scaleF + 0.42, 0.135),
+        new THREE.Vector3(0, 2.75 * scaleF + 0.45, 0.14),
+        new THREE.Vector3(0.46 * scaleF, 2.38 * scaleF + 0.42, 0.135),
+        new THREE.Vector3(0.92 * scaleF + waveOffset, 1.72 * scaleF + 0.38, 0.135),
+        new THREE.Vector3(1.05 * scaleF - waveOffset, 0.95 * scaleF + 0.35, 0.135),
+        new THREE.Vector3(0.88 * scaleF, 0.28 + r * 0.02, 0.13)
+      ]);
+      const ribTube = new THREE.Mesh(
+        new THREE.TubeGeometry(ribCurve, 44, 0.018, 8, false),
+        highlightIvoryMat
+      );
+      mandorlaGroup.add(ribTube);
+    }
+
+    // Vòng Tròn Hào Quang Chạm Hoa Cúc & Liên Châu ngay sau đầu Đức Phật Dược Sư
+    const headHaloGroup = new THREE.Group();
+    headHaloGroup.position.set(0, 1.86, 0.15);
+
+    const headHaloOuter = new THREE.Mesh(
+      new THREE.TorusGeometry(0.48, 0.032, 12, 32),
+      highlightIvoryMat
+    );
+    headHaloGroup.add(headHaloOuter);
+
+    const headHaloInner = new THREE.Mesh(
+      new THREE.TorusGeometry(0.36, 0.022, 10, 28),
+      deepReliefMat
+    );
+    headHaloGroup.add(headHaloInner);
+
+    for (let i = 0; i < 20; i++) {
+      const a = (i / 20) * Math.PI * 2;
+      const bead = new THREE.Mesh(new THREE.SphereGeometry(0.026, 8, 8), highlightIvoryMat);
+      bead.position.set(Math.cos(a) * 0.42, Math.sin(a) * 0.42, 0.01);
+      headHaloGroup.add(bead);
+    }
+    mandorlaGroup.add(headHaloGroup);
+
+    // Vòng Cung 16 Búp Sen Chạm Nổi chạy dọc vành Lá Đề (Arch of 16 Sculpted Lotus Buds)
+    for (const side of [-1, 1]) {
+      for (let b = 0; b < 8; b++) {
+        const t = b / 7.2;
+        const by = 0.42 + t * 2.48;
+        // Contour follows the inner border of the Bodhi leaf
+        const archProfile = Math.sin(0.28 + t * 2.52);
+        const bx = side * (0.76 + archProfile * 0.34 * (1 - t * 0.22));
+
+        const lotusMedallion = new THREE.Group();
+        lotusMedallion.position.set(bx, by, 0.14);
+        lotusMedallion.rotation.z = side * (-0.25 - t * 0.65);
+
+        const budCore = new THREE.Mesh(
+          new THREE.ConeGeometry(0.072, 0.15, 12),
+          highlightIvoryMat
+        );
+        budCore.scale.set(1.08, 1.0, 0.62);
+        lotusMedallion.add(budCore);
+
+        const budBase = new THREE.Mesh(
+          new THREE.TorusGeometry(0.062, 0.018, 8, 14),
+          deepReliefMat
+        );
+        budBase.position.y = -0.045;
+        lotusMedallion.add(budBase);
+
+        mandorlaGroup.add(lotusMedallion);
+      }
+    }
+
+    // Viền Lửa Tam Muội (Hỏa Quang) Chạm Nổi Uốn Lượn Dọc Mép Ngoài Lá Đề (26 Sculpted Flame Tongues + Apex Flame)
+    for (const side of [-1, 1]) {
+      for (let f = 0; f < 13; f++) {
+        const t = f / 12;
+        const fy = 0.28 + t * 3.12;
+        // Exact outer contour of leafOuterShape
+        const leafWidthAtY =
+          t < 0.55
+            ? 0.92 + Math.sin((t / 0.55) * (Math.PI * 0.62)) * 0.44
+            : 1.32 * (1 - Math.pow((t - 0.55) / 0.45, 1.12));
+        const fx = side * Math.max(0.18, leafWidthAtY);
+
+        const flameCurve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(fx * 0.96, fy, 0.08),
+          new THREE.Vector3(fx + side * 0.13, fy + 0.12, 0.11),
+          new THREE.Vector3(fx + side * 0.04, fy + 0.26, 0.12)
+        ]);
+        const flameTongue = new THREE.Mesh(
+          new THREE.TubeGeometry(flameCurve, 12, 0.038 * (1 - t * 0.22), 8, false),
+          highlightIvoryMat
+        );
+        mandorlaGroup.add(flameTongue);
+      }
+    }
+
+    // Chóp Lửa Tam Muội 3 Ngọn trên đỉnh Lá Đề
+    for (const [ox, oy, h, rz] of [
+      [0, 3.82, 0.36, 0],
+      [-0.12, 3.68, 0.26, 0.28],
+      [0.12, 3.68, 0.26, -0.28]
+    ]) {
+      const topFlame = new THREE.Mesh(new THREE.ConeGeometry(0.065, h, 10), highlightIvoryMat);
+      topFlame.scale.set(1.0, 1.0, 0.55);
+      topFlame.position.set(ox, oy, 0.11);
+      topFlame.rotation.z = rz;
+      mandorlaGroup.add(topFlame);
+    }
+
+    duocSuGroup.add(mandorlaGroup);
+    this.duocSuHalo = null; // Lá đề chạm liền khối cố định trang nghiêm theo mẫu Phúc Đan 3D
+
+    // =========================================================================
+    // 4. TÔN TƯỢNG ĐỨC PHẬT DƯỢC SƯ NGỒI KIẾT GIÀ, CHỮ VẠN & ẤN TRƯỚC NGỰC (y = 1.72 -> 3.85)
+    // =========================================================================
     const statueGroup = new THREE.Group();
-    statueGroup.position.set(0, 1.66, 0);
+    statueGroup.position.set(0, 1.72, 0.06);
 
-    // Chân ngồi Kiết Già (Vajra Lotus Legs)
-    const lotusLegs = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.92, 1.08, 0.46, 20),
-      sacredGoldMat
-    );
-    lotusLegs.position.y = 0.23;
-    lotusLegs.scale.set(1.15, 1.0, 0.82);
-    lotusLegs.castShadow = true;
-    statueGroup.add(lotusLegs);
+    // Chân ngồi Kiết Già rộng rãi + Nếp gấp Y Cà Sa uốn lượn (Full-Lotus Legs & Flowing Folds)
+    for (const side of [-1, 1]) {
+      const knee = new THREE.Mesh(new THREE.SphereGeometry(0.38, 22, 18), ivoryStoneMat);
+      knee.scale.set(1.36, 0.62, 0.92);
+      knee.position.set(side * 0.64, 0.19, 0.14);
+      knee.castShadow = true;
+      statueGroup.add(knee);
 
-    const leftKnee = new THREE.Mesh(new THREE.SphereGeometry(0.38, 14, 12), sacredGoldMat);
-    leftKnee.position.set(-0.68, 0.24, 0.16);
-    leftKnee.scale.set(1.25, 0.72, 0.95);
-    statueGroup.add(leftKnee);
+      const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.54, 12, 16), ivoryStoneMat);
+      shin.rotation.z = Math.PI / 2 - side * 0.10;
+      shin.rotation.y = side * -0.18;
+      shin.position.set(side * 0.30, 0.17, 0.36);
+      statueGroup.add(shin);
 
-    const rightKnee = new THREE.Mesh(new THREE.SphereGeometry(0.38, 14, 12), sacredGoldMat);
-    rightKnee.position.set(0.68, 0.24, 0.16);
-    rightKnee.scale.set(1.25, 0.72, 0.95);
-    statueGroup.add(rightKnee);
+      // Lòng bàn chân ngửa trên đùi thế Kiết Già
+      const upturnedFoot = new THREE.Mesh(
+        new THREE.SphereGeometry(0.105, 12, 10),
+        highlightIvoryMat
+      );
+      upturnedFoot.scale.set(1.28, 0.48, 0.82);
+      upturnedFoot.position.set(side * 0.25, 0.29, 0.30);
+      upturnedFoot.rotation.z = side * -0.22;
+      statueGroup.add(upturnedFoot);
 
-    // Thân mình & Y Ca Sa Kim Sắc viền Ngọc Lưu Ly
-    const torso = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.56, 0.76, 1.32, 18),
-      sacredGoldMat
-    );
-    torso.position.y = 0.96;
-    torso.scale.set(1.08, 1.0, 0.78);
+      // Các đường nếp y cà sa chạm nổi mềm mại quanh đầu gối
+      for (let f = 0; f < 4; f++) {
+        const fold = new THREE.Mesh(
+          new THREE.TorusGeometry(0.28 - f * 0.032, 0.018, 8, 18, Math.PI * 0.82),
+          highlightIvoryMat
+        );
+        fold.position.set(side * (0.56 - f * 0.065), 0.18 + f * 0.022, 0.30 + f * 0.03);
+        fold.rotation.x = 0.48;
+        fold.rotation.y = side * 0.32;
+        fold.rotation.z = side === 1 ? -0.42 : -2.68;
+        statueGroup.add(fold);
+      }
+    }
+
+    // Nếp y cà sa xếp vòng cung mềm mại giữa lòng đùi phủ lên đài sen (thay vì các ống thẳng đứng)
+    for (let c = 0; c < 4; c++) {
+      const lapFoldArc = new THREE.Mesh(
+        new THREE.TorusGeometry(0.24 - c * 0.038, 0.018, 8, 20, Math.PI),
+        highlightIvoryMat
+      );
+      lapFoldArc.position.set(0, 0.21 - c * 0.028, 0.43 + c * 0.015);
+      lapFoldArc.rotation.x = Math.PI * 0.72;
+      statueGroup.add(lapFoldArc);
+    }
+
+    // Thân mình ngồi thẳng uy nghi điêu khắc liền khối bằng LatheGeometry (Organic Sculpted Torso)
+    const torsoPoints = [
+      new THREE.Vector2(0.01, 0.18),
+      new THREE.Vector2(0.46, 0.22),
+      new THREE.Vector2(0.42, 0.48),
+      new THREE.Vector2(0.39, 0.68),
+      new THREE.Vector2(0.45, 0.94),
+      new THREE.Vector2(0.48, 1.14),
+      new THREE.Vector2(0.42, 1.28),
+      new THREE.Vector2(0.22, 1.36),
+      new THREE.Vector2(0.01, 1.38)
+    ];
+    const torso = new THREE.Mesh(new THREE.LatheGeometry(torsoPoints, 28), ivoryStoneMat);
+    torso.scale.set(1.12, 1.0, 0.68);
     torso.castShadow = true;
     statueGroup.add(torso);
 
-    // Ngực & Y nội Lưu Ly
-    const chestInner = new THREE.Mesh(
-      new THREE.SphereGeometry(0.52, 16, 14),
-      skinGoldMat
+    // Vùng ngực đầy đặn trang nghiêm mở rộng giữa hai tà y cà sa
+    const chestBare = new THREE.Mesh(
+      new THREE.SphereGeometry(0.36, 22, 18),
+      highlightIvoryMat
     );
-    chestInner.position.set(0, 1.18, 0.08);
-    chestInner.scale.set(1.08, 0.95, 0.72);
-    statueGroup.add(chestInner);
+    chestBare.scale.set(1.05, 0.96, 0.56);
+    chestBare.position.set(0, 0.98, 0.14);
+    statueGroup.add(chestBare);
 
-    // Dải Y Ca Sa Lưu Ly vắt chéo ngực
-    const sash = new THREE.Mesh(
-      new THREE.TorusGeometry(0.54, 0.085, 10, 24),
-      lapisGlowMat
+    // Đai y nội ngang bụng dưới ngực (như ảnh mẫu Phúc Đan 3D)
+    const waistBand = new THREE.Mesh(
+      new THREE.TorusGeometry(0.39, 0.026, 10, 24, Math.PI * 0.85),
+      deepReliefMat
     );
-    sash.position.set(0.04, 1.12, 0.12);
-    sash.rotation.set(0.32, 0.25, -0.68);
-    statueGroup.add(sash);
+    waistBand.rotation.x = Math.PI / 2;
+    waistBand.rotation.z = Math.PI * 0.075;
+    waistBand.position.set(0, 0.66, 0.02);
+    statueGroup.add(waistBand);
 
-    // Chữ Vạn Vàng Kim trước ngực Đức Phật Dược Sư
-    const swastikaEmblem = new THREE.Mesh(
-      new THREE.OctahedronGeometry(0.095, 0),
-      lapisGlowMat
-    );
-    swastikaEmblem.position.set(0, 1.22, 0.47);
-    statueGroup.add(swastikaEmblem);
+    // CHỮ VẠN (卍) CHẠM NỔI SẮC NÉT GIỮA NGỰC ĐỨC PHẬT DƯỢC SƯ (giống hệt ảnh mẫu Phúc Đan 3D)
+    const swastikaGroup = new THREE.Group();
+    swastikaGroup.position.set(0, 1.04, 0.345);
+    const barMat = darkCarveMat;
+    const vBar = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.105, 0.016), barMat);
+    const hBar = new THREE.Mesh(new THREE.BoxGeometry(0.105, 0.02, 0.016), barMat);
+    swastikaGroup.add(vBar, hBar);
+    const arm1 = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.02, 0.016), barMat);
+    arm1.position.set(-0.018, 0.043, 0);
+    const arm2 = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.02, 0.016), barMat);
+    arm2.position.set(0.018, -0.043, 0);
+    const arm3 = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.052, 0.016), barMat);
+    arm3.position.set(0.043, 0.018, 0);
+    const arm4 = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.052, 0.016), barMat);
+    arm4.position.set(-0.043, -0.018, 0);
+    swastikaGroup.add(arm1, arm2, arm3, arm4);
+    statueGroup.add(swastikaGroup);
 
-    // Bờ vai tròn đầy từ hòa
-    for (const dir of [-1, 1]) {
-      const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.31, 14, 12), sacredGoldMat);
-      shoulder.position.set(dir * 0.58, 1.38, 0.02);
-      shoulder.scale.set(1.0, 1.15, 0.88);
+    // Tà Y Cà Sa Đắp Thông Kiên ôm mượt qua hai vai & rủ nếp ống tay áo hai bên
+    for (const side of [-1, 1]) {
+      // Bờ vai tròn tự nhiên nối liền thân và bắp tay
+      const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.20, 16, 14), ivoryStoneMat);
+      shoulder.position.set(side * 0.42, 1.14, 0.02);
+      shoulder.scale.set(1.05, 1.0, 0.88);
       statueGroup.add(shoulder);
+
+      // Nếp tà y cà sa uốn cong mềm mại từ vai xuống hai bên ngực (mở ngực chữ U lộ chữ Vạn)
+      const lapelCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(side * 0.28, 1.28, 0.16),
+        new THREE.Vector3(side * 0.24, 1.04, 0.29),
+        new THREE.Vector3(side * 0.19, 0.76, 0.30),
+        new THREE.Vector3(side * 0.14, 0.56, 0.28)
+      ]);
+      const lapel = new THREE.Mesh(
+        new THREE.TubeGeometry(lapelCurve, 18, 0.042, 10, false),
+        highlightIvoryMat
+      );
+      statueGroup.add(lapel);
+
+      const innerLapel = new THREE.Mesh(
+        new THREE.TubeGeometry(lapelCurve, 16, 0.024, 8, false),
+        deepReliefMat
+      );
+      innerLapel.position.set(side * -0.03, 0, 0.015);
+      statueGroup.add(innerLapel);
+
+      // Bắp tay trên xuôi từ vai xuống khuỷu tay
+      const upperArm = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.145, 0.42, 10, 14),
+        ivoryStoneMat
+      );
+      upperArm.position.set(side * 0.45, 0.86, 0.08);
+      upperArm.rotation.z = side * -0.12;
+      upperArm.rotation.x = 0.22;
+      statueGroup.add(upperArm);
+
+      // Vạt ống tay áo rộng rủ mềm mại từ khuỷu tay xuống đùi (bầu tròn phía dưới)
+      const sleeveCuff = new THREE.Mesh(
+        new THREE.SphereGeometry(0.21, 16, 14),
+        ivoryStoneMat
+      );
+      sleeveCuff.scale.set(0.82, 1.18, 1.12);
+      sleeveCuff.position.set(side * 0.44, 0.54, 0.20);
+      statueGroup.add(sleeveCuff);
+
+      // Các nếp gấp ống tay áo chạm nổi
+      for (let sf = 0; sf < 3; sf++) {
+        const sleeveFold = new THREE.Mesh(
+          new THREE.TorusGeometry(0.15 - sf * 0.02, 0.016, 8, 14, Math.PI * 0.9),
+          highlightIvoryMat
+        );
+        sleeveFold.position.set(side * (0.44 - sf * 0.03), 0.52 + sf * 0.06, 0.28);
+        sleeveFold.rotation.x = 0.65;
+        sleeveFold.rotation.y = side * 0.4;
+        statueGroup.add(sleeveFold);
+      }
     }
 
-    // Tay Trái kết Ấn Thiền Định đặt trước bụng nâng BÌNH BÁT THUỐC LƯU LY (Medicine Bowl)
-    const leftArm = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.15, 0.13, 0.72, 12),
-      sacredGoldMat
+    // ĐÔI BÀN TAY KẾT ẤN CÁT TƯỜNG THUYẾT PHÁP TRƯỚC NGỰC (như ảnh mẫu Phúc Đan 3D)
+    // Cẳng tay phải nâng lên trước ngực
+    const rightForearm = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.11, 0.34, 10, 14),
+      highlightIvoryMat
     );
-    leftArm.position.set(0.46, 0.88, 0.22);
-    leftArm.rotation.set(0.65, 0, 0.52);
-    statueGroup.add(leftArm);
+    rightForearm.position.set(-0.24, 0.72, 0.26);
+    rightForearm.rotation.z = -0.72;
+    rightForearm.rotation.x = -0.48;
+    statueGroup.add(rightForearm);
 
-    const leftHand = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 10), skinGoldMat);
-    leftHand.position.set(0.06, 0.56, 0.46);
-    leftHand.scale.set(1.25, 0.55, 1.05);
-    statueGroup.add(leftHand);
-
-    // Bình Bát Thuốc Ngọc Lưu Ly (Bát Dược Sư phát quang xanh ngọc bích & cam lộ vàng)
-    const medicineBowlGroup = new THREE.Group();
-    medicineBowlGroup.position.set(0.06, 0.74, 0.48);
-
-    const bowlBody = new THREE.Mesh(
-      new THREE.SphereGeometry(0.24, 18, 14),
-      lapisGlowMat
+    // Bàn tay phải dựng đứng trước ngực kết ấn (ngay dưới chữ Vạn)
+    const rightHandGroup = new THREE.Group();
+    rightHandGroup.position.set(-0.04, 0.84, 0.39);
+    rightHandGroup.rotation.z = 0.12;
+    const rightPalm = new THREE.Mesh(
+      new THREE.SphereGeometry(0.086, 12, 10),
+      highlightIvoryMat
     );
-    bowlBody.scale.set(1.08, 0.82, 1.08);
-    medicineBowlGroup.add(bowlBody);
-
-    const bowlRim = new THREE.Mesh(
-      new THREE.TorusGeometry(0.21, 0.032, 10, 20),
-      sacredGoldMat
-    );
-    bowlRim.rotation.x = Math.PI / 2;
-    bowlRim.position.y = 0.12;
-    medicineBowlGroup.add(bowlRim);
-
-    const elixirOrb = new THREE.Mesh(
-      new THREE.SphereGeometry(0.15, 14, 12),
-      new THREE.MeshBasicMaterial({ color: 0x7dd3fc })
-    );
-    elixirOrb.position.y = 0.14;
-    elixirOrb.scale.set(1.1, 0.55, 1.1);
-    medicineBowlGroup.add(elixirOrb);
-    statueGroup.add(medicineBowlGroup);
-
-    // Tay Phải kết Ấn Thí Nguyện cầm NHÀNH THẢO DƯỢC KHA LÊ LẶC (Myrobalan Healing Branch)
-    const rightArm = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.15, 0.13, 0.72, 12),
-      sacredGoldMat
-    );
-    rightArm.position.set(-0.56, 0.92, 0.24);
-    rightArm.rotation.set(0.55, 0, -0.32);
-    statueGroup.add(rightArm);
-
-    const rightHand = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 10), skinGoldMat);
-    rightHand.position.set(-0.62, 0.68, 0.48);
-    statueGroup.add(rightHand);
-
-    // Nhành thảo dược Kha Lê Lặc & Quả Thuốc Vàng trên tay phải
-    const herbBranch = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.022, 0.016, 0.52, 8),
-      emeraldHerbMat
-    );
-    herbBranch.position.set(-0.66, 0.86, 0.56);
-    herbBranch.rotation.set(0.35, 0, 0.28);
-    statueGroup.add(herbBranch);
-
-    for (const [lx, ly, lz] of [
-      [-0.72, 0.96, 0.62],
-      [-0.61, 1.02, 0.60],
-      [-0.70, 1.08, 0.65]
-    ]) {
-      const leaf = new THREE.Mesh(new THREE.OctahedronGeometry(0.075, 1), emeraldHerbMat);
-      leaf.scale.set(1.2, 0.45, 0.7);
-      leaf.position.set(lx, ly, lz);
-      statueGroup.add(leaf);
+    rightPalm.scale.set(0.80, 1.25, 0.55);
+    rightHandGroup.add(rightPalm);
+    for (let fg = 0; fg < 4; fg++) {
+      const finger = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.016, 0.078, 6, 8),
+        highlightIvoryMat
+      );
+      finger.position.set(-0.028 + fg * 0.020, 0.10 - Math.abs(fg - 1.5) * 0.01, 0.015);
+      finger.rotation.x = fg === 0 ? 0.42 : 0.10;
+      rightHandGroup.add(finger);
     }
+    statueGroup.add(rightHandGroup);
 
-    const myrobalanFruit = new THREE.Mesh(
-      new THREE.SphereGeometry(0.065, 10, 10),
-      sacredGoldMat
+    // Cẳng tay trái & Bàn tay trái nâng đỡ hiệp ấn ngay bên dưới bàn tay phải trước ngực
+    const leftForearm = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.11, 0.34, 10, 14),
+      highlightIvoryMat
     );
-    myrobalanFruit.position.set(-0.68, 1.0, 0.66);
-    statueGroup.add(myrobalanFruit);
+    leftForearm.position.set(0.24, 0.66, 0.26);
+    leftForearm.rotation.z = 0.78;
+    leftForearm.rotation.x = -0.45;
+    statueGroup.add(leftForearm);
 
-    // Cổ Tam Đạo & Khuôn Mặt Từ Bi Viên Mãn của Đức Phật Dược Sư
+    const leftHandGroup = new THREE.Group();
+    leftHandGroup.position.set(0.05, 0.74, 0.41);
+    leftHandGroup.rotation.z = 0.68;
+    leftHandGroup.rotation.x = 0.28;
+    const leftPalm = new THREE.Mesh(
+      new THREE.SphereGeometry(0.086, 12, 10),
+      highlightIvoryMat
+    );
+    leftPalm.scale.set(0.82, 1.22, 0.55);
+    leftHandGroup.add(leftPalm);
+    for (let fg = 0; fg < 4; fg++) {
+      const finger = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.016, 0.075, 6, 8),
+        highlightIvoryMat
+      );
+      finger.position.set(-0.028 + fg * 0.020, 0.095, 0.015);
+      finger.rotation.x = -0.22;
+      leftHandGroup.add(finger);
+    }
+    statueGroup.add(leftHandGroup);
+
+    // =========================================================================
+    // 5. DIỆN TƯỚNG TỪ BI VIÊN MÃN & TÓC XOẮN ỐC NỔI RÕ TỪNG HẠT (Head, Face & 95+ Spiral Curls)
+    // =========================================================================
+    const headGroup = new THREE.Group();
+    headGroup.position.set(0, 1.58, 0.04);
+
+    // Cổ Tam Đạo
     const neck = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.22, 0.25, 0.24, 14),
-      skinGoldMat
+      new THREE.CylinderGeometry(0.18, 0.21, 0.22, 18),
+      ivoryStoneMat
     );
-    neck.position.y = 1.66;
-    statueGroup.add(neck);
+    neck.position.y = -0.20;
+    headGroup.add(neck);
 
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.42, 20, 18), skinGoldMat);
-    head.position.set(0, 2.02, 0.04);
-    head.scale.set(0.96, 1.08, 0.96);
-    head.castShadow = true;
-    statueGroup.add(head);
-
-    // Tóc xoắn ốc xanh Lưu Ly đậm & Nhục Kế (Ushnisha)
-    const hairCap = new THREE.Mesh(
-      new THREE.SphereGeometry(0.435, 18, 14, 0, Math.PI * 2, 0, Math.PI * 0.58),
-      lapisDeepMat
+    // Khuôn mặt tròn đầy từ hòa đồng nhất sắc ngà chạm khắc (không bị vệt xám ngang trán)
+    const face = new THREE.Mesh(
+      new THREE.SphereGeometry(0.34, 28, 24),
+      highlightIvoryMat
     );
-    hairCap.position.set(0, 2.05, 0.01);
-    statueGroup.add(hairCap);
+    face.scale.set(0.95, 1.06, 0.94);
+    face.castShadow = true;
+    headGroup.add(face);
 
-    const ushnisha = new THREE.Mesh(new THREE.SphereGeometry(0.19, 14, 12), lapisDeepMat);
-    ushnisha.position.set(0, 2.48, 0.01);
-    statueGroup.add(ushnisha);
-
-    const crownJewel = new THREE.Mesh(
-      new THREE.SphereGeometry(0.065, 12, 12),
-      new THREE.MeshBasicMaterial({ color: 0x7dd3fc })
-    );
-    crownJewel.position.set(0, 2.34, 0.34);
-    statueGroup.add(crownJewel);
-
-    // Bạch Hào Quang giữa hai hàng chân mày
+    // Bạch Hào Tướng Quang giữa hai hàng chân mày
     const urna = new THREE.Mesh(
-      new THREE.SphereGeometry(0.042, 10, 10),
-      new THREE.MeshBasicMaterial({ color: 0xffffff })
+      new THREE.SphereGeometry(0.022, 10, 10),
+      highlightIvoryMat
     );
-    urna.position.set(0, 2.12, 0.43);
-    statueGroup.add(urna);
+    urna.position.set(0, 0.095, 0.322);
+    headGroup.add(urna);
 
-    // Đôi tai dài phúc hậu
-    for (const dir of [-1, 1]) {
-      const ear = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.095, 0.42, 10), skinGoldMat);
-      ear.position.set(dir * 0.41, 1.96, 0.03);
-      ear.rotation.z = dir * 0.08;
-      statueGroup.add(ear);
+    // Chân mày cong thanh thoát, mắt khép hờ thiền định & đôi tai dài phúc hậu
+    for (const side of [-1, 1]) {
+      const brow = new THREE.Mesh(
+        new THREE.TorusGeometry(0.082, 0.0065, 8, 16, Math.PI * 0.78),
+        darkCarveMat
+      );
+      brow.position.set(side * 0.10, 0.042, 0.305);
+      brow.rotation.z = Math.PI * 0.11 - side * 0.05;
+      brow.rotation.y = side * 0.18;
+      headGroup.add(brow);
+
+      const eyelid = new THREE.Mesh(
+        new THREE.SphereGeometry(0.052, 12, 10),
+        ivoryStoneMat
+      );
+      eyelid.scale.set(1.15, 0.48, 0.42);
+      eyelid.position.set(side * 0.10, 0.012, 0.312);
+      headGroup.add(eyelid);
+
+      const eyeSlit = new THREE.Mesh(
+        new THREE.TorusGeometry(0.048, 0.005, 6, 12, Math.PI * 0.78),
+        darkCarveMat
+      );
+      eyeSlit.position.set(side * 0.10, 0.010, 0.320);
+      eyeSlit.rotation.z = Math.PI * 1.1;
+      eyeSlit.rotation.y = side * 0.18;
+      headGroup.add(eyeSlit);
+
+      // Đôi tai dài phúc hậu chạm vai
+      const earUpper = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.048, 0.19, 8, 12),
+        ivoryStoneMat
+      );
+      earUpper.position.set(side * 0.33, -0.02, -0.01);
+      earUpper.rotation.z = side * -0.05;
+      headGroup.add(earUpper);
+
+      const earLobe = new THREE.Mesh(
+        new THREE.SphereGeometry(0.068, 12, 10),
+        highlightIvoryMat
+      );
+      earLobe.scale.set(0.8, 1.35, 0.75);
+      earLobe.position.set(side * 0.335, -0.17, 0.01);
+      headGroup.add(earLobe);
     }
 
+    // Sống mũi thẳng & Môi từ bi mỉm cười nhẹ
+    const noseBridge = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.025, 0.095, 8, 10),
+      highlightIvoryMat
+    );
+    noseBridge.position.set(0, -0.008, 0.326);
+    noseBridge.rotation.x = -0.14;
+    headGroup.add(noseBridge);
+
+    const noseTip = new THREE.Mesh(
+      new THREE.SphereGeometry(0.036, 10, 10),
+      highlightIvoryMat
+    );
+    noseTip.position.set(0, -0.052, 0.342);
+    headGroup.add(noseTip);
+
+    const lips = new THREE.Mesh(
+      new THREE.SphereGeometry(0.044, 12, 10),
+      deepReliefMat
+    );
+    lips.scale.set(1.28, 0.38, 0.52);
+    lips.position.set(0, -0.125, 0.315);
+    headGroup.add(lips);
+
+    // Mái tóc xoắn ốc & Nhục Kế cao kết từ hơn 95 hạt xoắn ốc 3D nổi khối (như mẫu Phúc Đan 3D)
+    const hairBase = new THREE.Mesh(
+      new THREE.SphereGeometry(0.342, 20, 16, 0, Math.PI * 2, 0, Math.PI * 0.42),
+      ivoryStoneMat
+    );
+    hairBase.position.set(0, 0.08, -0.02);
+    hairBase.rotation.x = -0.16;
+    headGroup.add(hairBase);
+
+    const ushnishaBase = new THREE.Mesh(
+      new THREE.SphereGeometry(0.168, 16, 14),
+      ivoryStoneMat
+    );
+    ushnishaBase.position.set(0, 0.37, -0.01);
+    headGroup.add(ushnishaBase);
+
+    // Xếp các hàng hạt tóc xoắn ốc nổi rõ trên đầu, đường chân tóc trán và Nhục Kế
+    const curlGeo = new THREE.SphereGeometry(0.038, 8, 8);
+    const hairRows = [
+      { y: 0.16, r: 0.33, count: 18 },
+      { y: 0.22, r: 0.31, count: 17 },
+      { y: 0.28, r: 0.26, count: 15 },
+      { y: 0.34, r: 0.19, count: 13 },
+      { y: 0.41, r: 0.15, count: 11 },
+      { y: 0.47, r: 0.11, count: 8 },
+      { y: 0.52, r: 0.05, count: 4 }
+    ];
+    for (const row of hairRows) {
+      for (let c = 0; c < row.count; c++) {
+        const a = (c / row.count) * Math.PI * 2;
+        // Tạo đường chân tóc uốn lượn nhẹ phía trước trán
+        const frontDip = Math.sin(a) > 0.2 && row.y === 0.16 ? -0.015 * Math.sin(a * 2) : 0;
+        const curl = new THREE.Mesh(curlGeo, highlightIvoryMat);
+        curl.position.set(Math.cos(a) * row.r, row.y + frontDip, Math.sin(a) * row.r - 0.01);
+        headGroup.add(curl);
+      }
+    }
+
+    // Châu Ngọc Kế (Cintamani Crown Gem) giữa Nhục Kế
+    const ushnishaGem = new THREE.Mesh(
+      new THREE.SphereGeometry(0.044, 10, 10),
+      highlightIvoryMat
+    );
+    ushnishaGem.scale.set(1.18, 0.82, 0.82);
+    ushnishaGem.position.set(0, 0.32, 0.18);
+    headGroup.add(ushnishaGem);
+
+    statueGroup.add(headGroup);
     duocSuGroup.add(statueGroup);
 
-    // 4. Vòng Hào Quang Lưu Ly Thất Bảo phía sau Đức Phật Dược Sư
-    const dsHalo = new THREE.Group();
-    dsHalo.position.set(0, 3.65, -0.42);
+    // Ánh sáng tôn nghiêm làm nổi bật từng đường chạm khắc CNC trên Bệ Tu Di & Lá Đề
+    const duocSuKeyLight = new THREE.PointLight(0xfff7e6, 2.5, 14, 1.3);
+    duocSuKeyLight.position.set(1.4, 4.4, 2.8);
+    duocSuGroup.add(duocSuKeyLight);
 
-    const outerHaloRing = new THREE.Mesh(
-      new THREE.RingGeometry(1.12, 1.48, 32),
-      new THREE.MeshBasicMaterial({
-        color: 0x38bdf8,
-        side: THREE.DoubleSide,
-        transparent: true,
-        opacity: 0.85
-      })
-    );
-    dsHalo.add(outerHaloRing);
-
-    const goldHaloRing = new THREE.Mesh(
-      new THREE.RingGeometry(0.82, 1.12, 32),
-      new THREE.MeshBasicMaterial({
-        color: 0xfde047,
-        side: THREE.DoubleSide,
-        transparent: true,
-        opacity: 0.78
-      })
-    );
-    dsHalo.add(goldHaloRing);
-
-    const innerCoreGlow = new THREE.Mesh(
-      new THREE.CircleGeometry(0.82, 24),
-      new THREE.MeshBasicMaterial({
-        color: 0xe0f2fe,
-        side: THREE.DoubleSide,
-        transparent: true,
-        opacity: 0.38
-      })
-    );
-    dsHalo.add(innerCoreGlow);
-
-    // 12 tia quang minh đại nguyện Dược Sư
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * Math.PI * 2;
-      const ray = new THREE.Mesh(
-        new THREE.ConeGeometry(0.11, 0.42, 4),
-        new THREE.MeshBasicMaterial({ color: 0xfde047 })
-      );
-      ray.position.set(Math.cos(a) * 1.62, Math.sin(a) * 1.62, 0);
-      ray.rotation.z = a - Math.PI / 2;
-      dsHalo.add(ray);
-    }
-
-    duocSuGroup.add(dsHalo);
-    this.duocSuHalo = dsHalo;
-
-    // 5. Đôi Trụ Đèn Dược Sư Thất Tinh Lưu Ly (7-Lotus Healing Lamp Towers) hai bên
-    for (const side of [-1, 1]) {
-      const lampTower = new THREE.Group();
-      lampTower.position.set(side * 2.25, 0.32, 0.85);
-
-      const pillar = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.1, 0.16, 2.65, 10),
-        sacredGoldMat
-      );
-      pillar.position.y = 1.32;
-      pillar.castShadow = true;
-      lampTower.add(pillar);
-
-      // 7 ngọn đèn Dược Sư Thất Tinh xếp tầng
-      for (let tier = 0; tier < 4; tier++) {
-        const yPos = 0.85 + tier * 0.52;
-        const armSpan = 0.48 - tier * 0.08;
-        if (tier < 3) {
-          const crossbar = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.025, 0.025, armSpan * 2, 6),
-            sacredGoldMat
-          );
-          crossbar.rotation.z = Math.PI / 2;
-          crossbar.position.y = yPos;
-          lampTower.add(crossbar);
-
-          for (const armDir of [-1, 1]) {
-            const lotusBulb = new THREE.Mesh(
-              new THREE.SphereGeometry(0.085, 8, 8),
-              new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
-            );
-            lotusBulb.position.set(armDir * armSpan, yPos + 0.06, 0);
-            lampTower.add(lotusBulb);
-          }
-        } else {
-          // Ngọn đèn thứ 7 trên đỉnh tháp
-          const topBulb = new THREE.Mesh(
-            new THREE.SphereGeometry(0.11, 10, 10),
-            new THREE.MeshBasicMaterial({ color: 0xfef08a })
-          );
-          topBulb.position.set(0, yPos + 0.16, 0);
-          lampTower.add(topBulb);
-        }
-      }
-      duocSuGroup.add(lampTower);
-    }
-
-    // Ánh sáng Lưu Ly chiếu tôn tượng
-    const duocSuLight = new THREE.PointLight(0x7dd3fc, 2.4, 12, 1.4);
-    duocSuLight.position.set(0, 4.2, 2.4);
-    duocSuGroup.add(duocSuLight);
+    const duocSuRimLight = new THREE.PointLight(0xbae6fd, 1.4, 10, 1.5);
+    duocSuRimLight.position.set(-1.6, 3.2, 1.8);
+    duocSuGroup.add(duocSuRimLight);
 
     // Hitbox tương tác Đảnh Lễ Đức Phật Dược Sư Lưu Ly Quang
     const duocSuHitbox = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.35, 1.55, 4.5, 12),
+      new THREE.CylinderGeometry(1.55, 1.75, 5.2, 12),
       new THREE.MeshBasicMaterial({ visible: false })
     );
-    duocSuHitbox.position.set(0, 2.8, 0);
+    duocSuHitbox.position.set(0, 2.6, 0);
     duocSuHitbox.userData = {
       type: 'DUOC_SU_STATUE',
       label: 'Đảnh Lễ Đức Phật Dược Sư Lưu Ly Quang (Cầu Tiêu Tai Diên Thọ)'
@@ -3791,11 +4204,11 @@ export class Environment {
 
     // Bồ Đoàn Quỳ Lạy trước Đài Phật Dược Sư
     const dsCushionGroup = new THREE.Group();
-    dsCushionGroup.position.set(0, 0.08, 3.65);
+    dsCushionGroup.position.set(0, 0.08, 3.45);
 
     const dsMatPad = new THREE.Mesh(
       new THREE.BoxGeometry(1.3, 0.06, 1.3),
-      new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.78 })
+      new THREE.MeshStandardMaterial({ color: 0x7c2d12, roughness: 0.78 })
     );
     dsMatPad.receiveShadow = true;
     dsMatPad.userData = {
@@ -3807,7 +4220,7 @@ export class Environment {
 
     const dsRoundCushion = new THREE.Mesh(
       new THREE.CylinderGeometry(0.48, 0.52, 0.16, 20),
-      new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.68 })
+      new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.68 })
     );
     dsRoundCushion.position.y = 0.09;
     dsRoundCushion.castShadow = true;

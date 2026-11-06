@@ -44,8 +44,8 @@ function waitForEvent(socket, eventName, timeoutMs = 6000, filterFn = null) {
 // SUITE 1: FRONTEND DATA & AUDIO MODULES
 // ============================================================================
 describe('Suite 1: Frontend Data & Audio Modules', () => {
-  it('1.1 should have all 24 full-length canonical sutras and 3 prostration vows with required properties and verses', () => {
-    assert.strictEqual(SUTRA_LIBRARY.length, 24, 'SUTRA_LIBRARY must contain 24 full-length sutras');
+  it('1.1 should have all 30 full-length canonical sutras and mantras and 3 prostration vows with required properties and verses', () => {
+    assert.strictEqual(SUTRA_LIBRARY.length, 30, 'SUTRA_LIBRARY must contain 30 full-length sutras and mantras');
 
     const expectedSutraIds = [
       'bat-nha-tam-kinh',
@@ -71,7 +71,13 @@ describe('Suite 1: Frontend Data & Audio Modules', () => {
       'kinh-lang-nghiem-tinh-yeu',
       'kinh-hoa-nghiem-tinh-hanh',
       'kinh-bat-dai-nhan-giac',
-      'kinh-thap-thien-nghiep-dao'
+      'kinh-thap-thien-nghiep-dao',
+      'quan-am-linh-cam-chan-ngon',
+      'chu-vang-sanh-tinh-do',
+      'chu-chuan-de-cat-tuong',
+      'than-chu-duoc-su-12-dai-nguyen',
+      'kinh-thap-nhi-nhan-duyen',
+      'kinh-di-giao-tinh-yeu'
     ];
 
     for (const sutraId of expectedSutraIds) {
