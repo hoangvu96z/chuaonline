@@ -2080,58 +2080,261 @@ export class Environment {
   }
 
   _buildBanyanTree() {
-    // Blueprint: Z = 0 đến 25: Sân Chùa & Cây Đa Cổ Thụ ở (-13.5, 0, 13) để không che tầm nhìn Chánh Điện
+    // Cây Bồ Đề Cổ Thụ (Sacred Bodhi Tree — Ficus religiosa) tại (-13.5, 0, 12.2)
+    // Thiết kế chi tiết theo ảnh mẫu: Gốc rễ bạnh xòe rộng, thân cây nhiều thớ gân guốc chạy dọc,
+    // cành lớn vươn rộng như chiếc lọng che mát, rễ khí sinh rủ nhẹ ở rìa tán, và hàng trăm lá Bồ Đề hình trái tim đuôi nhọn 3D có gân lá rõ nét.
     const treeGroup = new THREE.Group();
-    treeGroup.position.set(-13.5, 0, 13);
+    treeGroup.position.set(-13.5, 0, 12.2);
 
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4e3629, roughness: 0.9 });
-    const foliageMat = new THREE.MeshStandardMaterial({ color: 0x2d5a27, roughness: 0.78 });
-    const goldenFoliageMat = new THREE.MeshStandardMaterial({ color: 0x5c7a29, roughness: 0.75 });
+    const darkBarkMat = new THREE.MeshStandardMaterial({
+      color: 0x3d2312,
+      roughness: 0.88,
+      metalness: 0.05
+    });
+    const warmBarkMat = new THREE.MeshStandardMaterial({
+      color: 0x6b4122,
+      roughness: 0.78,
+      metalness: 0.06,
+      emissive: 0x1a0c04,
+      emissiveIntensity: 0.12
+    });
+    const highlightBarkMat = new THREE.MeshStandardMaterial({
+      color: 0x85532d,
+      roughness: 0.72,
+      metalness: 0.08
+    });
+    const stoneCurbMat = new THREE.MeshStandardMaterial({ color: 0x6f7470, roughness: 0.82 });
+    const mossSoilMat = new THREE.MeshStandardMaterial({ color: 0x2f4222, roughness: 0.95 });
 
-    // Main Gnarled Trunk
-    const mainTrunk = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.85, 6.5, 12), trunkMat);
-    mainTrunk.position.set(0, 3.2, 0);
-    mainTrunk.castShadow = true;
-    mainTrunk.receiveShadow = true;
-    treeGroup.add(mainTrunk);
+    // 1. BỒN ĐÁ BÁT GIÁC CỔ KÍNH & THẢM RÊU XANH DƯỚI GỐC CÂY BỒ ĐỀ
+    const stoneCurbOuter = new THREE.Mesh(new THREE.CylinderGeometry(2.75, 2.95, 0.34, 16), stoneCurbMat);
+    stoneCurbOuter.position.y = 0.17;
+    stoneCurbOuter.receiveShadow = true;
+    treeGroup.add(stoneCurbOuter);
 
-    // Aerial roots (Rễ phụ cây đa cổ thụ)
-    const rootOffsets = [
-      [-1.4, 0.8], [1.3, 1.0], [-0.9, -1.3], [1.5, -0.9], [0.4, 1.6]
+    const mossMound = new THREE.Mesh(new THREE.CylinderGeometry(2.35, 2.65, 0.28, 20), mossSoilMat);
+    mossMound.position.y = 0.22;
+    mossMound.receiveShadow = true;
+    treeGroup.add(mossMound);
+
+    // 2. LÕI THÂN CÂY BỒ ĐỀ CỔ THỤ XÒE RỘNG Ở GỐC (Flared Lathe Trunk Core)
+    const trunkProfile = [
+      new THREE.Vector2(2.25, 0.15),
+      new THREE.Vector2(1.75, 0.65),
+      new THREE.Vector2(1.32, 1.35),
+      new THREE.Vector2(1.08, 2.25),
+      new THREE.Vector2(0.98, 3.25),
+      new THREE.Vector2(1.05, 4.15),
+      new THREE.Vector2(1.35, 4.95),
+      new THREE.Vector2(0.10, 5.35)
     ];
-    for (const [rx, rz] of rootOffsets) {
-      const root = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.22, 4.5, 8), trunkMat);
-      root.position.set(rx, 2.2, rz);
-      root.rotation.z = rx * 0.08;
-      root.castShadow = true;
-      treeGroup.add(root);
+    const coreTrunk = new THREE.Mesh(new THREE.LatheGeometry(trunkProfile, 24), darkBarkMat);
+    coreTrunk.castShadow = true;
+    coreTrunk.receiveShadow = true;
+    treeGroup.add(coreTrunk);
+
+    // 3. 18 THỚ THÂN GÂN GUỐC & RỄ BẠNH NỔI KHỐI CHẠY DỌC THÂN CÂY (Sculpted Vertical Bark Flutes & Buttress Roots)
+    const fluteCount = 18;
+    for (let i = 0; i < fluteCount; i++) {
+      const angle = (i / fluteCount) * Math.PI * 2;
+      const twist = ((i % 3) - 1) * 0.08;
+      const rootReach = 2.15 + (i % 2) * 0.32;
+      const midR = 1.02 + (i % 3) * 0.06;
+      const topBranchR = 1.85 + (i % 2) * 0.65;
+
+      const fluteCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(Math.cos(angle) * rootReach, 0.16, Math.sin(angle) * rootReach),
+        new THREE.Vector3(Math.cos(angle + twist * 0.4) * 1.52, 0.85, Math.sin(angle + twist * 0.4) * 1.52),
+        new THREE.Vector3(Math.cos(angle + twist) * midR, 2.15, Math.sin(angle + twist) * midR),
+        new THREE.Vector3(Math.cos(angle + twist * 1.2) * (midR * 0.96), 3.55, Math.sin(angle + twist * 1.2) * (midR * 0.96)),
+        new THREE.Vector3(Math.cos(angle + twist * 1.5) * 1.28, 4.65, Math.sin(angle + twist * 1.5) * 1.28),
+        new THREE.Vector3(Math.cos(angle + twist * 1.8) * topBranchR, 5.55, Math.sin(angle + twist * 1.8) * topBranchR)
+      ]);
+
+      const tubeRadius = i % 2 === 0 ? 0.165 : 0.125;
+      const bMat = i % 3 === 0 ? highlightBarkMat : i % 2 === 0 ? warmBarkMat : darkBarkMat;
+      const fluteMesh = new THREE.Mesh(new THREE.TubeGeometry(fluteCurve, 20, tubeRadius, 8, false), bMat);
+      fluteMesh.castShadow = true;
+      fluteMesh.receiveShadow = true;
+      treeGroup.add(fluteMesh);
     }
 
-    // Lush Multi-Cluster Canopy
-    const canopyClusters = [
-      { x: 0, y: 7.5, z: 0, r: 4.2, mat: foliageMat },
-      { x: -2.8, y: 6.4, z: 1.5, r: 3.1, mat: foliageMat },
-      { x: 2.6, y: 6.2, z: -1.2, r: 3.2, mat: goldenFoliageMat },
-      { x: 1.5, y: 6.8, z: 2.4, r: 2.8, mat: foliageMat },
-      { x: -1.8, y: 6.5, z: -2.2, r: 2.9, mat: goldenFoliageMat }
-    ];
-    for (const cl of canopyClusters) {
-      const sphere = new THREE.Mesh(new THREE.DodecahedronGeometry(cl.r, 1), cl.mat);
-      sphere.position.set(cl.x, cl.y, cl.z);
-      sphere.scale.y = 0.72;
-      sphere.castShadow = true;
-      sphere.receiveShadow = true;
-      treeGroup.add(sphere);
+    // 4. 8 CÀNH ĐẠI THỤ VƯƠN RỘNG ĐỠ TÁN LÁ HÌNH VÒM Ô & 12 RỄ KHÍ SINH RỦ XUỐNG (Spreading Limbs & Hanging Aerial Vines)
+    for (let b = 0; b < 8; b++) {
+      const bAngle = (b / 8) * Math.PI * 2 + 0.2;
+      const limbCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(Math.cos(bAngle) * 0.85, 4.45, Math.sin(bAngle) * 0.85),
+        new THREE.Vector3(Math.cos(bAngle) * 2.15, 5.25, Math.sin(bAngle) * 2.15),
+        new THREE.Vector3(Math.cos(bAngle) * 3.65, 5.65, Math.sin(bAngle) * 3.65),
+        new THREE.Vector3(Math.cos(bAngle) * 4.55, 5.35, Math.sin(bAngle) * 4.55)
+      ]);
+      const limbMesh = new THREE.Mesh(
+        new THREE.TubeGeometry(limbCurve, 14, 0.18, 8, false),
+        warmBarkMat
+      );
+      limbMesh.castShadow = true;
+      treeGroup.add(limbMesh);
     }
 
-    // Stone bench around Banyan tree base
-    const stoneRing = new THREE.Mesh(
-      new THREE.TorusGeometry(2.4, 0.35, 8, 20),
-      new THREE.MeshStandardMaterial({ color: 0x6f7370, roughness: 0.85 })
-    );
-    stoneRing.rotation.x = Math.PI / 2;
-    stoneRing.position.y = 0.25;
-    treeGroup.add(stoneRing);
+    // Rễ khí sinh mảnh rủ nhẹ từ rìa tán Bồ Đề xuống như trong hình mẫu
+    for (let v = 0; v < 10; v++) {
+      const vAngle = (v / 10) * Math.PI * 2 + 0.15;
+      const vr = 3.6 + (v % 3) * 0.65;
+      const vLen = 1.6 + (v % 3) * 0.55;
+      const vine = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.022, 0.012, vLen, 6),
+        darkBarkMat
+      );
+      vine.position.set(Math.cos(vAngle) * vr, 5.15 - vLen / 2, Math.sin(vAngle) * vr);
+      treeGroup.add(vine);
+    }
+
+    // 5. LÕI TÁN HÌNH VÒM LỌNG BÊN TRONG (Lathe Dome Core — nhỏ hơn lớp vỏ lá 0.55m ở mọi độ cao để 100% 1,350 lá Bồ Đề lộ rõ từ đáy lên đỉnh)
+    const innerCoreMat = new THREE.MeshStandardMaterial({ color: 0x0d3310, roughness: 0.92 });
+    const coreDomePoints = [
+      new THREE.Vector2(0.4, 4.85),
+      new THREE.Vector2(4.45, 5.05),
+      new THREE.Vector2(3.85, 5.85),
+      new THREE.Vector2(3.05, 6.75),
+      new THREE.Vector2(2.15, 7.65),
+      new THREE.Vector2(1.15, 8.55),
+      new THREE.Vector2(0.05, 9.25)
+    ];
+    const coreDomeMesh = new THREE.Mesh(new THREE.LatheGeometry(coreDomePoints, 24), innerCoreMat);
+    coreDomeMesh.castShadow = true;
+    treeGroup.add(coreDomeMesh);
+
+    // 6. 1,350 CHIẾC LÁ BỒ ĐỀ HÌNH TRÁI TIM ĐUÔI NHỌN 3D XẾP LỚP PHỦ KÍN TOÀN BỘ VÒM TÁN (Heart-Shaped Bodhi Leaves Canopy)
+    // Tạo hình dáng chiếc Lá Bồ Đề chuẩn (2 thùy tim tròn ở cuống + đầu lá vuốt nhọn dài đặc trưng của lá Bồ Đề)
+    const bodhiLeafShape = new THREE.Shape();
+    bodhiLeafShape.moveTo(0, 0.24); // Khe lõm hình tim ở cuống lá
+    bodhiLeafShape.bezierCurveTo(0.18, 0.38, 0.46, 0.28, 0.44, 0.02);
+    bodhiLeafShape.bezierCurveTo(0.42, -0.24, 0.15, -0.48, 0.035, -0.70);
+    bodhiLeafShape.lineTo(0, -0.95); // Đuôi nhọn dài đặc trưng của lá Bồ Đề (Drip-tip tail)
+    bodhiLeafShape.lineTo(-0.035, -0.70);
+    bodhiLeafShape.bezierCurveTo(-0.15, -0.48, -0.42, -0.24, -0.44, 0.02);
+    bodhiLeafShape.bezierCurveTo(-0.46, 0.28, -0.18, 0.38, 0, 0.24);
+
+    const bodhiLeafGeo = new THREE.ShapeGeometry(bodhiLeafShape, 10);
+    bodhiLeafGeo.computeBoundingBox();
+    const leafBBox = bodhiLeafGeo.boundingBox;
+    const uvAttr = bodhiLeafGeo.attributes.uv;
+    const posAttr = bodhiLeafGeo.attributes.position;
+    for (let u = 0; u < uvAttr.count; u++) {
+      const px = posAttr.getX(u);
+      const py = posAttr.getY(u);
+      const normU = (px - leafBBox.min.x) / (leafBBox.max.x - leafBBox.min.x || 1);
+      const normV = (py - leafBBox.min.y) / (leafBBox.max.y - leafBBox.min.y || 1);
+      uvAttr.setXY(u, normU, normV);
+    }
+    uvAttr.needsUpdate = true;
+
+    // Vẽ CanvasTexture chiếc lá Bồ Đề xanh ngọc đậm đà có viền tối và gân lá rõ nét như hình mẫu
+    const createBodhiLeafMaterial = (edgeHex, bodyHex, centerHex, veinHex) => {
+      const lCanvas = document.createElement('canvas');
+      lCanvas.width = 128;
+      lCanvas.height = 128;
+      const lctx = lCanvas.getContext('2d');
+
+      const grad = lctx.createRadialGradient(64, 46, 6, 64, 64, 66);
+      grad.addColorStop(0, centerHex);
+      grad.addColorStop(0.55, bodyHex);
+      grad.addColorStop(1, edgeHex);
+      lctx.fillStyle = grad;
+      lctx.fillRect(0, 0, 128, 128);
+
+      // Viền sẫm quanh mép lá giúp từng chiếc lá Bồ Đề tách lớp nổi khối 3D rõ rệt
+      lctx.strokeStyle = '#0a290c';
+      lctx.lineWidth = 5;
+      lctx.strokeRect(2, 2, 124, 124);
+
+      // Gân lá chính giữa & các nhánh gân xương cá
+      lctx.strokeStyle = veinHex;
+      lctx.lineWidth = 3.0;
+      lctx.beginPath();
+      lctx.moveTo(64, 8);
+      lctx.lineTo(64, 122);
+      lctx.stroke();
+
+      lctx.lineWidth = 1.6;
+      for (let v = 0; v < 6; v++) {
+        const vy = 24 + v * 14;
+        const span = 40 - v * 4.5;
+        lctx.beginPath();
+        lctx.moveTo(64, vy);
+        lctx.quadraticCurveTo(64 - span * 0.5, vy + 4, 64 - span, vy + 12);
+        lctx.moveTo(64, vy);
+        lctx.quadraticCurveTo(64 + span * 0.5, vy + 4, 64 + span, vy + 12);
+        lctx.stroke();
+      }
+
+      const leafTex = new THREE.CanvasTexture(lCanvas);
+      return new THREE.MeshStandardMaterial({
+        map: leafTex,
+        roughness: 0.62,
+        metalness: 0.04,
+        emissive: 0x0c2e0e,
+        emissiveIntensity: 0.22,
+        side: THREE.DoubleSide
+      });
+    };
+
+    const leafMats = [
+      createBodhiLeafMaterial('#0d3810', '#1b6620', '#2e8b34', '#5ec454'), // Lá xanh lục đậm
+      createBodhiLeafMaterial('#124516', '#257d2b', '#3ca63e', '#78db67'), // Lá xanh ngọc bích
+      createBodhiLeafMaterial('#19521b', '#339433', '#54bd48', '#9cf07d')  // Lá xanh non ánh nắng
+    ];
+
+    // Xếp 1,350 chiếc lá Bồ Đề (3 batch x 450 lá) theo 22 tầng vòng tròn từ rìa dưới (r = 5.4m, y = 4.9m) thuôn lên đỉnh chóp (r = 0.15m, y = 9.5m)
+    const leavesPerBatch = 450;
+    const totalLeaves = leavesPerBatch * 3;
+    const dummy = new THREE.Object3D();
+    dummy.rotation.order = 'YXZ';
+
+    for (let batch = 0; batch < 3; batch++) {
+      const instancedLeaves = new THREE.InstancedMesh(
+        bodhiLeafGeo,
+        leafMats[batch],
+        leavesPerBatch
+      );
+      instancedLeaves.castShadow = true;
+      instancedLeaves.receiveShadow = true;
+
+      for (let i = 0; i < leavesPerBatch; i++) {
+        // Đan xen đều 3 sắc độ xanh trên khắp vòm cây
+        const globalIdx = i * 3 + batch;
+        const t = globalIdx / totalLeaves; // 0 (rìa tán dưới) -> 1 (đỉnh chóp trên cùng)
+
+        // Biên dạng vòm hình chiếc lọng / tháp tròn uốn cong mềm mại đúng như ảnh mẫu Cây Bồ Đề
+        const domeCurveRadius = Math.pow(1 - t, 0.72) * 5.15 + 0.12;
+        // Tạo độ gợn múi tự nhiên quanh tán cây (8 múi tán nhẹ)
+        const goldenAngle = globalIdx * 2.3999632;
+        const lobeWave = 1.0 + Math.sin(goldenAngle * 5) * 0.05 + ((globalIdx % 7) - 3) * 0.025;
+        const ringRadius = domeCurveRadius * lobeWave;
+
+        // Chiều cao từ y = 4.85m (rìa lá rủ xuống) lên tới đỉnh y = 9.55m
+        const baseHeight = 4.95 + Math.pow(t, 0.78) * 4.55;
+        const droopAtRim = (1 - t) * Math.cos(goldenAngle * 6) * 0.18;
+        const heightY = baseHeight + droopAtRim + ((globalIdx % 5) - 2) * 0.05;
+
+        const lx = Math.cos(goldenAngle) * ringRadius;
+        const lz = Math.sin(goldenAngle) * ringRadius;
+
+        dummy.position.set(lx, heightY, lz);
+        // Xoay mặt lá hướng ra ngoài tâm cây và rủ nhẹ đuôi nhọn xuống dưới
+        dummy.rotation.y = Math.PI / 2 - goldenAngle + ((i % 3) - 1) * 0.12;
+        dummy.rotation.x = -(0.32 + t * 0.42) + ((i % 5) - 2) * 0.06;
+        dummy.rotation.z = ((i % 7) - 3) * 0.07;
+
+        const leafScale = 0.56 + (1 - t * 0.35) * 0.24;
+        dummy.scale.set(leafScale, leafScale, leafScale);
+        dummy.updateMatrix();
+        instancedLeaves.setMatrixAt(i, dummy.matrix);
+      }
+
+      instancedLeaves.instanceMatrix.needsUpdate = true;
+      treeGroup.add(instancedLeaves);
+    }
 
     this.group.add(treeGroup);
   }
