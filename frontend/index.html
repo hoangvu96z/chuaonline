@@ -120,19 +120,60 @@
           <span id="scroll-verse-counter" class="verse-counter">Câu 1/13</span>
         </div>
         <div class="scroll-actions">
-          <label class="zen-switch-label" title="Tự động đọc kinh và gõ mõ theo nhịp">
-            <input type="checkbox" id="chk-auto-chant" switch checked />
-            <span>Tự động đọc &amp; gõ mõ</span>
-          </label>
           <select id="select-voice-profile" class="scroll-voice-select" aria-label="Chọn giọng đọc kinh" title="Đổi giọng đọc kinh">
             <option value="SU_ONG_TRAM_AM">🎙️ Thầy Trụ Trì (Trầm Ấm)</option>
             <option value="SU_CO_THANH_NHA">🎙️ Sư Cô (Thanh Nhã)</option>
             <option value="CHU_TIEU_TRONG_TREO">🎙️ Chú Tiểu (Trong Trẻo)</option>
             <option value="DAI_CHUNG_TRANG_NGHIEM">🎙️ Đại Chúng (Trang Nghiêm)</option>
           </select>
-          <div class="scroll-speed-control" role="group" aria-label="Tinh chỉnh tốc độ chữ và giọng đọc kinh" title="Tinh chỉnh tốc độ chữ chạy và nhịp đọc kinh (0.5x - 1.8x)">
+          <button type="button" class="scroll-btn primary-scroll-btn" id="btn-pause-sutra" title="Tạm dừng / Tiếp tục tụng kinh">
+            ⏸️ Tạm Dừng
+          </button>
+          <button type="button" class="scroll-btn" id="btn-toggle-sutra-expand" aria-pressed="false" title="Mở rộng khung chữ tụng lên 70% màn hình / Thu nhỏ về mặc định">
+            📐 Khung 70%
+          </button>
+          <button type="button" class="scroll-btn active" id="btn-toggle-sutra-settings" aria-expanded="true" title="Ẩn / Hiện thanh tùy chỉnh Cỡ chữ, Tốc độ, Âm lượng Giọng &amp; Mõ">
+            🎛️ Tùy Chỉnh
+          </button>
+          <button type="button" class="scroll-btn" id="btn-change-sutra" command="show-modal" commandfor="dialog-sutra-library" title="Chọn bài kinh hoặc thần chú khác">
+            📖 Đổi Kinh
+          </button>
+          <button type="button" class="scroll-close-btn" id="btn-stop-sutra" aria-label="Đóng cuộn kinh" title="Đóng cuộn kinh">✕</button>
+        </div>
+      </div>
+
+      <!-- Unified, Neat 4-Column Control Strip: Cỡ Chữ • Tốc Độ • Âm Lượng Giọng • Âm Lượng Mõ Tự Động -->
+      <div id="sutra-settings-bar" class="sutra-settings-bar" role="region" aria-label="Tùy chỉnh chữ tụng và âm lượng Pháp Khí">
+        <!-- 1. Cỡ Chữ (Font Size: 18px - 48px) -->
+        <div class="sutra-setting-cell" title="Tăng / Giảm kích thước chữ kinh văn">
+          <div class="setting-cell-top">
+            <label for="range-sutra-fontsize" class="setting-cell-label">🔤 Cỡ chữ</label>
+            <output id="output-sutra-fontsize" for="range-sutra-fontsize" class="setting-output-badge">24px</output>
+          </div>
+          <div class="setting-cell-controls">
+            <button type="button" class="speed-step-btn" id="btn-font-smaller" aria-label="Giảm cỡ chữ" title="Chữ nhỏ hơn (-2px)">A−</button>
+            <input
+              type="range"
+              id="range-sutra-fontsize"
+              class="sutra-speed-slider"
+              min="18"
+              max="48"
+              step="2"
+              value="24"
+              aria-label="Thanh trượt kích thước chữ tụng kinh"
+            />
+            <button type="button" class="speed-step-btn" id="btn-font-larger" aria-label="Tăng cỡ chữ" title="Chữ to hơn (+2px)">A+</button>
+          </div>
+        </div>
+
+        <!-- 2. Tốc Độ Đọc & Chữ Karaoke (0.5x - 1.8x) -->
+        <div class="sutra-setting-cell" title="Tinh chỉnh tốc độ chữ chạy và nhịp đọc kinh (0.5x - 1.8x)">
+          <div class="setting-cell-top">
+            <label for="range-sutra-speed" class="setting-cell-label">⚡ Tốc độ</label>
+            <output id="output-sutra-speed" for="range-sutra-speed" class="setting-output-badge">1.0x</output>
+          </div>
+          <div class="setting-cell-controls">
             <button type="button" class="speed-step-btn" id="btn-speed-slower" aria-label="Giảm tốc độ chữ" title="Chậm lại (-0.05x)">−</button>
-            <label for="range-sutra-speed" class="speed-slider-label">⚡ Tốc độ</label>
             <input
               type="range"
               id="range-sutra-speed"
@@ -143,19 +184,58 @@
               value="1.0"
               aria-label="Thanh trượt tốc độ chữ đọc kinh"
             />
-            <output id="output-sutra-speed" for="range-sutra-speed" class="speed-output-badge">1.0x</output>
             <button type="button" class="speed-step-btn" id="btn-speed-faster" aria-label="Tăng tốc độ chữ" title="Nhanh hơn (+0.05x)">+</button>
           </div>
-          <button type="button" class="scroll-btn" id="btn-pause-sutra" title="Tạm dừng / Tiếp tục tụng kinh">
-            ⏸️ Tạm Dừng
-          </button>
-          <button type="button" class="scroll-btn stop-chant-btn" id="btn-stop-sutra-inline" title="Dừng hẳn bài kinh đang tụng">
-            ⏹️ Dừng Tụng
-          </button>
-          <button type="button" class="scroll-btn" id="btn-change-sutra" command="show-modal" commandfor="dialog-sutra-library">
-            Đổi Bài Kinh
-          </button>
-          <button type="button" class="scroll-close-btn" id="btn-stop-sutra" aria-label="Đóng cuộn kinh" title="Dừng và đóng cuộn kinh">✕</button>
+        </div>
+
+        <!-- 3. Âm Lượng Giọng Tụng (0% - 150%) -->
+        <div class="sutra-setting-cell" title="Tăng / Giảm âm lượng giọng đọc kinh Pháp Âm">
+          <div class="setting-cell-top">
+            <label for="range-voice-volume" class="setting-cell-label">🔊 Giọng tụng</label>
+            <output id="output-voice-volume" for="range-voice-volume" class="setting-output-badge">100%</output>
+          </div>
+          <div class="setting-cell-controls">
+            <button type="button" class="speed-step-btn" id="btn-voice-vol-down" aria-label="Giảm âm lượng giọng tụng" title="Nhỏ giọng tụng (-10%)">−</button>
+            <input
+              type="range"
+              id="range-voice-volume"
+              class="sutra-speed-slider"
+              min="0"
+              max="150"
+              step="5"
+              value="100"
+              aria-label="Thanh trượt âm lượng giọng tụng kinh"
+            />
+            <button type="button" class="speed-step-btn" id="btn-voice-vol-up" aria-label="Tăng âm lượng giọng tụng" title="Tăng giọng tụng (+10%)">+</button>
+          </div>
+        </div>
+
+        <!-- 4. Âm Lượng Gõ Mõ Tự Động (0% - 100%) + Công Tắc Tự Động -->
+        <div class="sutra-setting-cell" title="Tăng / Giảm âm lượng tiếng Mõ tự động và bật/tắt chế độ tự động">
+          <div class="setting-cell-top">
+            <label for="range-mo-volume" class="setting-cell-label">🪵 Tiếng mõ</label>
+            <div class="setting-cell-meta-group">
+              <label class="zen-switch-mini" title="Bật / Tắt tự động đọc kinh và gõ mõ theo nhịp">
+                <input type="checkbox" id="chk-auto-chant" switch checked />
+                <span>Tự động</span>
+              </label>
+              <output id="output-mo-volume" for="range-mo-volume" class="setting-output-badge">45%</output>
+            </div>
+          </div>
+          <div class="setting-cell-controls">
+            <button type="button" class="speed-step-btn" id="btn-mo-vol-down" aria-label="Giảm âm lượng tiếng mõ" title="Nhỏ tiếng mõ (-10%)">−</button>
+            <input
+              type="range"
+              id="range-mo-volume"
+              class="sutra-speed-slider"
+              min="0"
+              max="100"
+              step="5"
+              value="45"
+              aria-label="Thanh trượt âm lượng gõ mõ tự động"
+            />
+            <button type="button" class="speed-step-btn" id="btn-mo-vol-up" aria-label="Tăng âm lượng tiếng mõ" title="Tăng tiếng mõ (+10%)">+</button>
+          </div>
         </div>
       </div>
 
@@ -297,11 +377,11 @@
         <span class="dock-sub" id="dock-sub-mo">Trong Chánh Điện</span>
       </button>
 
-      <button type="button" class="dock-btn highlight" id="dock-chant-sutra" data-shortcut="K" command="show-modal" commandfor="dialog-sutra-library" title="Tụng Kinh 30 Bộ Kinh &amp; Thần Chú Đầy Đủ (Phím tắt: K)">
+      <button type="button" class="dock-btn highlight" id="dock-chant-sutra" data-shortcut="K" command="show-modal" commandfor="dialog-sutra-library" title="Tụng Kinh 31 Bộ Kinh &amp; Đại Thần Chú Đầy Đủ (Phím tắt: K)">
         <kbd class="dock-kbd">K</kbd>
         <span class="dock-icon">📖</span>
         <span class="dock-label">Tụng Kinh</span>
-        <span class="dock-sub">30 Bộ Kinh</span>
+        <span class="dock-sub">31 Bộ Kinh</span>
       </button>
 
       <button type="button" class="dock-btn" id="dock-ring-bell" data-shortcut="C" title="Thỉnh Đại Hồng Chung ngoài Sân Chùa (Phím tắt: C)">
@@ -377,7 +457,7 @@
   <dialog id="dialog-sutra-library" class="zen-dialog" closedby="any" aria-labelledby="title-sutra-library">
     <div class="dialog-header">
       <div>
-        <span class="dialog-eyebrow">TAM TẠNG KINH ĐIỂN &amp; MẬT CHÚ (30 BỘ)</span>
+        <span class="dialog-eyebrow">TAM TẠNG KINH ĐIỂN &amp; MẬT CHÚ (31 BỘ)</span>
         <h2 id="title-sutra-library">📖 Chọn Bài Kinh &amp; Thần Chú Trì Tụng</h2>
       </div>
       <form method="dialog">

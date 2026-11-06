@@ -897,7 +897,42 @@ class ChuaOnlineApp {
       this.showToast(`🎙️ Đã chuyển giọng đọc kinh: ${profile.name}`);
     });
 
-    // Reading & Karaoke Text Speed Fine-Tuning Control (0.5x -> 1.8x)
+    // 1. Font Size Control (18px -> 48px)
+    const fontSizeSlider = document.getElementById('range-sutra-fontsize');
+    const fontSizeOutput = document.getElementById('output-sutra-fontsize');
+    const btnFontSmaller = document.getElementById('btn-font-smaller');
+    const btnFontLarger = document.getElementById('btn-font-larger');
+    this._sutraFontSizePx = 24;
+
+    const applySutraFontSize = (nextPx, showFeedback = false) => {
+      const clampedPx = Math.max(18, Math.min(48, Math.round(Number(nextPx) / 2) * 2 || 24));
+      this._sutraFontSizePx = clampedPx;
+      const scrollPanelEl = document.getElementById('sutra-scroll-panel');
+      const verseTextEl = document.getElementById('karaoke-verse-text');
+      scrollPanelEl?.style.setProperty('--sutra-font-size', `${clampedPx}px`);
+      verseTextEl?.style.setProperty('--sutra-font-size', `${clampedPx}px`);
+      if (fontSizeSlider) fontSizeSlider.value = String(clampedPx);
+      if (fontSizeOutput) fontSizeOutput.textContent = `${clampedPx}px`;
+      if (showFeedback) {
+        this.showToast(`🔤 Đã chỉnh cỡ chữ kinh văn: ${clampedPx}px`);
+      }
+      return clampedPx;
+    };
+
+    fontSizeSlider?.addEventListener('input', (e) => {
+      applySutraFontSize(e.target.value, false);
+    });
+    fontSizeSlider?.addEventListener('change', (e) => {
+      applySutraFontSize(e.target.value, true);
+    });
+    btnFontSmaller?.addEventListener('click', () => {
+      applySutraFontSize((this._sutraFontSizePx || 24) - 2, true);
+    });
+    btnFontLarger?.addEventListener('click', () => {
+      applySutraFontSize((this._sutraFontSizePx || 24) + 2, true);
+    });
+
+    // 2. Reading & Karaoke Text Speed Fine-Tuning Control (0.5x -> 1.8x)
     const speedSlider = document.getElementById('range-sutra-speed');
     const speedOutput = document.getElementById('output-sutra-speed');
     const btnSpeedSlower = document.getElementById('btn-speed-slower');
@@ -929,6 +964,110 @@ class ChuaOnlineApp {
       this.showToast(`⚡ Đã tăng tốc độ chữ & nhịp đọc kinh: ${applied}x`);
     });
 
+    // 3. Voice Chanting Volume Control (0% -> 150%)
+    const voiceVolSlider = document.getElementById('range-voice-volume');
+    const voiceVolOutput = document.getElementById('output-voice-volume');
+    const btnVoiceVolDown = document.getElementById('btn-voice-vol-down');
+    const btnVoiceVolUp = document.getElementById('btn-voice-vol-up');
+
+    const applyVoiceVolumePct = (nextPct, showFeedback = false) => {
+      const clampedPct = Math.max(0, Math.min(150, Math.round(Number(nextPct) / 5) * 5));
+      this.sutraChanter.setVoiceVolume(clampedPct / 100);
+      if (voiceVolSlider) voiceVolSlider.value = String(clampedPct);
+      if (voiceVolOutput) voiceVolOutput.textContent = `${clampedPct}%`;
+      if (showFeedback) {
+        this.showToast(`🔊 Đã chỉnh âm lượng giọng tụng: ${clampedPct}%`);
+      }
+      return clampedPct;
+    };
+
+    voiceVolSlider?.addEventListener('input', (e) => {
+      applyVoiceVolumePct(e.target.value, false);
+    });
+    voiceVolSlider?.addEventListener('change', (e) => {
+      applyVoiceVolumePct(e.target.value, true);
+    });
+    btnVoiceVolDown?.addEventListener('click', () => {
+      const curPct = Math.round(this.sutraChanter.getVoiceVolume() * 100);
+      applyVoiceVolumePct(curPct - 10, true);
+    });
+    btnVoiceVolUp?.addEventListener('click', () => {
+      const curPct = Math.round(this.sutraChanter.getVoiceVolume() * 100);
+      applyVoiceVolumePct(curPct + 10, true);
+    });
+
+    // 4. Auto Wooden Fish (Tiếng Mõ Tự Động) Volume Control (0% -> 100%)
+    const moVolSlider = document.getElementById('range-mo-volume');
+    const moVolOutput = document.getElementById('output-mo-volume');
+    const btnMoVolDown = document.getElementById('btn-mo-vol-down');
+    const btnMoVolUp = document.getElementById('btn-mo-vol-up');
+
+    const applyMoVolumePct = (nextPct, playPreview = false) => {
+      const clampedPct = Math.max(0, Math.min(100, Math.round(Number(nextPct) / 5) * 5));
+      const appliedRatio = this.sutraChanter.setAutoWoodenFishVolume(clampedPct / 100);
+      if (moVolSlider) moVolSlider.value = String(clampedPct);
+      if (moVolOutput) moVolOutput.textContent = `${clampedPct}%`;
+      if (playPreview) {
+        if (appliedRatio > 0) {
+          this.zenAudio.playWoodenFish(appliedRatio);
+        }
+        this.showToast(`🪵 Đã chỉnh âm lượng gõ Mõ tự động: ${clampedPct}%`);
+      }
+      return clampedPct;
+    };
+
+    moVolSlider?.addEventListener('input', (e) => {
+      applyMoVolumePct(e.target.value, false);
+    });
+    moVolSlider?.addEventListener('change', (e) => {
+      applyMoVolumePct(e.target.value, true);
+    });
+    btnMoVolDown?.addEventListener('click', () => {
+      const curPct = Math.round(this.sutraChanter.getAutoWoodenFishVolume() * 100);
+      applyMoVolumePct(curPct - 10, true);
+    });
+    btnMoVolUp?.addEventListener('click', () => {
+      const curPct = Math.round(this.sutraChanter.getAutoWoodenFishVolume() * 100);
+      applyMoVolumePct(curPct + 10, true);
+    });
+
+    // 5. Expand Sutra Frame to 70% Screen Toggle Button
+    const btnExpandSutra = document.getElementById('btn-toggle-sutra-expand');
+    btnExpandSutra?.addEventListener('click', () => {
+      const scrollPanel = document.getElementById('sutra-scroll-panel');
+      if (!scrollPanel) return;
+      const expanded = scrollPanel.classList.toggle('expanded-70');
+      btnExpandSutra.classList.toggle('active', expanded);
+      btnExpandSutra.setAttribute('aria-pressed', String(expanded));
+      btnExpandSutra.textContent = expanded ? '📐 Thu Nhỏ' : '📐 Khung 70%';
+      // Auto-scale default font size nicely when expanding/collapsing if not manually customized far away
+      if (expanded && (this._sutraFontSizePx || 24) <= 24) {
+        applySutraFontSize(30, false);
+      } else if (!expanded && this._sutraFontSizePx === 30) {
+        applySutraFontSize(24, false);
+      }
+      this.showToast(
+        expanded
+          ? '📐 Đã mở rộng khung chữ tụng lên 70% màn hình.'
+          : '📐 Đã thu gọn khung chữ tụng về kích thước tiêu chuẩn.'
+      );
+    });
+
+    // 6. Toggle Settings Strip Visibility Button (🎛️ Tùy Chỉnh)
+    const btnToggleSettings = document.getElementById('btn-toggle-sutra-settings');
+    const settingsBar = document.getElementById('sutra-settings-bar');
+    btnToggleSettings?.addEventListener('click', () => {
+      if (!settingsBar) return;
+      const willHide = !settingsBar.hasAttribute('hidden');
+      if (willHide) {
+        settingsBar.setAttribute('hidden', '');
+      } else {
+        settingsBar.removeAttribute('hidden');
+      }
+      btnToggleSettings.classList.toggle('active', !willHide);
+      btnToggleSettings.setAttribute('aria-expanded', String(!willHide));
+    });
+
     // Pause / Resume Sutra Chanting Button
     const pauseBtn = document.getElementById('btn-pause-sutra');
     pauseBtn?.addEventListener('click', () => {
@@ -943,11 +1082,9 @@ class ChuaOnlineApp {
       if (dlg && !dlg.open) dlg.showModal();
     });
 
-    const handleStopSutraClick = () => {
+    document.getElementById('btn-stop-sutra')?.addEventListener('click', () => {
       this._stopSutraChanting(true);
-    };
-    document.getElementById('btn-stop-sutra')?.addEventListener('click', handleStopSutraClick);
-    document.getElementById('btn-stop-sutra-inline')?.addEventListener('click', handleStopSutraClick);
+    });
 
     // Multi-User Chat Widget & Quick Greetings
     const chatWidget = document.getElementById('zen-chat-widget');

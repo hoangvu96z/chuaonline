@@ -10,6 +10,7 @@ export class SutraChanter {
     this.isChanting = false;
     this.isPaused = false;
     this.isAuto = true;
+    this.autoWoodenFishVolume = 0.45; // Âm lượng gõ mõ tự động (0.0 -> 1.0, mặc định 0.45 = 45%)
     this.currentSutra = null;
     this.verseIndex = 0;
     this.repeatRound = 0; // Đếm số lần lặp lại câu kinh có ghi "(3 lần)" (0..repeatTotal-1)
@@ -50,9 +51,42 @@ export class SutraChanter {
     const scaledTempoMs = Math.max(280, Math.round((tempoMs || 680) / speedMult));
     this.woodenFishTimer = setInterval(() => {
       if (this.isChanting && !this.isPaused && this.isAuto && this.audio) {
-        this.audio.playWoodenFish(0.45); // Âm lượng mõ nền vừa phải để rõ giọng đọc kinh
+        if (this.autoWoodenFishVolume > 0.01) {
+          this.audio.playWoodenFish(this.autoWoodenFishVolume);
+        }
       }
     }, scaledTempoMs);
+  }
+
+  /**
+   * Tinh chỉnh âm lượng gõ mõ tự động (0.0 -> 1.0)
+   */
+  setAutoWoodenFishVolume(volume) {
+    const parsed = Number(volume);
+    if (Number.isFinite(parsed)) {
+      this.autoWoodenFishVolume = Math.max(0, Math.min(1, Number(parsed.toFixed(2))));
+    }
+    return this.autoWoodenFishVolume;
+  }
+
+  getAutoWoodenFishVolume() {
+    return this.autoWoodenFishVolume;
+  }
+
+  /**
+   * Tinh chỉnh âm lượng giọng tụng kinh (0.0 -> 1.5)
+   */
+  setVoiceVolume(volume) {
+    if (this.voice && typeof this.voice.setVolume === 'function') {
+      return this.voice.setVolume(volume);
+    }
+    return 1.0;
+  }
+
+  getVoiceVolume() {
+    return this.voice && typeof this.voice.getVolume === 'function'
+      ? this.voice.getVolume()
+      : 1.0;
   }
 
   /**

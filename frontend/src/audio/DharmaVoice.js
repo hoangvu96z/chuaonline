@@ -69,6 +69,7 @@ export class DharmaVoice {
     this.availableViVoices = [];
     this.currentProfileId = 'SU_ONG_TRAM_AM';
     this.speedMultiplier = 1.0; // Hệ số tinh chỉnh tốc độ chữ & giọng đọc (0.5x -> 1.8x)
+    this.voiceVolume = 1.0; // Âm lượng giọng tụng (0.0 -> 1.5, mặc định 1.0 = 100%)
 
     this.currentUtterance = null;
     this.watchdogTimer = null;
@@ -82,6 +83,7 @@ export class DharmaVoice {
     // Web Audio API Neural TTS & Warm Hall Acoustic Chain
     this._audioCtx = null;
     this._reverbImpulse = null;
+    this._masterVoiceGain = null;
     this._currentSourceNode = null;
     this._currentAbortController = null;
     this._audioBufferCache = new Map();
@@ -202,6 +204,27 @@ export class DharmaVoice {
   }
 
   /**
+   * Điều chỉnh âm lượng giọng tụng kinh (0.0 -> 1.5) theo thời gian thực
+   */
+  setVolume(vol) {
+    const parsed = Number(vol);
+    if (Number.isFinite(parsed)) {
+      this.voiceVolume = Math.max(0, Math.min(1.5, Number(parsed.toFixed(2))));
+      if (this._masterVoiceGain && this._audioCtx) {
+        this._masterVoiceGain.gain.setValueAtTime(this.voiceVolume, this._audioCtx.currentTime);
+      }
+      if (this.currentUtterance) {
+        this.currentUtterance.volume = Math.max(0, Math.min(1, this.voiceVolume));
+      }
+    }
+    return this.voiceVolume;
+  }
+
+  getVolume() {
+    return this.voiceVolume;
+  }
+
+  /**
    * Tính thời lượng hiển thị tự nhiên của từng chữ (ms) theo tốc độ giọng đọc & dấu câu
    * để chữ chạy khớp với nhịp ngắt nghỉ của giọng đọc tiếng Việt.
    */
@@ -232,7 +255,10 @@ export class DharmaVoice {
    */
   static stripRepeatInstruction(text) {
     if (!text || typeof text !== 'string') return '';
-    return text.replace(/\(\s*\d+\s*lần\s*\)/gi, '').trim();
+    return text
+      .replace(/^\(\s*(?:Câu|Đệ)\s+[^)]+\)\s*/i, '')
+      .replace(/\(\s*\d+\s*lần\s*\)/gi, '')
+      .trim();
   }
 
   /**
@@ -491,6 +517,7 @@ export class DharmaVoice {
         utterance.lang = 'vi-VN';
         utterance.rate = effectiveRate;
         utterance.pitch = profile.pitch;
+        utterance.volume = Math.max(0, Math.min(1, this.voiceVolume));
 
         if (this.availableViVoices.length > 1) {
           const idx = Math.max(0, VOICE_PROFILES.findIndex((p) => p.id === profile.id));
@@ -637,10 +664,16 @@ export class DharmaVoice {
       const dryGain = ctx.createGain();
       dryGain.gain.value = 0.92;
 
+      if (!this._masterVoiceGain) {
+        this._masterVoiceGain = ctx.createGain();
+        this._masterVoiceGain.connect(ctx.destination);
+      }
+      this._masterVoiceGain.gain.setValueAtTime(this.voiceVolume, ctx.currentTime);
+
       source.connect(warmthEq);
       warmthEq.connect(silkHighEq);
       silkHighEq.connect(dryGain);
-      dryGain.connect(ctx.destination);
+      dryGain.connect(this._masterVoiceGain);
 
       if (this._reverbImpulse) {
         const convolver = ctx.createConvolver();
@@ -649,7 +682,7 @@ export class DharmaVoice {
         wetGain.gain.value = profile.reverbWet ?? 0.16;
         silkHighEq.connect(convolver);
         convolver.connect(wetGain);
-        wetGain.connect(ctx.destination);
+        wetGain.connect(this._masterVoiceGain);
       }
 
       this._currentSourceNode = source;

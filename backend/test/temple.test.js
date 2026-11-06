@@ -44,12 +44,13 @@ function waitForEvent(socket, eventName, timeoutMs = 6000, filterFn = null) {
 // SUITE 1: FRONTEND DATA & AUDIO MODULES
 // ============================================================================
 describe('Suite 1: Frontend Data & Audio Modules', () => {
-  it('1.1 should have all 30 full-length canonical sutras and mantras and 3 prostration vows with required properties and verses', () => {
-    assert.strictEqual(SUTRA_LIBRARY.length, 30, 'SUTRA_LIBRARY must contain 30 full-length sutras and mantras');
+  it('1.1 should have all 31 full-length canonical sutras and mantras and 3 prostration vows with required properties and verses', () => {
+    assert.strictEqual(SUTRA_LIBRARY.length, 31, 'SUTRA_LIBRARY must contain 31 full-length sutras and mantras');
 
     const expectedSutraIds = [
       'bat-nha-tam-kinh',
       'chu-dai-bi-tam-yeu',
+      'chu-lang-nghiem-5-de',
       'kinh-tu-bi',
       'niem-phat-tu-tu',
       'ke-hoi-huong',
@@ -312,6 +313,16 @@ describe('Suite 1: Frontend Data & Audio Modules', () => {
     assert.strictEqual(dv.getSpeedMultiplier(), 1.35);
     assert.strictEqual(dv.setSpeedMultiplier(0.2), 0.5, 'Must clamp min speed multiplier to 0.5x');
     assert.strictEqual(dv.setSpeedMultiplier(3.0), 1.8, 'Must clamp max speed multiplier to 1.8x');
+
+    // Test Voice Volume & Auto Wooden Fish Volume
+    assert.strictEqual(dv.setVolume(1.25), 1.25);
+    assert.strictEqual(dv.getVolume(), 1.25);
+    assert.strictEqual(chanter.setAutoWoodenFishVolume(0.75), 0.75);
+    assert.strictEqual(chanter.getAutoWoodenFishVolume(), 0.75);
+    assert.strictEqual(
+      DharmaVoice.stripRepeatInstruction('(Câu 1–5) Nam mô hắc ra đát na đa ra dạ da.'),
+      'Nam mô hắc ra đát na đa ra dạ da.'
+    );
 
     const plainWordMs = dv._computeWordDurationMs('Phật', 0.82);
     const commaWordMs = dv._computeWordDurationMs('Phật,', 0.82);
