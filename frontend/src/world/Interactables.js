@@ -59,7 +59,13 @@ export class Interactables {
       { id: 'seed-l5', dharma_name: 'Tịnh Giác', wish_type: 'LANTERN', content: 'Cầu sức khỏe bình an cho đại gia đình', pos_x: -5.5, pos_z: 37.2 },
       { id: 'seed-l6', dharma_name: 'Diệu Âm', wish_type: 'LANTERN', content: 'Nam Mô A Di Đà Phật, vạn sự cát tường', pos_x: 5.8, pos_z: 37.6 },
       { id: 'seed-l7', dharma_name: 'Phúc Lâm', wish_type: 'LANTERN', content: 'Cầu công việc hanh thông, tâm luôn an lạc', pos_x: -9.2, pos_z: 31.8 },
-      { id: 'seed-l8', dharma_name: 'Thanh Liên', wish_type: 'LANTERN', content: 'Hoa khai kiến Phật, ngộ vô sanh', pos_x: 9.0, pos_z: 32.4 }
+      { id: 'seed-l8', dharma_name: 'Thanh Liên', wish_type: 'LANTERN', content: 'Hoa khai kiến Phật, ngộ vô sanh', pos_x: 9.0, pos_z: 32.4 },
+      { id: 'seed-l9', dharma_name: 'Tuệ Tâm', wish_type: 'LANTERN', content: 'Cầu thân tâm vô bệnh, gia đình hòa thuận', pos_x: -14.8, pos_z: 35.2 },
+      { id: 'seed-l10', dharma_name: 'Bình An', wish_type: 'LANTERN', content: 'Nguyện ánh sáng từ bi chiếu khắp muôn phương', pos_x: 14.5, pos_z: 34.8 },
+      { id: 'seed-l11', dharma_name: 'Từ Hòa', wish_type: 'LANTERN', content: 'Nam Mô Dược Sư Lưu Ly Quang Vương Phật', pos_x: -24.5, pos_z: 32.6 },
+      { id: 'seed-l12', dharma_name: 'Cát Tường', wish_type: 'LANTERN', content: 'Cầu cha mẹ mạnh khỏe, bách niên giai lão', pos_x: 24.8, pos_z: 33.4 },
+      { id: 'seed-l13', dharma_name: 'Tịnh Độ', wish_type: 'LANTERN', content: 'Nguyện sanh Tây Phương Tịnh Độ Trung', pos_x: -28.2, pos_z: 36.5 },
+      { id: 'seed-l14', dharma_name: 'Phước Huệ', wish_type: 'LANTERN', content: 'Phước huệ song tu, đạo tâm kiên cố', pos_x: 28.4, pos_z: 36.2 }
     ];
     for (const w of initialWishes) {
       this.addWishVisual(w, false);

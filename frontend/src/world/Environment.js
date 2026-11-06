@@ -2690,9 +2690,9 @@ export class Environment {
   }
 
   _buildSevenStoryPagoda() {
-    // Bảo Tháp Xá Lợi 7 Tầng (Đông Bắc Sân Chùa mở rộng: X = 20.5, Z = 6.0)
+    // Bảo Tháp Xá Lợi 7 Tầng (Chuyển sang Cánh Tây Nam Sân Chùa mở rộng: X = -19.5, Z = 21.5, đối xứng với Vườn Bồ Đề bên Đông Nam)
     const pagodaGroup = new THREE.Group();
-    pagodaGroup.position.set(20.5, 0.05, 6.0);
+    pagodaGroup.position.set(-19.5, 0.05, 21.5);
 
     const stoneMat = new THREE.MeshStandardMaterial({ color: 0x7a7e7a, roughness: 0.82 });
     const wallMat = new THREE.MeshStandardMaterial({ color: 0xeed9a4, roughness: 0.78 });
@@ -2751,9 +2751,71 @@ export class Environment {
     topLotus.position.y = currentY + 1.95;
     pagodaGroup.add(topLotus);
 
-    const pagodaLight = new THREE.PointLight(0xffca28, 2.2, 16, 1.3);
+    const pagodaLight = new THREE.PointLight(0xffca28, 2.6, 18, 1.2);
     pagodaLight.position.set(0, 6.5, 3.2);
     pagodaGroup.add(pagodaLight);
+
+    // 4 Trụ Đèn Đá Hoa Sen & Chậu Hoa Cúc Vàng quanh Bảo Tháp Xá Lợi (thắp sáng lung linh vào buổi tối)
+    const lanternGlowMat = new THREE.MeshBasicMaterial({ color: 0xffcf56 });
+    const blossomPinkMat = new THREE.MeshStandardMaterial({
+      color: 0xff8da1,
+      roughness: 0.35,
+      emissive: 0x4a1220,
+      emissiveIntensity: 0.32
+    });
+    const marigoldMat = new THREE.MeshStandardMaterial({
+      color: 0xffca28,
+      roughness: 0.32,
+      emissive: 0x4d3400,
+      emissiveIntensity: 0.35
+    });
+    const leafGreenMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.65 });
+
+    for (const [lx, lz] of [
+      [-3.5, 3.0],
+      [3.5, 3.0],
+      [-3.5, -2.8],
+      [3.5, -2.8]
+    ]) {
+      const pLantern = new THREE.Group();
+      pLantern.position.set(lx, 0, lz);
+      const lPost = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 1.75, 8), stoneMat);
+      lPost.position.y = 0.88;
+      pLantern.add(lPost);
+
+      const lChamber = new THREE.Mesh(new THREE.OctahedronGeometry(0.32, 1), lanternGlowMat);
+      lChamber.position.y = 1.92;
+      pLantern.add(lChamber);
+
+      const lRoof = new THREE.Mesh(new THREE.ConeGeometry(0.52, 0.34, 6), roofMat);
+      lRoof.position.y = 2.24;
+      pLantern.add(lRoof);
+      pagodaGroup.add(pLantern);
+    }
+
+    for (const [fx, fz] of [
+      [-2.3, 3.6],
+      [2.3, 3.6]
+    ]) {
+      const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.26, 0.42, 12), wallMat);
+      pot.position.set(fx, 0.21, fz);
+      pagodaGroup.add(pot);
+
+      const bush = new THREE.Mesh(new THREE.SphereGeometry(0.38, 10, 10), leafGreenMat);
+      bush.scale.set(1.1, 0.75, 1.1);
+      bush.position.set(fx, 0.52, fz);
+      pagodaGroup.add(bush);
+
+      for (let b = 0; b < 6; b++) {
+        const ba = (b / 6) * Math.PI * 2;
+        const flower = new THREE.Mesh(
+          new THREE.SphereGeometry(0.09, 8, 8),
+          b % 2 === 0 ? marigoldMat : blossomPinkMat
+        );
+        flower.position.set(fx + Math.cos(ba) * 0.24, 0.68, fz + Math.sin(ba) * 0.24);
+        pagodaGroup.add(flower);
+      }
+    }
 
     // Bồ Đoàn lễ bái trước Bảo Tháp Xá Lợi
     const btCushion = new THREE.Mesh(
@@ -3041,18 +3103,18 @@ export class Environment {
   }
 
   _buildLotusPondAndGate() {
-    // Blueprint: Z = 25 đến 45: Hồ Phóng Sinh & Thả Hoa Đăng + Cổng Tam Quan
+    // Blueprint: Z = 25 đến 45: Hồ Phóng Sinh & Thả Hoa Đăng mở rộng HẾT CHIỀU NGANG CHÙA (64m: X = -32 đến +32) + Cổng Tam Quan
     const pondGroup = new THREE.Group();
     pondGroup.position.set(0, 0, 34);
 
-    // Water surface (Z = 26 to 42, X = -14 to 14)
-    const waterGeo = new THREE.PlaneGeometry(28, 15);
+    // Mặt hồ nước mở rộng toàn bộ chiều ngang Sân Chùa (64m x 15m: X = -32 đến +32, Z = 26.5 đến 41.5)
+    const waterGeo = new THREE.PlaneGeometry(64, 15);
     const waterMat = new THREE.MeshStandardMaterial({
-      color: 0x16384c,
-      roughness: 0.15,
-      metalness: 0.75,
+      color: 0x163c52,
+      roughness: 0.14,
+      metalness: 0.76,
       transparent: true,
-      opacity: 0.92
+      opacity: 0.93
     });
     const water = new THREE.Mesh(waterGeo, waterMat);
     water.rotation.x = -Math.PI / 2;
@@ -3063,25 +3125,60 @@ export class Environment {
     this.waterMesh = water;
     this.interactiveMeshes.push(water);
 
-    // Stone Embankment around the pond
+    // Kè đá xanh cổ kính bao quanh Hồ Sen rộng 64m (khớp liền mạch với viền đá Sân Chùa tại X = ±32.2)
     const borderMat = new THREE.MeshStandardMaterial({ color: 0x6f7370, roughness: 0.8 });
-    const northBank = new THREE.Mesh(new THREE.BoxGeometry(29, 0.4, 0.8), borderMat);
-    northBank.position.set(0, 0.2, -7.6);
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xffd54f, metalness: 0.65, roughness: 0.28 });
+    const lanternGlowMat = new THREE.MeshBasicMaterial({ color: 0xffcf58 });
+
+    const northBank = new THREE.Mesh(new THREE.BoxGeometry(65.2, 0.42, 0.85), borderMat);
+    northBank.position.set(0, 0.21, -7.6);
+    northBank.receiveShadow = true;
     pondGroup.add(northBank);
 
-    const southBank = new THREE.Mesh(new THREE.BoxGeometry(29, 0.4, 0.8), borderMat);
-    southBank.position.set(0, 0.2, 7.6);
+    const southBank = new THREE.Mesh(new THREE.BoxGeometry(65.2, 0.42, 0.85), borderMat);
+    southBank.position.set(0, 0.21, 7.6);
+    southBank.receiveShadow = true;
     pondGroup.add(southBank);
 
-    const westBank = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 16), borderMat);
-    westBank.position.set(-14.2, 0.2, 0);
+    const westBank = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.42, 16.0), borderMat);
+    westBank.position.set(-32.2, 0.21, 0);
     pondGroup.add(westBank);
 
-    const eastBank = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 16), borderMat);
-    eastBank.position.set(14.2, 0.2, 0);
+    const eastBank = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.42, 16.0), borderMat);
+    eastBank.position.set(32.2, 0.21, 0);
     pondGroup.add(eastBank);
 
-    // Stone Bridge across the center of the Lotus Pond
+    // Hàng trụ đá đầu búp sen & đèn đá ven hồ dọc suốt 64m bờ Bắc & bờ Nam Hồ Nước
+    for (const bx of [-30, -24, -15, -9, -3.2, 3.2, 9, 15, 24, 30]) {
+      for (const bz of [-7.6, 7.6]) {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.72, 8), borderMat);
+        post.position.set(bx, 0.56, bz);
+        pondGroup.add(post);
+
+        const cap = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 10), goldMat);
+        cap.position.set(bx, 0.96, bz);
+        pondGroup.add(cap);
+      }
+    }
+
+    // 6 Trụ Đèn Đá Hoa Sen chiếu sáng mặt hồ rộng 64m vào ban đêm
+    for (const lx of [-28.5, -14.5, 14.5, 28.5]) {
+      const pLamp = new THREE.Group();
+      pLamp.position.set(lx, 0.35, -7.6);
+      const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 1.5, 8), borderMat);
+      pillar.position.y = 0.75;
+      pLamp.add(pillar);
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.44, 0.44), lanternGlowMat);
+      box.position.y = 1.68;
+      pLamp.add(box);
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(0.56, 0.36, 4), borderMat);
+      roof.rotation.y = Math.PI / 4;
+      roof.position.y = 2.05;
+      pLamp.add(roof);
+      pondGroup.add(pLamp);
+    }
+
+    // Cầu Đá Trung Tâm & 2 Cầu Đá Phụ Cánh Đông - Cánh Tây bắc qua Hồ Sen 64m
     const bridgeDeck = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.35, 16), borderMat);
     bridgeDeck.position.set(0, 0.28, 0);
     bridgeDeck.receiveShadow = true;
@@ -3089,18 +3186,65 @@ export class Environment {
     pondGroup.add(bridgeDeck);
     this.walkableMeshes.push(bridgeDeck);
 
-    // Decorative Lily Pads on Pond
-    const padMat = new THREE.MeshStandardMaterial({ color: 0x2d6a3e, roughness: 0.8 });
-    const padCoords = [
-      [-6, -3], [-8, 2], [-4.5, 4], [5.5, -2.5], [8.5, 1.5], [6, 4.2]
-    ];
-    for (const [lx, lz] of padCoords) {
-      const lily = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.04, 12), padMat);
-      lily.position.set(lx, 0.11, lz);
-      pondGroup.add(lily);
+    for (const sideBridgeX of [-19.5, 19.5]) {
+      const sideBridge = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.32, 16), borderMat);
+      sideBridge.position.set(sideBridgeX, 0.26, 0);
+      sideBridge.receiveShadow = true;
+      sideBridge.userData = { type: 'GROUND' };
+      pondGroup.add(sideBridge);
+      this.walkableMeshes.push(sideBridge);
     }
 
-    // 12 Đàn Cá Chép Koi Vàng & Đỏ Trắng (Koi Fish Phóng Sinh bơi lội trong Hồ Sen)
+    // 26 Cụm Lá Sen Xanh & Hoa Sen Hồng / Bạch Liên Nở Rộ trải khắp chiều ngang 64m của Hồ Nước
+    const padMat = new THREE.MeshStandardMaterial({ color: 0x2d6a3e, roughness: 0.8 });
+    const pinkLotusMat = new THREE.MeshStandardMaterial({
+      color: 0xff80ab,
+      roughness: 0.3,
+      emissive: 0x4a1025,
+      emissiveIntensity: 0.28
+    });
+    const whiteLotusMat = new THREE.MeshStandardMaterial({
+      color: 0xfffdf7,
+      roughness: 0.25,
+      emissive: 0x3a3520,
+      emissiveIntensity: 0.22
+    });
+
+    const padCoords = [
+      [-29.5, -3.5], [-27.2, 2.8], [-25.0, -1.2], [-23.2, 4.5],
+      [-16.2, -3.8], [-14.0, 2.2], [-11.5, -2.5], [-9.2, 4.2],
+      [-6.0, -3.0], [-8.0, 2.0], [-4.5, 4.0], [-5.2, -5.0],
+      [5.5, -2.5], [8.5, 1.5], [6.0, 4.2], [5.0, -5.0],
+      [10.2, -3.6], [12.5, 2.8], [15.2, -1.8], [16.5, 4.4],
+      [23.0, -3.2], [25.2, 2.4], [27.5, -1.5], [29.4, 3.8]
+    ];
+    for (let idx = 0; idx < padCoords.length; idx++) {
+      const [lx, lz] = padCoords[idx];
+      const lily = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.78, 0.04, 14), padMat);
+      lily.position.set(lx, 0.11, lz);
+      pondGroup.add(lily);
+
+      // Thêm bông Hoa Sen 3D nở trên mặt lá sen
+      if (idx % 2 === 0) {
+        const flowerGroup = new THREE.Group();
+        flowerGroup.position.set(lx, 0.15, lz);
+        const fMat = idx % 4 === 0 ? pinkLotusMat : whiteLotusMat;
+        for (let p = 0; p < 8; p++) {
+          const pa = (p / 8) * Math.PI * 2;
+          const petal = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.32, 5), fMat);
+          petal.position.set(Math.cos(pa) * 0.14, 0.10, Math.sin(pa) * 0.14);
+          petal.rotation.y = -pa + Math.PI / 2;
+          petal.rotation.x = 0.45;
+          flowerGroup.add(petal);
+        }
+        const pistil = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8), goldMat);
+        pistil.position.y = 0.12;
+        flowerGroup.add(pistil);
+        pondGroup.add(flowerGroup);
+      }
+    }
+
+    // 20 Đàn Cá Chép Koi Vàng & Đỏ Trắng bơi lội khắp chiều ngang 64m của Hồ Sen
     const koiGoldMat = new THREE.MeshStandardMaterial({
       color: 0xff9800,
       roughness: 0.25,
@@ -3117,10 +3261,13 @@ export class Environment {
     });
     const koiTailMat = new THREE.MeshBasicMaterial({ color: 0xfff3e0, side: THREE.DoubleSide });
 
-    for (let i = 0; i < 12; i++) {
-      const side = i % 2 === 0 ? -1 : 1;
-      const centerX = side * (5.2 + (i % 3) * 2.1);
-      const centerZ = (i % 4 - 1.5) * 2.4;
+    const koiCentersX = [
+      -27.5, -24.0, -15.5, -12.0, -9.0, -7.2, -5.2, -4.2, -10.8, -26.0,
+      4.5, 6.2, 8.0, 10.5, 13.0, 15.8, 23.5, 26.2, 28.5, 11.8
+    ];
+    for (let i = 0; i < koiCentersX.length; i++) {
+      const centerX = koiCentersX[i];
+      const centerZ = ((i % 4) - 1.5) * 2.4;
 
       const fishGroup = new THREE.Group();
       fishGroup.position.set(centerX, 0.09, centerZ);
@@ -3151,7 +3298,7 @@ export class Environment {
         rx: 1.6 + (i % 3) * 0.65,
         rz: 1.2 + (i % 2) * 0.55,
         speed: 0.75 + (i % 4) * 0.18,
-        phase: (i / 12) * Math.PI * 2
+        phase: (i / koiCentersX.length) * Math.PI * 2
       });
     }
 
@@ -3365,35 +3512,38 @@ export class Environment {
   }
 
   _buildMedicineBuddhaShrine() {
-    // Đài Đức Phật Dược Sư Lưu Ly Quang Như Lai (-10.5, 0.05, 21.8)
+    // Đài Đức Phật Dược Sư Lưu Ly Quang Như Lai (Chuyển sang Cánh Đông Bắc Sân Chùa — Đông Phương Tịnh Lưu Ly: X = 20.5, Z = 6.0)
     // Điêu khắc 3D nguyên bản theo Mẫu Bộ Phật Dược Sư Phúc Đan 3D (https://phucdan3d.com/file-mau-bo-phat-duoc-su/):
     // - Bệ Đá Tu Di 5 cấp chạm hoa văn mây xoắn, Pháp Luân & Lan Can Câu Lan tứ giác chạm lộng
     // - Đài Sen Cánh Bầu dày dặn kèm đôi cuống mây xoắn chữ S hai bên đỡ Lá Đề
     // - Lá Đề Hào Quang nhọn đỉnh chạm nổi hệ vân sóng đồng tâm, vòng cung 16 búp sen nổi & viền Lửa Tam Muội
     // - Tôn tượng Đức Phật Dược Sư ngồi Kiết Già, ngực chạm nổi Chữ Vạn (卍), hai tay kết Ấn Dược Sư trước ngực, tóc xoắn ốc nổi rõ từng hạt
+    // - Bao quanh bởi 4 Trụ Đèn Lưu Ly & Hoàng Kim phát sáng ban đêm, Đôi Cây Hoa Đào Tiên / Hoa Đại & 4 Chậu Hoa Cúc Vàng trang nghiêm
     const duocSuGroup = new THREE.Group();
-    duocSuGroup.position.set(-10.5, 0.05, 21.8);
-    duocSuGroup.rotation.y = 0.22; // Hướng về trung tâm Sân Chùa để đạo hữu chiêm bái rõ chính diện
+    duocSuGroup.position.set(20.5, 0.05, 6.0);
+    duocSuGroup.rotation.y = -0.18; // Hướng nhẹ về trung tâm Sân Chùa thoáng đãng, không vướng Cây Đa hay Đài Quán Âm
 
-    // Chất liệu Đá Bạch Ngọc Ngà Chạm Khắc CNC Cao Cấp (Sculpted Ivory-Alabaster Stone with Warm Relief Shading)
+    // Chất liệu Đá Bạch Ngọc Ngà Chạm Khắc CNC Cao Cấp (Sculpted Ivory-Alabaster Stone with Warm Golden-Ivory Glow at Night)
     const ivoryStoneMat = new THREE.MeshStandardMaterial({
-      color: 0xe6e2d8,
-      roughness: 0.34,
+      color: 0xeae5da,
+      roughness: 0.32,
       metalness: 0.14,
-      emissive: 0x26231c,
-      emissiveIntensity: 0.14
+      emissive: 0x383122,
+      emissiveIntensity: 0.22
     });
     const highlightIvoryMat = new THREE.MeshStandardMaterial({
-      color: 0xf4f1e8,
-      roughness: 0.26,
+      color: 0xf7f3e8,
+      roughness: 0.24,
       metalness: 0.18,
-      emissive: 0x332e24,
-      emissiveIntensity: 0.18
+      emissive: 0x453b28,
+      emissiveIntensity: 0.26
     });
     const deepReliefMat = new THREE.MeshStandardMaterial({
-      color: 0xb8b2a4,
-      roughness: 0.48,
-      metalness: 0.12
+      color: 0xc2bba8,
+      roughness: 0.45,
+      metalness: 0.12,
+      emissive: 0x262015,
+      emissiveIntensity: 0.15
     });
     const darkCarveMat = new THREE.MeshStandardMaterial({
       color: 0x5c574d,
@@ -4180,13 +4330,231 @@ export class Environment {
     statueGroup.add(headGroup);
     duocSuGroup.add(statueGroup);
 
-    // Ánh sáng tôn nghiêm làm nổi bật từng đường chạm khắc CNC trên Bệ Tu Di & Lá Đề
-    const duocSuKeyLight = new THREE.PointLight(0xfff7e6, 2.5, 14, 1.3);
-    duocSuKeyLight.position.set(1.4, 4.4, 2.8);
+    // =========================================================================
+    // 6. THẢM ĐÁ BÁT GIÁC, 4 TRỤ ĐÈN LƯU LY BAN ĐÊM & CÂY HOA / CHẬU HOA TRANG TRÍ QUANH TƯỢNG
+    // =========================================================================
+    const plazaStoneMat = new THREE.MeshStandardMaterial({ color: 0x787d78, roughness: 0.76 });
+    const goldTrimMat = new THREE.MeshStandardMaterial({
+      color: 0xf5c542,
+      metalness: 0.72,
+      roughness: 0.25,
+      emissive: 0x4a3500,
+      emissiveIntensity: 0.28
+    });
+    const warmLampGlowMat = new THREE.MeshBasicMaterial({ color: 0xffe07d });
+    const lapisGlowMat = new THREE.MeshStandardMaterial({
+      color: 0x38bdf8,
+      roughness: 0.18,
+      metalness: 0.35,
+      emissive: 0x0284c7,
+      emissiveIntensity: 0.95
+    });
+
+    // Thảm Đá Hoa Cương Bát Giác viền vàng nâng đỡ toàn bộ Đài Phật Dược Sư
+    const sanctuaryPlaza = new THREE.Mesh(
+      new THREE.CylinderGeometry(3.45, 3.68, 0.12, 8),
+      plazaStoneMat
+    );
+    sanctuaryPlaza.position.y = 0.06;
+    sanctuaryPlaza.receiveShadow = true;
+    duocSuGroup.add(sanctuaryPlaza);
+
+    const plazaGoldRim = new THREE.Mesh(
+      new THREE.TorusGeometry(3.48, 0.045, 8, 8),
+      goldTrimMat
+    );
+    plazaGoldRim.rotation.x = Math.PI / 2;
+    plazaGoldRim.rotation.z = Math.PI / 8;
+    plazaGoldRim.position.y = 0.12;
+    duocSuGroup.add(plazaGoldRim);
+
+    // 4 Trụ Đèn Lưu Ly & Hoàng Kim Phát Sáng Rực Rỡ Vào Buổi Tối quanh Tượng Phật Dược Sư
+    const lampCoords = [
+      [-2.55, 1.95],
+      [2.55, 1.95],
+      [-2.85, -1.35],
+      [2.85, -1.35]
+    ];
+    for (const [lx, lz] of lampCoords) {
+      const lampGroup = new THREE.Group();
+      lampGroup.position.set(lx, 0.10, lz);
+
+      const lBase = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.36, 0.28, 8), plazaStoneMat);
+      lBase.position.y = 0.14;
+      lampGroup.add(lBase);
+
+      const lColumn = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 1.65, 10), ivoryStoneMat);
+      lColumn.position.y = 1.10;
+      lColumn.castShadow = true;
+      lampGroup.add(lColumn);
+
+      const lotusTray = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.16, 0.16, 10), goldTrimMat);
+      lotusTray.position.y = 1.98;
+      lampGroup.add(lotusTray);
+
+      // Lồng đèn Hoàng Kim tỏa ánh sáng ấm áp ban đêm
+      const lanternCore = new THREE.Mesh(new THREE.OctahedronGeometry(0.28, 2), warmLampGlowMat);
+      lanternCore.scale.set(1.0, 1.25, 1.0);
+      lanternCore.position.y = 2.28;
+      lampGroup.add(lanternCore);
+
+      // Mái bảo cái & Ngọc Lưu Ly Lam trên đỉnh trụ đèn
+      const canopy = new THREE.Mesh(new THREE.ConeGeometry(0.46, 0.30, 8), goldTrimMat);
+      canopy.position.y = 2.62;
+      lampGroup.add(canopy);
+
+      const lapisFinial = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 12), lapisGlowMat);
+      lapisFinial.position.y = 2.84;
+      lampGroup.add(lapisFinial);
+
+      duocSuGroup.add(lampGroup);
+    }
+
+    // Đôi Cây Hoa Đào Tiên & Hoa Đại Cửa Thiền Nở Hoa Rực Rỡ hai bên Tả - Hữu Tượng Phật Dược Sư
+    const trunkBarkMat = new THREE.MeshStandardMaterial({ color: 0x4e3424, roughness: 0.88 });
+    const foliageLushMat = new THREE.MeshStandardMaterial({ color: 0x2e6f38, roughness: 0.72 });
+    const peachBlossomMat = new THREE.MeshStandardMaterial({
+      color: 0xff8da6,
+      roughness: 0.28,
+      emissive: 0x6b1830,
+      emissiveIntensity: 0.45
+    });
+    const goldenBlossomMat = new THREE.MeshStandardMaterial({
+      color: 0xffdf6b,
+      roughness: 0.25,
+      emissive: 0x664800,
+      emissiveIntensity: 0.48
+    });
+
+    for (const side of [-1, 1]) {
+      const fTree = new THREE.Group();
+      fTree.position.set(side * 3.25, 0.10, -0.75);
+
+      // Bồn đá tròn trồng cây hoa cảnh
+      const planterRing = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.72, 0.82, 0.36, 14),
+        plazaStoneMat
+      );
+      planterRing.position.y = 0.18;
+      fTree.add(planterRing);
+
+      // Thân cây uốn dáng nghệ thuật hướng nhẹ về phía Lá Đề
+      const trunkCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(0, 0.32, 0),
+        new THREE.Vector3(side * 0.18, 1.35, 0.08),
+        new THREE.Vector3(side * -0.15, 2.45, -0.05),
+        new THREE.Vector3(side * -0.35, 3.35, 0.05)
+      ]);
+      const trunkMesh = new THREE.Mesh(
+        new THREE.TubeGeometry(trunkCurve, 16, 0.14, 8, false),
+        trunkBarkMat
+      );
+      trunkMesh.castShadow = true;
+      fTree.add(trunkMesh);
+
+      // 3 Tán lá & Chùm hoa Đào Hồng / Hoa Mai Vàng rực rỡ
+      const canopyPositions = [
+        [side * -0.35, 3.45, 0.05, 0.85],
+        [side * 0.22, 2.85, 0.22, 0.68],
+        [side * -0.58, 2.72, -0.18, 0.64]
+      ];
+      for (const [cx, cy, cz, cr] of canopyPositions) {
+        const leafCluster = new THREE.Mesh(new THREE.DodecahedronGeometry(cr, 1), foliageLushMat);
+        leafCluster.scale.set(1.15, 0.72, 1.1);
+        leafCluster.position.set(cx, cy, cz);
+        leafCluster.castShadow = true;
+        fTree.add(leafCluster);
+
+        // Đính các đóa hoa nở rộ phát sáng nhẹ ban đêm quanh tán cây
+        for (let b = 0; b < 9; b++) {
+          const ba = (b / 9) * Math.PI * 2;
+          const br = cr * 0.78;
+          const blossom = new THREE.Mesh(
+            new THREE.SphereGeometry(0.11, 8, 8),
+            b % 2 === 0 ? peachBlossomMat : goldenBlossomMat
+          );
+          blossom.scale.set(1.2, 0.75, 1.2);
+          blossom.position.set(
+            cx + Math.cos(ba) * br,
+            cy + 0.18 + (b % 3) * 0.12,
+            cz + Math.sin(ba) * br
+          );
+          fTree.add(blossom);
+        }
+      }
+
+      duocSuGroup.add(fTree);
+    }
+
+    // 4 Chậu Hoa Cúc Đại Đóa Vàng & Hoa Sen Hồng đặt trang trí hai bên thềm Bệ Đá Tu Di
+    const celadonPotMat = new THREE.MeshStandardMaterial({
+      color: 0x88b3a4,
+      roughness: 0.28,
+      metalness: 0.15
+    });
+    const flowerPotCoords = [
+      [-1.92, 1.25],
+      [1.92, 1.25],
+      [-2.18, 0.15],
+      [2.18, 0.15]
+    ];
+    for (let pIdx = 0; pIdx < flowerPotCoords.length; pIdx++) {
+      const [px, pz] = flowerPotCoords[pIdx];
+      const urnGroup = new THREE.Group();
+      urnGroup.position.set(px, 0.12, pz);
+
+      const urnBody = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.32, 0.22, 0.38, 14),
+        celadonPotMat
+      );
+      urnBody.position.y = 0.19;
+      urnGroup.add(urnBody);
+
+      const urnRim = new THREE.Mesh(
+        new THREE.TorusGeometry(0.32, 0.032, 8, 16),
+        goldTrimMat
+      );
+      urnRim.rotation.x = Math.PI / 2;
+      urnRim.position.y = 0.38;
+      urnGroup.add(urnRim);
+
+      const foliageMound = new THREE.Mesh(
+        new THREE.SphereGeometry(0.30, 10, 10),
+        foliageLushMat
+      );
+      foliageMound.scale.set(1.1, 0.65, 1.1);
+      foliageMound.position.y = 0.44;
+      urnGroup.add(foliageMound);
+
+      for (let f = 0; f < 7; f++) {
+        const fa = (f / 7) * Math.PI * 2;
+        const fr = f === 0 ? 0 : 0.18;
+        const bloom = new THREE.Mesh(
+          new THREE.SphereGeometry(0.082, 8, 8),
+          (pIdx + f) % 2 === 0 ? goldenBlossomMat : peachBlossomMat
+        );
+        bloom.position.set(Math.cos(fa) * fr, 0.58 + (f === 0 ? 0.06 : 0), Math.sin(fa) * fr);
+        urnGroup.add(bloom);
+      }
+
+      duocSuGroup.add(urnGroup);
+    }
+
+    // Hệ thống Ánh Sáng Hoàng Kim & Lưu Ly Ban Đêm tôn nghiêm làm nổi bật từng đường chạm khắc CNC trên Bệ Tu Di & Lá Đề
+    const duocSuKeyLight = new THREE.PointLight(0xffe49e, 3.2, 16, 1.2);
+    duocSuKeyLight.position.set(0.0, 3.8, 3.2);
     duocSuGroup.add(duocSuKeyLight);
 
-    const duocSuRimLight = new THREE.PointLight(0xbae6fd, 1.4, 10, 1.5);
-    duocSuRimLight.position.set(-1.6, 3.2, 1.8);
+    const duocSuWarmLeft = new THREE.PointLight(0xffcb57, 2.2, 12, 1.3);
+    duocSuWarmLeft.position.set(-2.6, 2.5, 2.0);
+    duocSuGroup.add(duocSuWarmLeft);
+
+    const duocSuWarmRight = new THREE.PointLight(0xffcb57, 2.2, 12, 1.3);
+    duocSuWarmRight.position.set(2.6, 2.5, 2.0);
+    duocSuGroup.add(duocSuWarmRight);
+
+    const duocSuRimLight = new THREE.PointLight(0x7dd3fc, 1.6, 11, 1.4);
+    duocSuRimLight.position.set(0.0, 4.4, -1.6);
     duocSuGroup.add(duocSuRimLight);
 
     // Hitbox tương tác Đảnh Lễ Đức Phật Dược Sư Lưu Ly Quang
