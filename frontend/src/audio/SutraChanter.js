@@ -46,11 +46,45 @@ export class SutraChanter {
 
   _startAutoWoodenFish(tempoMs) {
     if (this.woodenFishTimer) clearInterval(this.woodenFishTimer);
+    const speedMult = this.getReadingSpeed();
+    const scaledTempoMs = Math.max(280, Math.round((tempoMs || 680) / speedMult));
     this.woodenFishTimer = setInterval(() => {
       if (this.isChanting && !this.isPaused && this.isAuto && this.audio) {
         this.audio.playWoodenFish(0.45); // Âm lượng mõ nền vừa phải để rõ giọng đọc kinh
       }
-    }, tempoMs);
+    }, scaledTempoMs);
+  }
+
+  /**
+   * Tinh chỉnh tốc độ chữ chạy Karaoke & nhịp đọc kinh (0.5x -> 1.8x)
+   * @param {number} multiplier - Hệ số tốc độ (0.5 .. 1.8)
+   * @param {boolean} [restartUtterance=false] - Nếu true, cập nhật ngay giọng đọc TTS từ chữ hiện tại
+   */
+  setReadingSpeed(multiplier, restartUtterance = false) {
+    const applied =
+      this.voice && typeof this.voice.setSpeedMultiplier === 'function'
+        ? this.voice.setSpeedMultiplier(multiplier)
+        : Math.max(0.5, Math.min(1.8, Number(multiplier) || 1.0));
+
+    if (this.isChanting && this.currentSutra && this.isAuto) {
+      this._startAutoWoodenFish(this.currentSutra.tempoMs || 680);
+      if (restartUtterance && !this.isPaused) {
+        if (this.nextVerseTimer) {
+          clearTimeout(this.nextVerseTimer);
+          this.nextVerseTimer = null;
+        }
+        this._chantSessionId++;
+        const resumeWordIdx = Math.max(0, Number(this.voice?._currentWordIdx || 0));
+        this._readNextVerse(resumeWordIdx, true);
+      }
+    }
+    return applied;
+  }
+
+  getReadingSpeed() {
+    return this.voice && typeof this.voice.getSpeedMultiplier === 'function'
+      ? this.voice.getSpeedMultiplier()
+      : 1.0;
   }
 
   /**

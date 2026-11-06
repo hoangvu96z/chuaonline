@@ -68,6 +68,7 @@ export class DharmaVoice {
     this.preferredVoice = null;
     this.availableViVoices = [];
     this.currentProfileId = 'SU_ONG_TRAM_AM';
+    this.speedMultiplier = 1.0; // Hệ số tinh chỉnh tốc độ chữ & giọng đọc (0.5x -> 1.8x)
 
     this.currentUtterance = null;
     this.watchdogTimer = null;
@@ -176,6 +177,49 @@ export class DharmaVoice {
     return VOICE_PROFILES.find((p) => p.id === this.currentProfileId) || VOICE_PROFILES[0];
   }
 
+  /**
+   * Tinh chỉnh hệ số tốc độ chữ chạy Karaoke & giọng đọc (0.5x -> 1.8x)
+   * Cập nhật trực tiếp playbackRate của Web Audio Neural TTS đang phát mà không làm ngắt tiếng!
+   */
+  setSpeedMultiplier(multiplier) {
+    const parsed = Number(multiplier);
+    if (Number.isFinite(parsed)) {
+      this.speedMultiplier = Math.max(0.5, Math.min(1.8, Number(parsed.toFixed(2))));
+      if (this._currentSourceNode && this._currentSourceNode.playbackRate) {
+        const profile = this.getCurrentProfile();
+        const basePbRate = profile.playbackRate || 0.90;
+        this._currentSourceNode.playbackRate.value = Math.max(
+          0.45,
+          Math.min(1.85, basePbRate * this.speedMultiplier)
+        );
+      }
+    }
+    return this.speedMultiplier;
+  }
+
+  getSpeedMultiplier() {
+    return this.speedMultiplier;
+  }
+
+  /**
+   * Tính thời lượng hiển thị tự nhiên của từng chữ (ms) theo tốc độ giọng đọc & dấu câu
+   * để chữ chạy khớp với nhịp ngắt nghỉ của giọng đọc tiếng Việt.
+   */
+  _computeWordDurationMs(word, effectiveRate) {
+    const clean = String(word || '').trim();
+    const rateScale = 0.82 / Math.max(0.4, effectiveRate || 0.82);
+    let baseMs = 240 + Math.max(0, clean.length - 3) * 16;
+
+    // Ngắt nhịp tự nhiên khi gặp dấu phẩy, chấm phẩy, hai chấm, gạch ngang
+    if (/[,;:—–-]$/.test(clean)) {
+      baseMs += 195;
+    } else if (/[.!?…]$/.test(clean)) {
+      baseMs += 290;
+    }
+
+    return Math.max(75, Math.round(baseMs * rateScale));
+  }
+
   setEnabled(enabled) {
     this.enabled = Boolean(enabled);
     if (!this.enabled) {
@@ -277,6 +321,7 @@ export class DharmaVoice {
     if (this.currentUtterance) {
       this.currentUtterance.onend = null;
       this.currentUtterance.onerror = null;
+      this.currentUtterance.onboundary = null;
       this.currentUtterance = null;
     }
     if (this.synth) {
@@ -288,29 +333,51 @@ export class DharmaVoice {
     }
   }
 
-  _startKaraokeTicker(words, durationMs, spokenText, onWordBoundary, sessionId) {
+  _startKaraokeTicker(words, targetTotalDurationMs, spokenText, onWordBoundary, sessionId) {
     if (this.karaokeInterval) {
+      clearTimeout(this.karaokeInterval);
       clearInterval(this.karaokeInterval);
       this.karaokeInterval = null;
     }
-    const remainingCount = Math.max(1, words.length - this._currentWordIdx);
-    const wordIntervalMs = Math.max(105, Math.floor(durationMs / remainingCount));
 
-    this.karaokeInterval = setInterval(() => {
-      if (this.isPaused || !this.isSpeaking || sessionId !== this._speakSessionId) return;
-      this._currentWordIdx++;
-      if (this._currentWordIdx < words.length) {
-        onWordBoundary({
-          wordIndex: this._currentWordIdx,
-          word: words[this._currentWordIdx],
-          charIndex: spokenText.indexOf(words[this._currentWordIdx]),
-          totalWords: words.length
-        });
-      } else if (this.karaokeInterval) {
-        clearInterval(this.karaokeInterval);
+    const startIdx = this._currentWordIdx;
+    const remainingSlice = words.slice(startIdx);
+    const rawWeights = remainingSlice.map((w) => this._computeWordDurationMs(w, 0.82));
+    const totalRawWeight = Math.max(1, rawWeights.reduce((acc, v) => acc + v, 0));
+    const baseSpeedAtStart = this.speedMultiplier || 1.0;
+
+    const scheduleNextWordStep = () => {
+      if (this.karaokeInterval) {
+        clearTimeout(this.karaokeInterval);
         this.karaokeInterval = null;
       }
-    }, wordIntervalMs);
+      if (this.isPaused || !this.isSpeaking || sessionId !== this._speakSessionId) return;
+      if (this._currentWordIdx >= words.length - 1) return;
+
+      const relIdx = Math.max(0, this._currentWordIdx - startIdx);
+      const wordWeight = rawWeights[relIdx] || 240;
+      const liveSpeedRatio = baseSpeedAtStart / Math.max(0.5, this.speedMultiplier || 1.0);
+      const stepDelayMs = Math.max(
+        65,
+        Math.round((wordWeight / totalRawWeight) * targetTotalDurationMs * liveSpeedRatio)
+      );
+
+      this.karaokeInterval = setTimeout(() => {
+        if (this.isPaused || !this.isSpeaking || sessionId !== this._speakSessionId) return;
+        if (this._currentWordIdx + 1 < words.length) {
+          this._currentWordIdx++;
+          onWordBoundary({
+            wordIndex: this._currentWordIdx,
+            word: words[this._currentWordIdx],
+            charIndex: spokenText.indexOf(words[this._currentWordIdx]),
+            totalWords: words.length
+          });
+          scheduleNextWordStep();
+        }
+      }, stepDelayMs);
+    };
+
+    scheduleNextWordStep();
   }
 
   /**
@@ -346,10 +413,34 @@ export class DharmaVoice {
     this.isPaused = false;
 
     const profile = this.getCurrentProfile();
+    const effectiveRate = Math.max(
+      0.45,
+      Math.min(1.85, Number(((profile.rate || 0.82) * this.speedMultiplier).toFixed(2)))
+    );
     const remainingWords = words.slice(safeStartIdx);
     const remainingText = remainingWords.join(' ');
-    const speedFactor = 0.82 / (profile.rate || 0.82);
-    const estimatedDurationMs = Math.max(1500, Math.round(remainingText.length * 68 * speedFactor));
+
+    // Build character offset lookup table in remainingText for native SpeechSynthesis onboundary mapping
+    const remainingWordOffsets = [];
+    let cursor = 0;
+    for (let i = 0; i < remainingWords.length; i++) {
+      const w = remainingWords[i];
+      const startChar = cursor;
+      const endChar = startChar + w.length;
+      remainingWordOffsets.push({
+        globalWordIdx: safeStartIdx + i,
+        word: w,
+        startChar,
+        endChar
+      });
+      cursor = endChar + 1; // +1 for space
+    }
+
+    const totalWeightedMs = remainingWords.reduce(
+      (sum, w) => sum + this._computeWordDurationMs(w, effectiveRate),
+      0
+    );
+    const estimatedDurationMs = Math.max(1200, totalWeightedMs + 280);
 
     let completed = false;
     const finish = () => {
@@ -363,6 +454,7 @@ export class DharmaVoice {
       if (this.currentUtterance) {
         this.currentUtterance.onend = null;
         this.currentUtterance.onerror = null;
+        this.currentUtterance.onboundary = null;
         this.currentUtterance = null;
       }
       onEndCallback();
@@ -377,15 +469,15 @@ export class DharmaVoice {
       });
     }
 
-    this._startKaraokeTicker(words, estimatedDurationMs, spokenText, onWordBoundary, sessionId);
-
     if (!this.enabled) {
+      this._startKaraokeTicker(words, estimatedDurationMs, spokenText, onWordBoundary, sessionId);
       this.fallbackTimer = setTimeout(finish, estimatedDurationMs);
       return;
     }
 
     const startBrowserUtterance = () => {
       if (sessionId !== this._speakSessionId || this.isPaused || !this.isSpeaking) return;
+      this._startKaraokeTicker(words, estimatedDurationMs, spokenText, onWordBoundary, sessionId);
       const hasUtterance = typeof window !== 'undefined' && 'SpeechSynthesisUtterance' in window;
       if (!this.synth || !hasUtterance) {
         this.fallbackTimer = setTimeout(finish, estimatedDurationMs);
@@ -397,7 +489,7 @@ export class DharmaVoice {
         }
         const utterance = new window.SpeechSynthesisUtterance(remainingText);
         utterance.lang = 'vi-VN';
-        utterance.rate = profile.rate;
+        utterance.rate = effectiveRate;
         utterance.pitch = profile.pitch;
 
         if (this.availableViVoices.length > 1) {
@@ -407,6 +499,25 @@ export class DharmaVoice {
         } else if (this.preferredVoice) {
           utterance.voice = this.preferredVoice;
         }
+
+        // Synchronize Karaoke word position with native TTS boundary events when supported by OS voice
+        utterance.onboundary = (evt) => {
+          if (sessionId !== this._speakSessionId || this.isPaused || !this.isSpeaking) return;
+          if (typeof evt?.charIndex !== 'number') return;
+          const cIdx = evt.charIndex;
+          const matched = remainingWordOffsets.find(
+            (item) => cIdx >= item.startChar && cIdx <= item.endChar + 1
+          );
+          if (matched && matched.globalWordIdx !== this._currentWordIdx) {
+            this._currentWordIdx = matched.globalWordIdx;
+            onWordBoundary({
+              wordIndex: this._currentWordIdx,
+              word: words[this._currentWordIdx],
+              charIndex: cIdx,
+              totalWords: words.length
+            });
+          }
+        };
 
         utterance.onend = () => {
           if (sessionId === this._speakSessionId && !this.isPaused && this.isSpeaking) {
@@ -426,7 +537,7 @@ export class DharmaVoice {
 
         this.currentUtterance = utterance;
 
-        const watchdogMs = estimatedDurationMs + 1100;
+        const watchdogMs = estimatedDurationMs + 1400;
         if (this.watchdogTimer) clearTimeout(this.watchdogTimer);
         this.watchdogTimer = setTimeout(() => {
           finish();
@@ -494,12 +605,17 @@ export class DharmaVoice {
         throw new Error('AudioContext or AudioBuffer unavailable');
       }
 
-      const pbRate = profile.playbackRate || 0.90;
+      const pbRate = Math.max(
+        0.45,
+        Math.min(1.85, (profile.playbackRate || 0.90) * (this.speedMultiplier || 1.0))
+      );
       const detune = profile.detuneCents || 0;
       const effectiveRate = pbRate * Math.pow(2, detune / 1200);
+      // Subtract ~180ms of trailing silence in MP3 so karaoke finishes last word right as voice finishes
+      const spokenAudioSec = Math.max(0.6, audioBuffer.duration - 0.18);
       const actualDurationMs = Math.max(
-        900,
-        Math.round((audioBuffer.duration / Math.max(0.5, effectiveRate)) * 1000)
+        700,
+        Math.round((spokenAudioSec / Math.max(0.45, effectiveRate)) * 1000)
       );
       this._startKaraokeTicker(words, actualDurationMs, spokenText, onWordBoundary, sessionId);
 
@@ -602,6 +718,7 @@ export class DharmaVoice {
       this.fallbackTimer = null;
     }
     if (this.karaokeInterval) {
+      clearTimeout(this.karaokeInterval);
       clearInterval(this.karaokeInterval);
       this.karaokeInterval = null;
     }

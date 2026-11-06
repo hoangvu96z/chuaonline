@@ -489,6 +489,8 @@ class ChuaOnlineApp {
         this._handlePrayDiLac();
       } else if (hit.type === 'DIA_TANG_STATUE') {
         this._handlePrayDiaTang();
+      } else if (hit.type === 'DUOC_SU_STATUE') {
+        this._handlePrayDuocSu();
       } else if (hit.type === 'BAO_THAP') {
         this._handlePrayBaoThap();
       } else if (hit.type === 'BODHI_GARDEN') {
@@ -579,6 +581,11 @@ class ChuaOnlineApp {
           this.templeScene.focusZone('DAI_DIA_TANG');
           this._syncProstrateButtonUI('DIA_TANG');
           this.showToast('🔱 Đã đến Đài Địa Tạng Vương Bồ Tát — Nhấn phím [L] hoặc click vào Tượng/Bồ Đoàn để đảnh lễ cầu siêu độ & bình an.');
+        } else if (zone === 'DAI_DUOC_SU') {
+          this._handleMoveToGroundPoint(-9.5, 25.4, false);
+          this.templeScene.focusZone('DAI_DUOC_SU');
+          this._syncProstrateButtonUI('DUOC_SU');
+          this.showToast('🔵 Đã đến Đài Phật Dược Sư Lưu Ly Quang — Nhấn phím [L] hoặc click vào Tượng/Bồ Đoàn để đảnh lễ cầu tiêu tai diên thọ.');
         } else if (zone === 'BAO_THAP') {
           this._handleMoveToGroundPoint(20.5, 10.4, false);
           this.templeScene.focusZone('BAO_THAP');
@@ -797,6 +804,8 @@ class ChuaOnlineApp {
         this._handlePrayDiLac();
       } else if (nearTarget === 'DIA_TANG') {
         this._handlePrayDiaTang();
+      } else if (nearTarget === 'DUOC_SU') {
+        this._handlePrayDuocSu();
       } else if (nearTarget === 'BAO_THAP') {
         this._handlePrayBaoThap();
       } else {
@@ -886,6 +895,38 @@ class ChuaOnlineApp {
       const code = e.target.value;
       const profile = this.sutraChanter.changeVoiceProfile(code);
       this.showToast(`🎙️ Đã chuyển giọng đọc kinh: ${profile.name}`);
+    });
+
+    // Reading & Karaoke Text Speed Fine-Tuning Control (0.5x -> 1.8x)
+    const speedSlider = document.getElementById('range-sutra-speed');
+    const speedOutput = document.getElementById('output-sutra-speed');
+    const btnSpeedSlower = document.getElementById('btn-speed-slower');
+    const btnSpeedFaster = document.getElementById('btn-speed-faster');
+
+    const applyReadingSpeed = (nextVal, restartUtterance = false) => {
+      const clamped = Math.max(0.5, Math.min(1.8, Number(Number(nextVal).toFixed(2)) || 1.0));
+      const applied = this.sutraChanter.setReadingSpeed(clamped, restartUtterance);
+      if (speedSlider) speedSlider.value = String(applied);
+      if (speedOutput) speedOutput.textContent = `${applied.toFixed(2).replace(/\.00$/, '.0').replace(/(\.\d)0$/, '$1')}x`;
+      return applied;
+    };
+
+    speedSlider?.addEventListener('input', (e) => {
+      applyReadingSpeed(e.target.value, false);
+    });
+    speedSlider?.addEventListener('change', (e) => {
+      const applied = applyReadingSpeed(e.target.value, true);
+      this.showToast(`⚡ Đã chỉnh tốc độ chữ & nhịp đọc kinh: ${applied}x`);
+    });
+    btnSpeedSlower?.addEventListener('click', () => {
+      const cur = this.sutraChanter.getReadingSpeed();
+      const applied = applyReadingSpeed(cur - 0.05, true);
+      this.showToast(`⚡ Đã giảm tốc độ chữ & nhịp đọc kinh: ${applied}x`);
+    });
+    btnSpeedFaster?.addEventListener('click', () => {
+      const cur = this.sutraChanter.getReadingSpeed();
+      const applied = applyReadingSpeed(cur + 0.05, true);
+      this.showToast(`⚡ Đã tăng tốc độ chữ & nhịp đọc kinh: ${applied}x`);
     });
 
     // Pause / Resume Sutra Chanting Button
@@ -1177,6 +1218,7 @@ class ChuaOnlineApp {
     if (Math.hypot(x - 9.5, z - 14.5) <= 6.5) return 'QUAN_AM';
     if (Math.hypot(x - -23.0, z - 14.8) <= 7.5) return 'DI_LAC';
     if (Math.hypot(x - -23.0, z - 4.8) <= 6.8) return 'DIA_TANG';
+    if (Math.hypot(x - -10.5, z - 21.8) <= 6.8) return 'DUOC_SU';
     if (Math.hypot(x - 20.5, z - 6.0) <= 7.0) return 'BAO_THAP';
     return null;
   }
@@ -1197,6 +1239,9 @@ class ChuaOnlineApp {
     } else if (targetType === 'DIA_TANG') {
       if (lbl) lbl.textContent = 'Lạy Địa Tạng';
       if (sub) sub.textContent = 'Đài Địa Tạng +5';
+    } else if (targetType === 'DUOC_SU') {
+      if (lbl) lbl.textContent = 'Lạy Dược Sư';
+      if (sub) sub.textContent = 'Đài Dược Sư +5';
     } else if (targetType === 'BAO_THAP') {
       if (lbl) lbl.textContent = 'Lễ Bảo Tháp';
       if (sub) sub.textContent = 'Tháp Xá Lợi +5';
@@ -1538,6 +1583,37 @@ class ChuaOnlineApp {
     this.socketClient.sendMove(matX, matZ, rotFacing, 'PROSTRATE', null);
     this.socketClient.prostrateBuddha(1, 'DIA_TANG', rotFacing);
     this._addLocalOptimisticMerit(5, 'Đảnh Lễ Địa Tạng Bồ Tát');
+  }
+
+  _handlePrayDuocSu() {
+    // Di chuyển đạo hữu đến Bồ Đoàn trước Đài Phật Dược Sư Lưu Ly Quang (-9.5, 25.4)
+    const matX = -9.5;
+    const matZ = 25.4;
+    const rotFacing = Math.atan2(-10.5 - matX, 21.8 - matZ);
+
+    this._syncProstrateButtonUI('DUOC_SU');
+    this._syncPercussionLocationUI(false);
+
+    const local = this.avatarManager.getLocalAvatar();
+    if (local) local.customSitRotY = rotFacing;
+    this.avatarManager.setLocalTargetPosition(matX, matZ, 'PROSTRATE', null);
+    this.avatarManager.triggerProstration(this.localSocketId, rotFacing);
+    this.templeScene.focusZone('DAI_DUOC_SU');
+
+    this.zenAudio.playMeditationBell(0.85);
+    setTimeout(() => this.zenAudio.playWoodenFish(0.6), 350);
+
+    const vowText =
+      'Chí tâm đảnh lễ: Nam Mô Đông Phương Tịnh Lưu Ly Thế Giới Dược Sư Lưu Ly Quang Vương Như Lai, nguyện cầu tiêu tai diên thọ, tật bệnh tiêu trừ, thân tâm thường an lạc.';
+    this.dharmaVoice.speakVerse(vowText);
+    this._setZenTickerText(
+      `🔵 Đạo hữu "${this.profile.dharmaName}" vừa thành tâm đảnh lễ Đức Phật Dược Sư Lưu Ly Quang cầu tiêu tai diên thọ (+5 Công Đức).`
+    );
+    this.showToast('🔵 Nam Mô Dược Sư Lưu Ly Quang Vương Phật — Đã thành tâm đảnh lễ cầu sức khỏe & bình an (+5 Công Đức)!');
+
+    this.socketClient.sendMove(matX, matZ, rotFacing, 'PROSTRATE', null);
+    this.socketClient.prostrateBuddha(1, 'DUOC_SU', rotFacing);
+    this._addLocalOptimisticMerit(5, 'Đảnh Lễ Phật Dược Sư');
   }
 
   _handlePrayBaoThap() {

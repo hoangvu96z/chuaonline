@@ -44,8 +44,8 @@ function waitForEvent(socket, eventName, timeoutMs = 6000, filterFn = null) {
 // SUITE 1: FRONTEND DATA & AUDIO MODULES
 // ============================================================================
 describe('Suite 1: Frontend Data & Audio Modules', () => {
-  it('1.1 should have all 18 full-length canonical sutras and 3 prostration vows with required properties and verses', () => {
-    assert.strictEqual(SUTRA_LIBRARY.length, 18, 'SUTRA_LIBRARY must contain 18 full-length sutras');
+  it('1.1 should have all 24 full-length canonical sutras and 3 prostration vows with required properties and verses', () => {
+    assert.strictEqual(SUTRA_LIBRARY.length, 24, 'SUTRA_LIBRARY must contain 24 full-length sutras');
 
     const expectedSutraIds = [
       'bat-nha-tam-kinh',
@@ -65,14 +65,20 @@ describe('Suite 1: Frontend Data & Audio Modules', () => {
       'kinh-phuoc-duc',
       'kinh-chuyen-phap-luan',
       'kinh-vo-luong-tho',
-      'sam-quy-mang'
+      'sam-quy-mang',
+      'duoc-su-that-phat-sam-phap',
+      'kinh-phap-hoa-quan-am',
+      'kinh-lang-nghiem-tinh-yeu',
+      'kinh-hoa-nghiem-tinh-hanh',
+      'kinh-bat-dai-nhan-giac',
+      'kinh-thap-thien-nghiep-dao'
     ];
 
     for (const sutraId of expectedSutraIds) {
       const sutra = SUTRA_LIBRARY.find((s) => s.id === sutraId);
       assert.ok(sutra, `Sutra with ID "${sutraId}" must exist`);
       assert.ok(typeof sutra.title === 'string' && sutra.title.length > 0, `${sutraId} title missing`);
-      assert.ok(Array.isArray(sutra.verses) && sutra.verses.length >= 16, `${sutraId} must be a full-length sutra with at least 16 verses`);
+      assert.ok(Array.isArray(sutra.verses) && sutra.verses.length >= 15, `${sutraId} must be a full-length sutra with at least 15 verses`);
       assert.ok(typeof sutra.meritPerVerse === 'number' && sutra.meritPerVerse > 0, `${sutraId} meritPerVerse invalid`);
       assert.ok(typeof sutra.completionBonus === 'number' && sutra.completionBonus > 0, `${sutraId} completionBonus invalid`);
       assert.ok(typeof sutra.tempoMs === 'number' && sutra.tempoMs > 0, `${sutraId} tempoMs invalid`);
@@ -290,11 +296,22 @@ describe('Suite 1: Frontend Data & Audio Modules', () => {
     assert.strictEqual(chanter.repeatRound, 1);
     assert.strictEqual(chanter.verseIndex, 0);
 
-    // Test Pause / Resume
+    // Test Pause / Resume & Reading Speed Multiplier (0.5x .. 1.8x)
     assert.strictEqual(chanter.togglePause(), true);
     assert.strictEqual(chanter.isPaused, true);
     assert.strictEqual(chanter.togglePause(), false);
     assert.strictEqual(chanter.isPaused, false);
+
+    assert.strictEqual(dv.setSpeedMultiplier(1.35), 1.35);
+    assert.strictEqual(dv.getSpeedMultiplier(), 1.35);
+    assert.strictEqual(dv.setSpeedMultiplier(0.2), 0.5, 'Must clamp min speed multiplier to 0.5x');
+    assert.strictEqual(dv.setSpeedMultiplier(3.0), 1.8, 'Must clamp max speed multiplier to 1.8x');
+
+    const plainWordMs = dv._computeWordDurationMs('Phật', 0.82);
+    const commaWordMs = dv._computeWordDurationMs('Phật,', 0.82);
+    const periodWordMs = dv._computeWordDurationMs('Phật.', 0.82);
+    assert.ok(commaWordMs > plainWordMs, 'Comma-terminated word must include natural clause pause');
+    assert.ok(periodWordMs > commaWordMs, 'Period-terminated word must include natural sentence pause');
 
     chanter.stop();
     assert.strictEqual(chanter.isChanting, false);

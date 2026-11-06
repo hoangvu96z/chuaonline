@@ -527,7 +527,63 @@ html, body {
 .scroll-actions {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.scroll-speed-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  background: rgba(124, 45, 18, 0.09);
+  border: 1px solid rgba(139, 69, 19, 0.45);
+  border-radius: 999px;
+  padding: 0.16rem 0.42rem;
+}
+
+.speed-slider-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #4a1c0b;
+  white-space: nowrap;
+}
+
+.sutra-speed-slider {
+  width: 74px;
+  height: 6px;
+  accent-color: #9a3412;
+  cursor: pointer;
+}
+
+.speed-output-badge {
+  font-size: 0.74rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #7c2d12;
+  min-width: 2.35rem;
+  text-align: center;
+}
+
+.speed-step-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid rgba(139, 69, 19, 0.55);
+  background: rgba(255, 255, 255, 0.55);
+  color: #4a1c0b;
+  font-size: 0.85rem;
+  font-weight: 800;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.speed-step-btn:hover {
+  background: #7c2d12;
+  color: #fff;
 }
 
 .zen-switch-label {

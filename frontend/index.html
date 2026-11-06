@@ -66,6 +66,7 @@
           <button type="button" class="zone-btn" data-zone="DAI_QUAN_AM">🙏 Quán Âm</button>
           <button type="button" class="zone-btn" data-zone="DAI_DI_LAC">😄 Di Lặc</button>
           <button type="button" class="zone-btn" data-zone="DAI_DIA_TANG">🔱 Địa Tạng</button>
+          <button type="button" class="zone-btn" data-zone="DAI_DUOC_SU">🔵 Dược Sư</button>
           <button type="button" class="zone-btn" data-zone="BAO_THAP">☸️ Bảo Tháp</button>
           <button type="button" class="zone-btn" data-zone="VUON_BO_DE">🌱 Vườn Bồ Đề</button>
           <button type="button" class="zone-btn" data-zone="SAN_CHUA">🔔 Sân (<span id="hud-leaf-count">0</span>)</button>
@@ -129,6 +130,22 @@
             <option value="CHU_TIEU_TRONG_TREO">🎙️ Chú Tiểu (Trong Trẻo)</option>
             <option value="DAI_CHUNG_TRANG_NGHIEM">🎙️ Đại Chúng (Trang Nghiêm)</option>
           </select>
+          <div class="scroll-speed-control" role="group" aria-label="Tinh chỉnh tốc độ chữ và giọng đọc kinh" title="Tinh chỉnh tốc độ chữ chạy và nhịp đọc kinh (0.5x - 1.8x)">
+            <button type="button" class="speed-step-btn" id="btn-speed-slower" aria-label="Giảm tốc độ chữ" title="Chậm lại (-0.05x)">−</button>
+            <label for="range-sutra-speed" class="speed-slider-label">⚡ Tốc độ</label>
+            <input
+              type="range"
+              id="range-sutra-speed"
+              class="sutra-speed-slider"
+              min="0.5"
+              max="1.8"
+              step="0.05"
+              value="1.0"
+              aria-label="Thanh trượt tốc độ chữ đọc kinh"
+            />
+            <output id="output-sutra-speed" for="range-sutra-speed" class="speed-output-badge">1.0x</output>
+            <button type="button" class="speed-step-btn" id="btn-speed-faster" aria-label="Tăng tốc độ chữ" title="Nhanh hơn (+0.05x)">+</button>
+          </div>
           <button type="button" class="scroll-btn" id="btn-pause-sutra" title="Tạm dừng / Tiếp tục tụng kinh">
             ⏸️ Tạm Dừng
           </button>
@@ -280,11 +297,11 @@
         <span class="dock-sub" id="dock-sub-mo">Trong Chánh Điện</span>
       </button>
 
-      <button type="button" class="dock-btn highlight" id="dock-chant-sutra" data-shortcut="K" command="show-modal" commandfor="dialog-sutra-library" title="Tụng Kinh 18 Bộ Kinh Đầy Đủ (Phím tắt: K)">
+      <button type="button" class="dock-btn highlight" id="dock-chant-sutra" data-shortcut="K" command="show-modal" commandfor="dialog-sutra-library" title="Tụng Kinh 24 Bộ Kinh Đầy Đủ (Phím tắt: K)">
         <kbd class="dock-kbd">K</kbd>
         <span class="dock-icon">📖</span>
         <span class="dock-label">Tụng Kinh</span>
-        <span class="dock-sub">18 Bộ Kinh</span>
+        <span class="dock-sub">24 Bộ Kinh</span>
       </button>
 
       <button type="button" class="dock-btn" id="dock-ring-bell" data-shortcut="C" title="Thỉnh Đại Hồng Chung ngoài Sân Chùa (Phím tắt: C)">

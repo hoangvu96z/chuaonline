@@ -191,6 +191,12 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
           dharmaName: currentUser.dharmaName,
           message: `🙏 Đạo hữu "${currentUser.dharmaName}" vừa thành tâm đảnh lễ Đức Địa Tạng Vương Bồ Tát (+${delta} Công Đức).`
         });
+      } else if (target === 'DUOC_SU') {
+        emitThrottledGlobalTicker('PROSTRATION_DUOC_SU', 1500, {
+          type: 'PROSTRATION_DUOC_SU',
+          dharmaName: currentUser.dharmaName,
+          message: `🔵 Đạo hữu "${currentUser.dharmaName}" vừa thành tâm đảnh lễ Đức Phật Dược Sư Lưu Ly Quang cầu tiêu tai diên thọ (+${delta} Công Đức).`
+        });
       } else if (target === 'BAO_THAP') {
         emitThrottledGlobalTicker('PROSTRATION_BAO_THAP', 1500, {
           type: 'PROSTRATION_BAO_THAP',
