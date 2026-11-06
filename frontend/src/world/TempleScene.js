@@ -266,17 +266,17 @@ export class TempleScene {
       this.orbitPitch = 0.42;
       this.orbitAngle = -0.14;
     } else if (zoneName === 'DAI_QUAN_AM') {
-      this.desiredCameraTarget.set(9.5, 2.8, 14.5);
-      this.orbitDistance = 10.5;
+      this.desiredCameraTarget.set(12.2, 2.6, 16.5);
+      this.orbitDistance = 10.2;
       this.orbitPitch = 0.24;
-      this.orbitAngle = -0.32;
+      this.orbitAngle = -0.25;
     } else if (zoneName === 'DAI_DI_LAC') {
       this.desiredCameraTarget.set(0.0, 1.95, 14.8);
       this.orbitDistance = 11.2;
       this.orbitPitch = 0.24;
       this.orbitAngle = 0.0;
     } else if (zoneName === 'DAI_DIA_TANG') {
-      this.desiredCameraTarget.set(-8.5, 1.85, 18.8);
+      this.desiredCameraTarget.set(-11.2, 1.85, 18.8);
       this.orbitDistance = 8.4;
       this.orbitPitch = 0.22;
       this.orbitAngle = 0.0;

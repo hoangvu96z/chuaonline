@@ -288,44 +288,46 @@ export class Environment {
       shrineGroup.add(plazaRim);
     }
 
-    // 2. Bốn Trụ Đèn Hoa Sen Hoàng Kim ở 4 góc đài tượng
-    const lampCoords = [
-      [-lampX, lampZFront],
-      [lampX, lampZFront],
-      [-lampX * 1.05, lampZBack],
-      [lampX * 1.05, lampZBack]
-    ];
-    for (const [lx, lz] of lampCoords) {
-      const lampGroup = new THREE.Group();
-      lampGroup.position.set(lx, 0.08, lz);
+    // 2. Bốn Trụ Đèn Hoa Sen Hoàng Kim ở 4 góc đài tượng (nếu bật includeLamps)
+    if (options.includeLamps !== false) {
+      const lampCoords = [
+        [-lampX, lampZFront],
+        [lampX, lampZFront],
+        [-lampX * 1.05, lampZBack],
+        [lampX * 1.05, lampZBack]
+      ];
+      for (const [lx, lz] of lampCoords) {
+        const lampGroup = new THREE.Group();
+        lampGroup.position.set(lx, 0.08, lz);
 
-      const lBase = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.34, 0.26, 8), plazaStoneMat);
-      lBase.position.y = 0.13;
-      lampGroup.add(lBase);
+        const lBase = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.34, 0.26, 8), plazaStoneMat);
+        lBase.position.y = 0.13;
+        lampGroup.add(lBase);
 
-      const lColumn = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.15, 1.55, 10), ivoryStoneMat);
-      lColumn.position.y = 1.02;
-      lColumn.castShadow = true;
-      lampGroup.add(lColumn);
+        const lColumn = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.15, 1.55, 10), ivoryStoneMat);
+        lColumn.position.y = 1.02;
+        lColumn.castShadow = true;
+        lampGroup.add(lColumn);
 
-      const lotusTray = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.15, 0.15, 10), goldTrimMat);
-      lotusTray.position.y = 1.85;
-      lampGroup.add(lotusTray);
+        const lotusTray = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.15, 0.15, 10), goldTrimMat);
+        lotusTray.position.y = 1.85;
+        lampGroup.add(lotusTray);
 
-      const lanternCore = new THREE.Mesh(new THREE.OctahedronGeometry(0.26, 2), warmLampGlowMat);
-      lanternCore.scale.set(1.0, 1.22, 1.0);
-      lanternCore.position.y = 2.14;
-      lampGroup.add(lanternCore);
+        const lanternCore = new THREE.Mesh(new THREE.OctahedronGeometry(0.26, 2), warmLampGlowMat);
+        lanternCore.scale.set(1.0, 1.22, 1.0);
+        lanternCore.position.y = 2.14;
+        lampGroup.add(lanternCore);
 
-      const canopy = new THREE.Mesh(new THREE.ConeGeometry(0.44, 0.28, 8), goldTrimMat);
-      canopy.position.y = 2.46;
-      lampGroup.add(canopy);
+        const canopy = new THREE.Mesh(new THREE.ConeGeometry(0.44, 0.28, 8), goldTrimMat);
+        canopy.position.y = 2.46;
+        lampGroup.add(canopy);
 
-      const finial = new THREE.Mesh(new THREE.SphereGeometry(0.10, 10, 10), lotusPinkGlowMat);
-      finial.position.y = 2.66;
-      lampGroup.add(finial);
+        const finial = new THREE.Mesh(new THREE.SphereGeometry(0.10, 10, 10), lotusPinkGlowMat);
+        finial.position.y = 2.66;
+        lampGroup.add(finial);
 
-      shrineGroup.add(lampGroup);
+        shrineGroup.add(lampGroup);
+      }
     }
 
     // 3. Đôi Cây Hoa Đào Tiên & Hoa Mai Vàng hai bên đài tượng
@@ -2135,11 +2137,11 @@ export class Environment {
   }
 
   _buildQuanAmStatue() {
-    // Đài Quán Thế Âm Bồ Tát Bạch Ngọc ngoài Sân Chùa (9.5, 0.05, 14.5)
+    // Đài Quán Thế Âm Bồ Tát Bạch Ngọc ngoài Sân Chùa (Dời qua phải gần Vườn Cây Bồ Đề: X = 12.2, Z = 16.5)
     const quanAmGroup = new THREE.Group();
-    quanAmGroup.position.set(9.5, 0.05, 14.5);
+    quanAmGroup.position.set(12.2, 0.05, 16.5);
     // Xoay nhẹ hướng về trung tâm Sân Chùa để đạo hữu dễ dàng chiêm bái
-    quanAmGroup.rotation.y = -0.42;
+    quanAmGroup.rotation.y = -0.25;
 
     const whiteMarbleMat = new THREE.MeshStandardMaterial({
       color: 0xfcfbf7,
@@ -2275,13 +2277,15 @@ export class Environment {
     quanAmGroup.add(smallBurner);
     this.interactiveMeshes.push(smallBurner);
 
-    // Trang trí trụ đèn hoa sen & chậu hoa xung quanh Đài Quán Thế Âm Bồ Tát
+    // Trang trí đơn giản bằng 2 chậu hoa sen nhỏ hai bên thềm Đài Quán Thế Âm Bồ Tát
     this._addShrineSurroundingDecor(quanAmGroup, {
       includePlaza: false,
-      lampX: 2.85,
-      lampZFront: 2.35,
-      lampZBack: -2.15,
-      includeTrees: false
+      includeLamps: false,
+      includeTrees: false,
+      potCoords: [
+        [-1.85, 1.55],
+        [1.85, 1.55]
+      ]
     });
 
     // Biển tên nhỏ dưới chân Đài Quán Thế Âm Bồ Tát
@@ -2762,14 +2766,15 @@ export class Environment {
     diLacGroup.add(dlHitbox);
     this.interactiveMeshes.push(dlHitbox);
 
-    // Trang trí thảm đá bát giác, 4 trụ đèn hoa sen, cây hoa đào/mai & chậu hoa cúc quanh Đài Phật Di Lặc (Vị trí 1)
+    // Trang trí đơn giản quanh Đài Phật Di Lặc (không để cây và đèn để giữ không gian thoáng đãng)
     this._addShrineSurroundingDecor(diLacGroup, {
-      radius: 4.1,
-      lampX: 3.1,
-      lampZFront: 2.4,
-      lampZBack: -2.1,
-      treeX: 3.85,
-      treeZ: -0.6
+      radius: 3.55,
+      includeLamps: false,
+      includeTrees: false,
+      potCoords: [
+        [-2.15, 1.85],
+        [2.15, 1.85]
+      ]
     });
 
     // Biển tên nhỏ dưới chân Tượng Phật Di Lặc (Vị trí số 1)
@@ -3405,9 +3410,9 @@ export class Environment {
   }
 
   _buildDiaTangStatue() {
-    // Đài Đức Địa Tạng Vương Bồ Tát ngoài Sân Chùa (Chuyển sang Vị trí số 2 đánh dấu trong hình: X = -8.5, Z = 18.8)
+    // Đài Đức Địa Tạng Vương Bồ Tát ngoài Sân Chùa (Dời qua trái xíu tại X = -11.2, Z = 18.8 & trang trí đơn giản)
     const outdoorDiaTangGroup = new THREE.Group();
-    outdoorDiaTangGroup.position.set(-8.5, 0.05, 18.8);
+    outdoorDiaTangGroup.position.set(-11.2, 0.05, 18.8);
 
     const stonePlinthMat = new THREE.MeshStandardMaterial({ color: 0x707571, roughness: 0.82 });
     const stoneStep = new THREE.Mesh(new THREE.CylinderGeometry(2.25, 2.45, 0.24, 16), stonePlinthMat);
@@ -3419,14 +3424,15 @@ export class Environment {
     const diaTangSculpture = this._createPhucDanDiaTangSculpture();
     outdoorDiaTangGroup.add(diaTangSculpture);
 
-    // Trang trí thảm đá bát giác, 4 trụ đèn hoa sen, cây hoa cảnh & 4 chậu hoa quanh Đài Địa Tạng Vương Bồ Tát (Vị trí 2)
+    // Trang trí đơn giản quanh Đài Địa Tạng Vương Bồ Tát (thảm đá bát giác + 2 chậu hoa nhỏ, không để cây & trụ đèn)
     this._addShrineSurroundingDecor(outdoorDiaTangGroup, {
-      radius: 2.85,
-      lampX: 2.25,
-      lampZFront: 1.85,
-      lampZBack: -1.55,
-      treeX: 2.85,
-      treeZ: -0.55
+      radius: 2.65,
+      includeLamps: false,
+      includeTrees: false,
+      potCoords: [
+        [-1.75, 1.35],
+        [1.75, 1.35]
+      ]
     });
 
     // Biển tên nhỏ dưới chân Tượng Địa Tạng Vương Bồ Tát (Vị trí số 2)
@@ -4165,10 +4171,9 @@ export class Environment {
 
     const coords = [
       [-7.5, -1.5], [7.5, -1.5],
-      [-7.5, 12], [7.5, 12],
-      [-8.5, 25], [8.5, 25],
+      [-4.2, 25.2], [4.2, 25.2],
       [-26.8, 6.0], [25.5, 6.0],
-      [-26.8, 15.0], [24.5, 14.5]
+      [-26.8, 15.0], [25.5, 15.0]
     ];
 
     for (const [lx, lz] of coords) {

@@ -1352,9 +1352,9 @@ class ChuaOnlineApp {
     if (!local) return null;
     const x = local.root.position.x;
     const z = local.root.position.z;
-    if (Math.hypot(x - 9.5, z - 14.5) <= 6.5) return 'QUAN_AM';
+    if (Math.hypot(x - 12.2, z - 16.5) <= 6.5) return 'QUAN_AM';
     if (Math.hypot(x - 0.0, z - 14.8) <= 7.0) return 'DI_LAC';
-    if (Math.hypot(x - -8.5, z - 18.8) <= 6.5) return 'DIA_TANG';
+    if (Math.hypot(x - -11.2, z - 18.8) <= 6.5) return 'DIA_TANG';
     if (Math.hypot(x - 20.5, z - 6.0) <= 6.8) return 'DUOC_SU';
     if (Math.hypot(x - -19.5, z - 21.5) <= 7.2) return 'BAO_THAP';
     return null;
@@ -1623,14 +1623,14 @@ class ChuaOnlineApp {
     const local = this.avatarManager.getLocalAvatar();
     this.socketClient.sendMove(x, z, local?.targetRotY || 0, 'WALK', null);
     this._syncPercussionLocationUI(z <= 0.5);
-    this._syncProstrateButtonUI(Math.hypot(x - 9.5, z - 14.5) <= 6.5);
+    this._syncProstrateButtonUI(this._getNearestSacredTarget());
   }
 
   _handlePrayQuanAm() {
-    // Di chuyển đạo hữu đến Bồ Đoàn trước Đài Quán Thế Âm Bồ Tát (7.8, 18.2) và thực hiện Lạy Ngũ Thể Đầu Địa!
-    const matX = 7.8;
-    const matZ = 18.2;
-    const rotFacingQuanAm = Math.atan2(9.5 - matX, 14.5 - matZ); // Hướng thẳng về tôn tượng Quán Thế Âm (9.5, 14.5)
+    // Di chuyển đạo hữu đến Bồ Đoàn trước Đài Quán Thế Âm Bồ Tát (11.1, 20.6) và thực hiện Lạy Ngũ Thể Đầu Địa!
+    const matX = 11.1;
+    const matZ = 20.6;
+    const rotFacingQuanAm = Math.atan2(12.2 - matX, 16.5 - matZ); // Hướng thẳng về tôn tượng Quán Thế Âm (12.2, 16.5)
 
     this.templeScene.focusZone('DAI_QUAN_AM');
     this._syncProstrateButtonUI(true);
@@ -1692,8 +1692,8 @@ class ChuaOnlineApp {
   }
 
   _handlePrayDiaTang() {
-    // Di chuyển đạo hữu đến Bồ Đoàn trước Đài Địa Tạng Vương Bồ Tát tại Vị trí số 2 (-8.5, 22.65)
-    const matX = -8.5;
+    // Di chuyển đạo hữu đến Bồ Đoàn trước Đài Địa Tạng Vương Bồ Tát tại (-11.2, 22.65)
+    const matX = -11.2;
     const matZ = 22.65;
     const rotFacing = Math.PI;
 
