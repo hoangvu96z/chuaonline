@@ -1353,8 +1353,8 @@ class ChuaOnlineApp {
     const x = local.root.position.x;
     const z = local.root.position.z;
     if (Math.hypot(x - 9.5, z - 14.5) <= 6.5) return 'QUAN_AM';
-    if (Math.hypot(x - -23.0, z - 14.8) <= 7.5) return 'DI_LAC';
-    if (Math.hypot(x - -23.0, z - 4.8) <= 6.8) return 'DIA_TANG';
+    if (Math.hypot(x - 0.0, z - 14.8) <= 7.0) return 'DI_LAC';
+    if (Math.hypot(x - -8.5, z - 18.8) <= 6.5) return 'DIA_TANG';
     if (Math.hypot(x - 20.5, z - 6.0) <= 6.8) return 'DUOC_SU';
     if (Math.hypot(x - -19.5, z - 21.5) <= 7.2) return 'BAO_THAP';
     return null;
@@ -1661,10 +1661,10 @@ class ChuaOnlineApp {
   }
 
   _handlePrayDiLac() {
-    // Di chuyển đạo hữu đến Bồ Đoàn trước Đài Phật Di Lặc (-23.0, 19.0) & Lạy Ngũ Thể Đầu Địa
-    const matX = -23.0;
-    const matZ = 19.0;
-    const rotFacing = Math.PI; // Hướng thẳng về tôn tượng Phật Di Lặc (-23.0, 14.8)
+    // Di chuyển đạo hữu đến Bồ Đoàn trước Đài Phật Di Lặc tại Vị trí số 1 (0.0, 19.35) & Lạy Ngũ Thể Đầu Địa
+    const matX = 0.0;
+    const matZ = 19.35;
+    const rotFacing = Math.PI; // Hướng thẳng về tôn tượng Phật Di Lặc (0.0, 14.8)
 
     this._syncProstrateButtonUI('DI_LAC');
     this._syncPercussionLocationUI(false);
@@ -1692,9 +1692,9 @@ class ChuaOnlineApp {
   }
 
   _handlePrayDiaTang() {
-    // Di chuyển đạo hữu đến Bồ Đoàn trước Đài Địa Tạng Vương Bồ Tát (-23.0, 8.4)
-    const matX = -23.0;
-    const matZ = 8.4;
+    // Di chuyển đạo hữu đến Bồ Đoàn trước Đài Địa Tạng Vương Bồ Tát tại Vị trí số 2 (-8.5, 22.65)
+    const matX = -8.5;
+    const matZ = 22.65;
     const rotFacing = Math.PI;
 
     this._syncProstrateButtonUI('DIA_TANG');
