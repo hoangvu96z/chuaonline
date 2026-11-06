@@ -285,6 +285,10 @@ export class AvatarManager {
     root.position.set(data.x ?? 0, initialY, data.z ?? 8);
 
     const bodyGroup = new THREE.Group();
+    // Quan trọng: Đặt thứ tự góc xoay Euler là 'YXZ' (Yaw quanh trục Y trước, sau đó Pitch quanh trục X nội tại của nhân vật)
+    // Nhờ đó khi bodyGroup.rotation.x > 0 (Lạy Phật / Cúi đầu), nhân vật LUÔN cúi dập đầu về phía trước mặt (+Z nội tại)
+    // bất kể nhân vật đang quay mặt hướng nào (kể cả khi quay lưng về camera hướng vào Phật Đài ở góc Math.PI)!
+    bodyGroup.rotation.order = 'YXZ';
     root.add(bodyGroup);
 
     const robeColor = this._normalizeChibiRobeColor(data.robeColor);
@@ -826,6 +830,8 @@ export class AvatarManager {
     if (!entry) return;
     entry.customSitRotY = customRotY !== null && customRotY !== undefined ? customRotY : Math.PI;
     entry.targetRotY = entry.customSitRotY;
+    // Xoay ngay hướng mặt về phía Tượng Phật trước khi cúi lạy để không bị lạy ngược chiều đang đi
+    entry.bodyGroup.rotation.y = entry.targetRotY;
     this._applyAvatarState(entry, 'PROSTRATE');
     entry.prostrateTimer = 2.4;
   }
@@ -894,7 +900,12 @@ export class AvatarManager {
 
     const dx = clampedX - local.root.position.x;
     const dz = clampedZ - local.root.position.z;
-    if (Math.hypot(dx, dz) > 0.15 && state !== 'SIT' && state !== 'CHANT') {
+    if (
+      Math.hypot(dx, dz) > 0.15 &&
+      state !== 'SIT' &&
+      state !== 'CHANT' &&
+      state !== 'PROSTRATE'
+    ) {
       local.targetRotY = Math.atan2(dx, dz);
     }
 
@@ -957,15 +968,17 @@ export class AvatarManager {
         entry.lotusHalo.scale.set(pulse, pulse, 1);
       }
 
-      // 4. Full Five-Point Prostration (Lạy Phật Ngũ Thể Đầu Địa) or Gentle Bowing
+      // 4. Full Five-Point Prostration (Lạy Phật Ngũ Thể Đầu Địa — Cúi dập đầu ra phía trước về hướng Tượng Phật)
       if (entry.prostrateTimer > 0) {
         entry.prostrateTimer = Math.max(0, entry.prostrateTimer - dt);
         const progress = 1 - entry.prostrateTimer / 2.4;
         const prostrateCurve = Math.sin(progress * Math.PI);
-        entry.bodyGroup.rotation.x = prostrateCurve * 0.92;
-        entry.bodyGroup.position.y = -prostrateCurve * 0.14;
-        entry.handsGroup.position.y = 0.46 + Math.sin(progress * Math.PI * 2) * 0.16;
-        entry.handsGroup.position.z = 0.22 + prostrateCurve * 0.22;
+        // Với rotation.order = 'YXZ', rotation.x > 0 luôn gập thân & dập đầu về phía trước mặt nhân vật
+        entry.bodyGroup.rotation.x = prostrateCurve * 0.76;
+        entry.bodyGroup.position.y = -prostrateCurve * 0.08;
+        entry.headGroup.rotation.x = prostrateCurve * 0.42;
+        entry.handsGroup.position.y = 0.42 - prostrateCurve * 0.16;
+        entry.handsGroup.position.z = 0.18 + prostrateCurve * 0.32;
         if (entry.lotusHalo) {
           entry.lotusHalo.scale.setScalar(1 + prostrateCurve * 0.38);
         }
@@ -975,7 +988,8 @@ export class AvatarManager {
       } else if (entry.bowTimer > 0) {
         entry.bowTimer = Math.max(0, entry.bowTimer - dt);
         const bowPhase = Math.sin((entry.bowTimer / 0.45) * Math.PI);
-        entry.bodyGroup.rotation.x = bowPhase * 0.26;
+        entry.bodyGroup.rotation.x = bowPhase * 0.28;
+        entry.headGroup.rotation.x = bowPhase * 0.15;
         if (entry.woodenFish) {
           const s = 1 + bowPhase * 0.28;
           entry.woodenFish.scale.set(1.3 * s, 1.1 * s, 1.25 * s);
@@ -985,7 +999,9 @@ export class AvatarManager {
         }
       } else {
         entry.bodyGroup.rotation.x = 0;
-        entry.handsGroup.position.z = 0.22;
+        entry.headGroup.rotation.x = 0;
+        entry.handsGroup.position.y = 0.58;
+        entry.handsGroup.position.z = 0.14;
         if (entry.woodenFish) {
           entry.woodenFish.scale.set(1.3, 1.1, 1.25);
         }
