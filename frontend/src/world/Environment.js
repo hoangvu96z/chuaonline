@@ -4427,92 +4427,725 @@ export class Environment {
   }
 
   _buildSevenStoryPagoda() {
-    // Bảo Tháp Xá Lợi 7 Tầng (Chuyển sang Cánh Tây Nam Sân Chùa mở rộng: X = -19.5, Z = 21.5, đối xứng với Vườn Bồ Đề bên Đông Nam)
+    // Bảo Tháp Chùa Phật Tích (Tháp Viên Quang - Cánh Tây Nam Sân Chùa: X = -19.5, Z = 21.5)
+    // Dựng 3D chi tiết theo mẫu Bảo Tháp Chùa Phật Tích (https://sketchfab.com/3d-models/bao-thap-cua-chua-phat-tich-614394b4511d4f84811b411c0cb243bb):
+    // - Chất liệu gạch đỏ nung cổ Thời Lý (CanvasTexture mạch gạch chỉ truyền thống)
+    // - Tầng đế lớn Bát Giác mở 8 cửa vòm cuốn gạch đỏ, 8 trụ gạch vát nghiêng ở góc, cửa gỗ chấn song sơn đỏ thếp vàng & Bảo Tháp Xá Lợi vàng rực bên trong, mái hiên bát giác 8 sống góc
+    // - Tầng cổ diềm Bát Giác thứ 2 với 8 ô cửa vòm cuốn, 8 tượng búp sen góc mái và mái đao bát giác tầng 2
+    // - 10 tầng tháp thượng thu nhỏ dần lên cao (tổng cộng 12 tầng tháp uy nghiêm), mỗi tầng có 8 ô khám Phật vòm cuốn trên 8 mặt và diềm mái gạch giật cấp 3 lớp kèm 8 sống góc
+    // - Đỉnh tháp đài sen, bầu hồ lô Cam Lộ và chóp búp sen Tướng Luân
     const pagodaGroup = new THREE.Group();
     pagodaGroup.position.set(-19.5, 0.05, 21.5);
 
-    const stoneMat = new THREE.MeshStandardMaterial({ color: 0x7a7e7a, roughness: 0.82 });
-    const wallMat = new THREE.MeshStandardMaterial({ color: 0xeed9a4, roughness: 0.78 });
-    const roofMat = new THREE.MeshStandardMaterial({ color: 0x822714, roughness: 0.55 });
-    const goldMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.75, roughness: 0.22 });
+    // 1. Tạo Procedural CanvasTexture cho Gạch Đỏ Nung Cổ Thời Lý
+    const brickCanvas = document.createElement('canvas');
+    brickCanvas.width = 256;
+    brickCanvas.height = 256;
+    const bctx = brickCanvas.getContext('2d');
+    bctx.fillStyle = '#b4573b';
+    bctx.fillRect(0, 0, 256, 256);
 
-    // Bệ đá Bát Giác 2 bậc chân tháp
-    const pBase1 = new THREE.Mesh(new THREE.CylinderGeometry(3.8, 4.2, 0.45, 8), stoneMat);
-    pBase1.position.y = 0.22;
-    pBase1.receiveShadow = true;
-    pagodaGroup.add(pBase1);
-
-    const pBase2 = new THREE.Mesh(new THREE.CylinderGeometry(3.1, 3.4, 0.45, 8), stoneMat);
-    pBase2.position.y = 0.67;
-    pBase2.receiveShadow = true;
-    pagodaGroup.add(pBase2);
-
-    // 7 tầng tháp Bát Giác thon dần lên cao
-    let currentY = 0.9;
-    for (let floor = 0; floor < 7; floor++) {
-      const scale = 1 - floor * 0.095;
-      const bodyRadius = 2.15 * scale;
-      const bodyHeight = 1.25 * scale;
-
-      const towerWall = new THREE.Mesh(
-        new THREE.CylinderGeometry(bodyRadius * 0.94, bodyRadius, bodyHeight, 8),
-        wallMat
-      );
-      towerWall.position.y = currentY + bodyHeight / 2;
-      towerWall.castShadow = true;
-      towerWall.receiveShadow = true;
-      towerWall.userData = {
-        type: 'BAO_THAP',
-        label: '☸️ Chiêm Bái Bảo Tháp Xá Lợi 7 Tầng (+5 Công Đức)'
-      };
-      pagodaGroup.add(towerWall);
-      if (floor < 2) this.interactiveMeshes.push(towerWall);
-
-      const roofCone = new THREE.Mesh(
-        new THREE.ConeGeometry(bodyRadius * 1.55, 0.65 * scale, 8),
-        roofMat
-      );
-      roofCone.position.y = currentY + bodyHeight + 0.24 * scale;
-      roofCone.castShadow = true;
-      pagodaGroup.add(roofCone);
-
-      currentY += bodyHeight + 0.32 * scale;
+    const rows = 16;
+    const cols = 8;
+    const rowH = 256 / rows;
+    const colW = 256 / cols;
+    for (let r = 0; r < rows; r++) {
+      const offset = (r % 2) * (colW * 0.5);
+      for (let c = -1; c <= cols; c++) {
+        const bx = c * colW + offset;
+        const by = r * rowH;
+        const shade = ((r * 7 + c * 13) % 5) - 2;
+        const red = Math.min(215, Math.max(150, 184 + shade * 7));
+        const green = Math.min(115, Math.max(68, 88 + shade * 4));
+        const blue = Math.min(82, Math.max(45, 60 + shade * 3));
+        bctx.fillStyle = `rgb(${red}, ${green}, ${blue})`;
+        bctx.fillRect(bx + 1.5, by + 1.5, colW - 3, rowH - 3);
+      }
+      bctx.fillStyle = 'rgba(92, 34, 18, 0.55)';
+      bctx.fillRect(0, r * rowH, 256, 1.8);
     }
 
-    // Đỉnh Tướng Luân Vàng & Bảo Châu trên nóc Bảo Tháp
-    const spirePole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.16, 1.9, 12), goldMat);
-    spirePole.position.y = currentY + 0.95;
+    const brickTex = new THREE.CanvasTexture(brickCanvas);
+    brickTex.wrapS = THREE.RepeatWrapping;
+    brickTex.wrapT = THREE.RepeatWrapping;
+    brickTex.repeat.set(3, 3);
+
+    const brickWallMat = new THREE.MeshStandardMaterial({
+      color: 0xd47455,
+      map: brickTex,
+      roughness: 0.76,
+      metalness: 0.06
+    });
+    const brickTrimMat = new THREE.MeshStandardMaterial({
+      color: 0xa14429,
+      roughness: 0.68,
+      metalness: 0.08
+    });
+    const brickRoofMat = new THREE.MeshStandardMaterial({
+      color: 0xb85234,
+      map: brickTex,
+      roughness: 0.62,
+      metalness: 0.08
+    });
+    const brickRibMat = new THREE.MeshStandardMaterial({
+      color: 0x8c341b,
+      roughness: 0.58,
+      metalness: 0.1
+    });
+    const darkArchMat = new THREE.MeshStandardMaterial({
+      color: 0x26120c,
+      roughness: 0.9
+    });
+    const woodScreenMat = new THREE.MeshStandardMaterial({
+      color: 0x8f2418,
+      roughness: 0.52,
+      metalness: 0.15
+    });
+    const stoneMat = new THREE.MeshStandardMaterial({
+      color: 0x767b78,
+      roughness: 0.82
+    });
+    const stoneDarkMat = new THREE.MeshStandardMaterial({
+      color: 0x595e5c,
+      roughness: 0.86
+    });
+    const goldMat = new THREE.MeshStandardMaterial({
+      color: 0xffd54f,
+      metalness: 0.78,
+      roughness: 0.22,
+      emissive: 0x4a3200,
+      emissiveIntensity: 0.22
+    });
+    const leafDarkMat = new THREE.MeshStandardMaterial({
+      color: 0x255d27,
+      roughness: 0.72
+    });
+    const leafBrightMat = new THREE.MeshStandardMaterial({
+      color: 0x387d39,
+      roughness: 0.65
+    });
+
+    const pagodaInteractionData = {
+      type: 'BAO_THAP',
+      label: '☸️ Chiêm Bái Bảo Tháp Chùa Phật Tích (+5 Công Đức)'
+    };
+
+    const OCT_ROT = Math.PI / 8; // Xoay 22.5 độ để 8 mặt phẳng hướng thẳng Đông-Tây-Nam-Bắc
+
+    // Helper dựng gờ sống mái 8 góc cho tầng mái bát giác
+    const addOctagonalRoofWithRibs = (yBase, rBottom, rTop, roofHeight, corbelLayers = 3) => {
+      // Các lớp gạch giật cấp (corbelled brick eaves) đỡ dưới mái
+      const corbelH = 0.065;
+      for (let c = 0; c < corbelLayers; c++) {
+        const t = (c + 1) / corbelLayers;
+        const cRad = rTop + (rBottom - rTop) * (0.58 + 0.36 * t);
+        const corbel = new THREE.Mesh(
+          new THREE.CylinderGeometry(cRad, cRad * 0.96, corbelH, 8),
+          c % 2 === 0 ? brickTrimMat : brickWallMat
+        );
+        corbel.rotation.y = OCT_ROT;
+        corbel.position.y = yBase + (c + 0.5) * corbelH;
+        corbel.castShadow = true;
+        corbel.receiveShadow = true;
+        pagodaGroup.add(corbel);
+      }
+
+      const mainRoofY = yBase + corbelLayers * corbelH;
+      const frustum = new THREE.Mesh(
+        new THREE.CylinderGeometry(rTop, rBottom, roofHeight, 8),
+        brickRoofMat
+      );
+      frustum.rotation.y = OCT_ROT;
+      frustum.position.y = mainRoofY + roofHeight * 0.5;
+      frustum.castShadow = true;
+      frustum.receiveShadow = true;
+      pagodaGroup.add(frustum);
+
+      // 8 sống mái gờ gạch chạy dọc 8 góc bát giác + đầu đao hơi vểnh nhẹ
+      const dr = rBottom - rTop;
+      const ribLen = Math.hypot(dr, roofHeight);
+      const ribTilt = Math.atan2(dr, roofHeight);
+      const midR = (rBottom + rTop) * 0.5;
+      for (let k = 0; k < 8; k++) {
+        const cornerAngle = (k + 0.5) * (Math.PI / 4);
+        const ribHolder = new THREE.Group();
+        ribHolder.position.set(
+          Math.sin(cornerAngle) * midR,
+          mainRoofY + roofHeight * 0.52,
+          Math.cos(cornerAngle) * midR
+        );
+        ribHolder.rotation.y = cornerAngle;
+
+        const ribMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(0.09, ribLen + 0.06, 0.11),
+          brickRibMat
+        );
+        ribMesh.rotation.x = -ribTilt;
+        ribHolder.add(ribMesh);
+
+        // Đầu đao gạch ở góc mái
+        const eaveTip = new THREE.Mesh(
+          new THREE.BoxGeometry(0.1, 0.09, 0.18),
+          brickRibMat
+        );
+        eaveTip.position.set(0, -roofHeight * 0.44, dr * 0.52);
+        eaveTip.rotation.x = -0.32;
+        ribHolder.add(eaveTip);
+
+        pagodaGroup.add(ribHolder);
+      }
+
+      return mainRoofY + roofHeight;
+    };
+
+    // Helper dựng khung cửa vòm cuốn gạch đỏ (Arched doorway / niche) trên mặt phẳng bát giác
+    const createBrickArchOpening = (width, height, depth, isWalkthrough = false, hasBuddha = true) => {
+      const archGroup = new THREE.Group();
+      const archRadius = width * 0.5;
+      const straightH = Math.max(0.12, height - archRadius);
+
+      // Khung gạch cuốn vòm bên ngoài (giật cấp 2 lớp)
+      const outerPillarGeo = new THREE.BoxGeometry(0.11, straightH, depth);
+      for (const side of [-1, 1]) {
+        const jamb = new THREE.Mesh(outerPillarGeo, brickTrimMat);
+        jamb.position.set(side * (archRadius + 0.045), straightH * 0.5, 0);
+        archGroup.add(jamb);
+      }
+
+      const outerArchRing = new THREE.Mesh(
+        new THREE.TorusGeometry(archRadius + 0.04, 0.065, 8, 18, Math.PI),
+        brickTrimMat
+      );
+      outerArchRing.position.set(0, straightH, 0.01);
+      archGroup.add(outerArchRing);
+
+      // Lòng vòm tối bên trong
+      const recessBody = new THREE.Mesh(
+        new THREE.BoxGeometry(width, straightH, depth * 0.55),
+        darkArchMat
+      );
+      recessBody.position.set(0, straightH * 0.5, 0);
+      archGroup.add(recessBody);
+
+      const recessArch = new THREE.Mesh(
+        new THREE.CylinderGeometry(archRadius, archRadius, depth * 0.55, 18, 1, false, 0, Math.PI),
+        darkArchMat
+      );
+      recessArch.rotation.x = Math.PI * 0.5;
+      recessArch.rotation.y = Math.PI * 0.5;
+      recessArch.position.set(0, straightH, 0);
+      archGroup.add(recessArch);
+
+      if (isWalkthrough) {
+        // Cửa gỗ bức bàn chấn song sơn đỏ thếp vàng ở các mặt bên
+        const sill = new THREE.Mesh(
+          new THREE.BoxGeometry(width + 0.14, 0.08, depth * 0.9),
+          brickTrimMat
+        );
+        sill.position.set(0, 0.04, 0.02);
+        archGroup.add(sill);
+
+        // Chấn song đứng hai bên cửa vòm
+        const barCount = 5;
+        for (let b = 0; b < barCount; b++) {
+          const bx = -width * 0.38 + (b / (barCount - 1)) * (width * 0.76);
+          if (hasBuddha && Math.abs(bx) < 0.12) continue; // Chừa khe nhìn thấy tượng/tháp xá lợi vàng bên trong
+          const bar = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.022, 0.022, straightH + archRadius * 0.65, 6),
+            woodScreenMat
+          );
+          bar.position.set(bx, (straightH + archRadius * 0.55) * 0.5, 0.01);
+          archGroup.add(bar);
+        }
+
+        const transBar = new THREE.Mesh(
+          new THREE.BoxGeometry(width * 0.92, 0.055, 0.06),
+          goldMat
+        );
+        transBar.position.set(0, straightH * 0.52, 0.02);
+        archGroup.add(transBar);
+      } else if (hasBuddha) {
+        // Tượng Phật Vàng nhỏ ngự trong ô khám vòm cuốn
+        const miniLotus = new THREE.Mesh(
+          new THREE.CylinderGeometry(width * 0.28, width * 0.22, 0.06, 10),
+          goldMat
+        );
+        miniLotus.position.set(0, 0.05, 0.02);
+        archGroup.add(miniLotus);
+
+        const miniBody = new THREE.Mesh(
+          new THREE.ConeGeometry(width * 0.22, height * 0.44, 10),
+          goldMat
+        );
+        miniBody.position.set(0, 0.08 + height * 0.22, 0.02);
+        archGroup.add(miniBody);
+
+        const miniHead = new THREE.Mesh(
+          new THREE.SphereGeometry(width * 0.11, 10, 10),
+          goldMat
+        );
+        miniHead.position.set(0, 0.09 + height * 0.47, 0.025);
+        archGroup.add(miniHead);
+      }
+
+      return archGroup;
+    };
+
+    // =========================================================================
+    // 2. NỀN ĐÁ XANH BÁT GIÁC, BẬC TAM CẤP & CÂY TÙNG CẮT TỈA TRƯỚC THÁP
+    // =========================================================================
+    const baseStep1 = new THREE.Mesh(
+      new THREE.CylinderGeometry(4.25, 4.45, 0.34, 8),
+      stoneDarkMat
+    );
+    baseStep1.rotation.y = OCT_ROT;
+    baseStep1.position.y = 0.17;
+    baseStep1.receiveShadow = true;
+    pagodaGroup.add(baseStep1);
+
+    const baseStep2 = new THREE.Mesh(
+      new THREE.CylinderGeometry(3.68, 3.82, 0.28, 8),
+      stoneMat
+    );
+    baseStep2.rotation.y = OCT_ROT;
+    baseStep2.position.y = 0.48;
+    baseStep2.receiveShadow = true;
+    pagodaGroup.add(baseStep2);
+
+    // Gờ gạch bó nền chân tháp
+    const brickPlinth = new THREE.Mesh(
+      new THREE.CylinderGeometry(3.26, 3.36, 0.26, 8),
+      brickTrimMat
+    );
+    brickPlinth.rotation.y = OCT_ROT;
+    brickPlinth.position.y = 0.75;
+    brickPlinth.receiveShadow = true;
+    pagodaGroup.add(brickPlinth);
+
+    // Bậc tam cấp đá phía trước cửa Nam (+Z) và cửa Bắc (-Z)
+    for (const dirZ of [1, -1]) {
+      for (let s = 0; s < 3; s++) {
+        const stepMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(1.75 - s * 0.08, 0.18, 0.38),
+          stoneMat
+        );
+        stepMesh.position.set(0, 0.09 + s * 0.18, dirZ * (4.22 - s * 0.32));
+        stepMesh.receiveShadow = true;
+        pagodaGroup.add(stepMesh);
+      }
+      // 2 thành bậc đá chạm rồng/mây hai bên cầu thang
+      for (const sideX of [-0.92, 0.92]) {
+        const rail = new THREE.Mesh(
+          new THREE.BoxGeometry(0.14, 0.62, 1.15),
+          stoneDarkMat
+        );
+        rail.position.set(sideX, 0.34, dirZ * 3.88);
+        rail.rotation.x = dirZ * 0.36;
+        pagodaGroup.add(rail);
+      }
+    }
+
+    // 4 Cây Tùng Bách Cắt Tỉa Tầng Xanh Mướt đứng hai bên trụ cửa Bảo Tháp (như trong mẫu Sketchfab)
+    for (const [tx, tz, tScale] of [
+      [-2.15, 3.55, 1.0],
+      [2.15, 3.55, 1.0],
+      [-3.15, 2.55, 0.86],
+      [3.15, 2.55, 0.86]
+    ]) {
+      const cypress = new THREE.Group();
+      cypress.position.set(tx, 0.58, tz);
+      cypress.scale.setScalar(tScale);
+
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.08, 0.12, 0.75, 8),
+        new THREE.MeshStandardMaterial({ color: 0x4e342e, roughness: 0.85 })
+      );
+      trunk.position.y = 0.36;
+      cypress.add(trunk);
+
+      for (let tier = 0; tier < 4; tier++) {
+        const cone = new THREE.Mesh(
+          new THREE.ConeGeometry(0.46 - tier * 0.08, 0.55 - tier * 0.05, 10),
+          tier % 2 === 0 ? leafDarkMat : leafBrightMat
+        );
+        cone.position.y = 0.68 + tier * 0.34;
+        cone.castShadow = true;
+        cypress.add(cone);
+      }
+      pagodaGroup.add(cypress);
+    }
+
+    // =========================================================================
+    // 3. TẦNG 1: TẦNG ĐẾ BÁT GIÁC LỚN MỞ 8 CỬA VÒM CUỐN & 8 TRỤ GẠCH VÁT NGHIÊNG
+    // =========================================================================
+    const story1BaseY = 0.88;
+    const story1Height = 2.28;
+    const story1Radius = 2.98;
+
+    // Thân tường gạch đỏ bát giác tầng 1
+    const story1Wall = new THREE.Mesh(
+      new THREE.CylinderGeometry(story1Radius * 0.94, story1Radius, story1Height, 8),
+      brickWallMat
+    );
+    story1Wall.rotation.y = OCT_ROT;
+    story1Wall.position.y = story1BaseY + story1Height * 0.5;
+    story1Wall.castShadow = true;
+    story1Wall.receiveShadow = true;
+    story1Wall.userData = pagodaInteractionData;
+    pagodaGroup.add(story1Wall);
+    this.interactiveMeshes.push(story1Wall);
+
+    // Bảo Tháp Xá Lợi & Tượng Phật Vàng tỏa sáng bên trong lòng Tầng 1
+    const innerAltar = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.95, 1.15, 0.65, 8),
+      goldMat
+    );
+    innerAltar.position.y = story1BaseY + 0.32;
+    pagodaGroup.add(innerAltar);
+
+    const innerBuddha = new THREE.Mesh(
+      new THREE.ConeGeometry(0.55, 1.15, 12),
+      goldMat
+    );
+    innerBuddha.position.y = story1BaseY + 1.15;
+    pagodaGroup.add(innerBuddha);
+
+    const innerHead = new THREE.Mesh(
+      new THREE.SphereGeometry(0.24, 12, 12),
+      goldMat
+    );
+    innerHead.position.y = story1BaseY + 1.82;
+    pagodaGroup.add(innerHead);
+
+    // 8 Trụ Gạch Lớn Vát Nghiêng (Battered Corner Buttress Piers) ở 8 góc tầng 1
+    const s1CornerR = story1Radius * 0.97;
+    for (let k = 0; k < 8; k++) {
+      const cornerAngle = (k + 0.5) * (Math.PI / 4);
+      const pierGroup = new THREE.Group();
+      pierGroup.position.set(
+        Math.sin(cornerAngle) * s1CornerR,
+        story1BaseY,
+        Math.cos(cornerAngle) * s1CornerR
+      );
+      pierGroup.rotation.y = cornerAngle;
+
+      // Chân trụ gạch nở rộng
+      const pierBase = new THREE.Mesh(
+        new THREE.BoxGeometry(0.46, 0.34, 0.48),
+        brickTrimMat
+      );
+      pierBase.position.set(0, 0.17, 0.06);
+      pierGroup.add(pierBase);
+
+      // Thân trụ gạch vát nghiêng vào trong theo đúng dáng Tháp Phật Tích
+      const pierBody = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.19, 0.28, story1Height - 0.18, 6),
+        brickTrimMat
+      );
+      pierBody.position.set(0, story1Height * 0.5, 0.04);
+      pierBody.rotation.x = -0.04;
+      pierBody.castShadow = true;
+      pierGroup.add(pierBody);
+
+      // Đấu trụ gạch trên đầu cột
+      const pierCap = new THREE.Mesh(
+        new THREE.BoxGeometry(0.42, 0.22, 0.42),
+        brickRibMat
+      );
+      pierCap.position.set(0, story1Height - 0.11, 0.02);
+      pierGroup.add(pierCap);
+
+      pagodaGroup.add(pierGroup);
+    }
+
+    // 8 Cửa Vòm Cuốn Gạch Đỏ trên 8 mặt phẳng của Tầng 1
+    const s1FaceDist = story1Radius * Math.cos(OCT_ROT) * 0.965;
+    for (let k = 0; k < 8; k++) {
+      const faceAngle = k * (Math.PI / 4);
+      const archDoor = createBrickArchOpening(1.08, 1.78, 0.24, true, true);
+      archDoor.position.set(
+        Math.sin(faceAngle) * s1FaceDist,
+        story1BaseY + 0.08,
+        Math.cos(faceAngle) * s1FaceDist
+      );
+      archDoor.rotation.y = faceAngle;
+      pagodaGroup.add(archDoor);
+
+      // Khung gờ gạch chữ nhật bao quanh cửa vòm tầng 1
+      const topPanel = new THREE.Mesh(
+        new THREE.BoxGeometry(1.42, 0.22, 0.12),
+        brickTrimMat
+      );
+      topPanel.position.set(
+        Math.sin(faceAngle) * (s1FaceDist + 0.02),
+        story1BaseY + story1Height - 0.18,
+        Math.cos(faceAngle) * (s1FaceDist + 0.02)
+      );
+      topPanel.rotation.y = faceAngle;
+      pagodaGroup.add(topPanel);
+    }
+
+    // Mái Hiên Bát Giác Tầng 1 (Rộng uy nghi với 8 sống mái gạch đỏ)
+    const afterRoof1Y = addOctagonalRoofWithRibs(
+      story1BaseY + story1Height,
+      3.92,
+      2.65,
+      0.58,
+      3
+    );
+
+    // =========================================================================
+    // 4. TẦNG 2: CỔ DIỀM BÁT GIÁC LỚN VỚI 8 Ô CỬA VÒM CUỐN & 8 BÚP SEN GÓC MÁI
+    // =========================================================================
+    const story2BaseY = afterRoof1Y;
+    const story2Height = 1.48;
+    const story2Radius = 2.32;
+
+    // Bệ lan can gạch bát giác đỡ Tầng 2
+    const story2Pedestal = new THREE.Mesh(
+      new THREE.CylinderGeometry(story2Radius * 1.08, story2Radius * 1.12, 0.24, 8),
+      brickTrimMat
+    );
+    story2Pedestal.rotation.y = OCT_ROT;
+    story2Pedestal.position.y = story2BaseY + 0.12;
+    pagodaGroup.add(story2Pedestal);
+
+    // 8 Tượng Búp Sen / Hộ Pháp Đá nhỏ đứng ở 8 góc diềm mái tầng 1 (đúng như mẫu Sketchfab)
+    for (let k = 0; k < 8; k++) {
+      const cornerAngle = (k + 0.5) * (Math.PI / 4);
+      const cOrnament = new THREE.Group();
+      cOrnament.position.set(
+        Math.sin(cornerAngle) * (story2Radius * 1.12),
+        story2BaseY + 0.24,
+        Math.cos(cornerAngle) * (story2Radius * 1.12)
+      );
+      const oBase = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.11, 0.14, 0.16, 8),
+        stoneMat
+      );
+      oBase.position.y = 0.08;
+      cOrnament.add(oBase);
+
+      const oBud = new THREE.Mesh(
+        new THREE.ConeGeometry(0.1, 0.28, 8),
+        brickTrimMat
+      );
+      oBud.position.y = 0.28;
+      cOrnament.add(oBud);
+      pagodaGroup.add(cOrnament);
+    }
+
+    // Thân tường gạch đỏ bát giác Tầng 2
+    const story2Wall = new THREE.Mesh(
+      new THREE.CylinderGeometry(story2Radius * 0.95, story2Radius, story2Height, 8),
+      brickWallMat
+    );
+    story2Wall.rotation.y = OCT_ROT;
+    story2Wall.position.y = story2BaseY + 0.22 + story2Height * 0.5;
+    story2Wall.castShadow = true;
+    story2Wall.receiveShadow = true;
+    story2Wall.userData = pagodaInteractionData;
+    pagodaGroup.add(story2Wall);
+    this.interactiveMeshes.push(story2Wall);
+
+    // 8 trụ gạch góc Tầng 2
+    const s2CornerR = story2Radius * 0.97;
+    for (let k = 0; k < 8; k++) {
+      const cornerAngle = (k + 0.5) * (Math.PI / 4);
+      const p2 = new THREE.Mesh(
+        new THREE.BoxGeometry(0.22, story2Height, 0.22),
+        brickTrimMat
+      );
+      p2.position.set(
+        Math.sin(cornerAngle) * s2CornerR,
+        story2BaseY + 0.22 + story2Height * 0.5,
+        Math.cos(cornerAngle) * s2CornerR
+      );
+      p2.rotation.y = cornerAngle;
+      pagodaGroup.add(p2);
+    }
+
+    // 8 Ô Cửa Vòm Cuốn Cổ Diềm trên 8 mặt Tầng 2
+    const s2FaceDist = story2Radius * Math.cos(OCT_ROT) * 0.965;
+    for (let k = 0; k < 8; k++) {
+      const faceAngle = k * (Math.PI / 4);
+      const archWin = createBrickArchOpening(0.72, 1.08, 0.18, false, true);
+      archWin.position.set(
+        Math.sin(faceAngle) * s2FaceDist,
+        story2BaseY + 0.34,
+        Math.cos(faceAngle) * s2FaceDist
+      );
+      archWin.rotation.y = faceAngle;
+      pagodaGroup.add(archWin);
+    }
+
+    // Mái Đao Bát Giác Tầng 2
+    let currentY = addOctagonalRoofWithRibs(
+      story2BaseY + 0.22 + story2Height,
+      3.08,
+      1.98,
+      0.48,
+      3
+    );
+
+    // =========================================================================
+    // 5. 10 TẦNG THÁP THƯỢNG THU NHỎ DẦN LÊN CAO (TỔNG CỘNG 12 TẦNG THÁP)
+    // =========================================================================
+    for (let tier = 0; tier < 10; tier++) {
+      const t = tier / 9;
+      const bodyRadius = 1.78 * (1 - t * 0.54); // Thu nhỏ dần từ 1.78m lên đỉnh 0.82m
+      const bodyHeight = 0.62 * (1 - t * 0.34); // Chiều cao thân tầng cân đối để trọn 12 tầng + chóp hồ lô nằm gọn trong khung hình
+      const roofOuterR = bodyRadius * 1.35;
+      const roofInnerR = bodyRadius * 0.88;
+      const roofH = 0.21 * (1 - t * 0.28);
+
+      // Cổ đế gạch từng tầng
+      const neckStep = new THREE.Mesh(
+        new THREE.CylinderGeometry(bodyRadius * 1.03, bodyRadius * 1.06, 0.07, 8),
+        brickTrimMat
+      );
+      neckStep.rotation.y = OCT_ROT;
+      neckStep.position.y = currentY + 0.035;
+      pagodaGroup.add(neckStep);
+      currentY += 0.065;
+
+      // Thân tháp Bát Giác gạch đỏ
+      const tierWall = new THREE.Mesh(
+        new THREE.CylinderGeometry(bodyRadius * 0.95, bodyRadius, bodyHeight, 8),
+        brickWallMat
+      );
+      tierWall.rotation.y = OCT_ROT;
+      tierWall.position.y = currentY + bodyHeight * 0.5;
+      tierWall.castShadow = true;
+      tierWall.receiveShadow = true;
+      tierWall.userData = pagodaInteractionData;
+      pagodaGroup.add(tierWall);
+
+      // 8 gờ trụ góc ở mỗi tầng
+      const tCornerR = bodyRadius * 0.97;
+      for (let k = 0; k < 8; k++) {
+        const cornerAngle = (k + 0.5) * (Math.PI / 4);
+        const cornerPilaster = new THREE.Mesh(
+          new THREE.BoxGeometry(0.12 * (1 - t * 0.35), bodyHeight, 0.12 * (1 - t * 0.35)),
+          brickTrimMat
+        );
+        cornerPilaster.position.set(
+          Math.sin(cornerAngle) * tCornerR,
+          currentY + bodyHeight * 0.5,
+          Math.cos(cornerAngle) * tCornerR
+        );
+        cornerPilaster.rotation.y = cornerAngle;
+        pagodaGroup.add(cornerPilaster);
+      }
+
+      // 8 Ô Khám Phật Vòm Cuốn trên 8 mặt của từng tầng tháp
+      const faceDist = bodyRadius * Math.cos(OCT_ROT) * 0.965;
+      const nicheW = Math.max(0.22, 0.44 * (1 - t * 0.45));
+      const nicheH = Math.max(0.28, bodyHeight * 0.72);
+      for (let k = 0; k < 8; k++) {
+        const faceAngle = k * (Math.PI / 4);
+        const niche = createBrickArchOpening(nicheW, nicheH, 0.12, false, true);
+        niche.position.set(
+          Math.sin(faceAngle) * faceDist,
+          currentY + bodyHeight * 0.12,
+          Math.cos(faceAngle) * faceDist
+        );
+        niche.rotation.y = faceAngle;
+        pagodaGroup.add(niche);
+      }
+
+      currentY += bodyHeight;
+
+      // Diềm mái gạch giật cấp + Mái ngói gạch đỏ 8 góc
+      currentY = addOctagonalRoofWithRibs(currentY, roofOuterR, roofInnerR, roofH, 2);
+    }
+
+    // =========================================================================
+    // 6. ĐỈNH THÁP ĐÀI SEN, BÌNH CAM LỘ (HỒ LÔ) & CHÓP BÚP SEN TƯỚNG LUÂN
+    // =========================================================================
+    const spirePedestal = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.68, 0.82, 0.28, 8),
+      brickTrimMat
+    );
+    spirePedestal.rotation.y = OCT_ROT;
+    spirePedestal.position.y = currentY + 0.14;
+    pagodaGroup.add(spirePedestal);
+
+    // Đài sen gạch đỏ đỡ bình Cam Lộ trên đỉnh
+    const topLotusBase = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.64, 0.46, 0.26, 12),
+      brickRoofMat
+    );
+    topLotusBase.position.y = currentY + 0.4;
+    pagodaGroup.add(topLotusBase);
+
+    // Bầu Hồ Lô / Bình Cam Lộ Gạch Đỏ - Vàng
+    const gourdLower = new THREE.Mesh(
+      new THREE.SphereGeometry(0.42, 16, 14),
+      brickRoofMat
+    );
+    gourdLower.scale.set(1.0, 0.88, 1.0);
+    gourdLower.position.y = currentY + 0.82;
+    pagodaGroup.add(gourdLower);
+
+    const gourdNeck = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.18, 0.24, 0.28, 12),
+      goldMat
+    );
+    gourdNeck.position.y = currentY + 1.22;
+    pagodaGroup.add(gourdNeck);
+
+    const gourdUpper = new THREE.Mesh(
+      new THREE.SphereGeometry(0.28, 14, 12),
+      brickRoofMat
+    );
+    gourdUpper.scale.set(0.95, 1.1, 0.95);
+    gourdUpper.position.y = currentY + 1.52;
+    pagodaGroup.add(gourdUpper);
+
+    // Trục Tướng Luân 9 vòng & Chóp Búp Sen Vàng trên đỉnh cao nhất
+    const spirePole = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.05, 0.13, 1.35, 12),
+      goldMat
+    );
+    spirePole.position.y = currentY + 2.32;
     pagodaGroup.add(spirePole);
 
-    const topLotus = new THREE.Mesh(new THREE.SphereGeometry(0.28, 14, 14), goldMat);
-    topLotus.position.y = currentY + 1.95;
-    pagodaGroup.add(topLotus);
+    for (let r = 0; r < 5; r++) {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(0.18 - r * 0.022, 0.022, 8, 16),
+        goldMat
+      );
+      ring.rotation.x = Math.PI * 0.5;
+      ring.position.y = currentY + 1.88 + r * 0.19;
+      pagodaGroup.add(ring);
+    }
 
-    const pagodaLight = new THREE.PointLight(0xffca28, 2.6, 18, 1.2);
-    pagodaLight.position.set(0, 6.5, 3.2);
+    const topLotusBud = new THREE.Mesh(
+      new THREE.ConeGeometry(0.14, 0.42, 12),
+      goldMat
+    );
+    topLotusBud.position.y = currentY + 3.08;
+    pagodaGroup.add(topLotusBud);
+
+    // Đèn chiếu sáng ấm áp tôn vẻ cổ kính của Bảo Tháp Phật Tích vào ban đêm
+    const pagodaLight = new THREE.PointLight(0xffb74d, 2.4, 22, 1.2);
+    pagodaLight.position.set(0, 7.2, 4.8);
     pagodaGroup.add(pagodaLight);
 
-    // 4 Trụ Đèn Đá Hoa Sen & Chậu Hoa Cúc Vàng quanh Bảo Tháp Xá Lợi (thắp sáng lung linh vào buổi tối)
-    const lanternGlowMat = new THREE.MeshBasicMaterial({ color: 0xffcf56 });
-    const blossomPinkMat = new THREE.MeshStandardMaterial({
-      color: 0xff8da1,
-      roughness: 0.35,
-      emissive: 0x4a1220,
-      emissiveIntensity: 0.32
-    });
-    const marigoldMat = new THREE.MeshStandardMaterial({
-      color: 0xffca28,
-      roughness: 0.32,
-      emissive: 0x4d3400,
-      emissiveIntensity: 0.35
-    });
-    const leafGreenMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.65 });
+    const innerSanctumLight = new THREE.PointLight(0xffd54f, 1.9, 8, 1.4);
+    innerSanctumLight.position.set(0, 2.1, 0);
+    pagodaGroup.add(innerSanctumLight);
 
+    // =========================================================================
+    // 7. ĐÈN ĐÁ HOA SEN, BIỂN TÊN "BẢO THÁP PHẬT TÍCH" & BỒ ĐOÀN LỄ BÁI
+    // =========================================================================
+    const lanternGlowMat = new THREE.MeshBasicMaterial({ color: 0xffcf56 });
     for (const [lx, lz] of [
-      [-3.5, 3.0],
-      [3.5, 3.0],
-      [-3.5, -2.8],
-      [3.5, -2.8]
+      [-3.85, 3.65],
+      [3.85, 3.65],
+      [-3.85, -3.45],
+      [3.85, -3.45]
     ]) {
       const pLantern = new THREE.Group();
       pLantern.position.set(lx, 0, lz);
@@ -4524,58 +5157,31 @@ export class Environment {
       lChamber.position.y = 1.92;
       pLantern.add(lChamber);
 
-      const lRoof = new THREE.Mesh(new THREE.ConeGeometry(0.52, 0.34, 6), roofMat);
+      const lRoof = new THREE.Mesh(new THREE.ConeGeometry(0.52, 0.34, 6), brickRoofMat);
       lRoof.position.y = 2.24;
       pLantern.add(lRoof);
       pagodaGroup.add(pLantern);
     }
 
-    for (const [fx, fz] of [
-      [-2.3, 3.6],
-      [2.3, 3.6]
-    ]) {
-      const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.26, 0.42, 12), wallMat);
-      pot.position.set(fx, 0.21, fz);
-      pagodaGroup.add(pot);
-
-      const bush = new THREE.Mesh(new THREE.SphereGeometry(0.38, 10, 10), leafGreenMat);
-      bush.scale.set(1.1, 0.75, 1.1);
-      bush.position.set(fx, 0.52, fz);
-      pagodaGroup.add(bush);
-
-      for (let b = 0; b < 6; b++) {
-        const ba = (b / 6) * Math.PI * 2;
-        const flower = new THREE.Mesh(
-          new THREE.SphereGeometry(0.09, 8, 8),
-          b % 2 === 0 ? marigoldMat : blossomPinkMat
-        );
-        flower.position.set(fx + Math.cos(ba) * 0.24, 0.68, fz + Math.sin(ba) * 0.24);
-        pagodaGroup.add(flower);
-      }
-    }
-
-    // Biển tên nhỏ dưới chân Bảo Tháp Xá Lợi 7 Tầng
+    // Biển tên nhỏ dưới chân Bảo Tháp Phật Tích
     const btPlaque = this._createStatueNamePlaque(
-      'BẢO THÁP XÁ LỢI',
-      'Thất Bảo Như Lai • Ánh Sáng Trí Tuệ',
-      {
-        type: 'BAO_THAP',
-        label: '☸️ Chiêm Bái Bảo Tháp Xá Lợi 7 Tầng (+5 Công Đức)'
-      },
-      0.95
+      'BẢO THÁP PHẬT TÍCH',
+      'Tháp Viên Quang • Quốc Bảo Ngàn Năm',
+      pagodaInteractionData,
+      0.98
     );
-    btPlaque.position.set(0, 0.08, 3.55);
+    btPlaque.position.set(0, 0.08, 4.55);
     pagodaGroup.add(btPlaque);
 
-    // Bồ Đoàn lễ bái trước Bảo Tháp Xá Lợi
+    // Bồ Đoàn lễ bái trước Bảo Tháp Phật Tích
     const btCushion = new THREE.Mesh(
       new THREE.CylinderGeometry(0.74, 0.8, 0.18, 24),
       new THREE.MeshStandardMaterial({ color: 0xa83232, roughness: 0.55 })
     );
-    btCushion.position.set(0, 0.17, 4.75);
+    btCushion.position.set(0, 0.17, 5.55);
     btCushion.userData = {
       type: 'BAO_THAP',
-      label: '☸️ Đảnh Lễ Bảo Tháp Xá Lợi 7 Tầng (+5 Công Đức)'
+      label: '☸️ Đảnh Lễ Bảo Tháp Chùa Phật Tích (+5 Công Đức)'
     };
     pagodaGroup.add(btCushion);
     this.interactiveMeshes.push(btCushion);
