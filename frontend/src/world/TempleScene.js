@@ -85,16 +85,16 @@ export class TempleScene {
     this.dirLight.shadow.bias = -0.0005;
     this.scene.add(this.dirLight);
 
-    // Sanctuary & Courtyard PointLights (#ffaa33) for crisp, warm visibility day & night
-    const mainHallLight = new THREE.PointLight(0xffe082, 3.8, 42, 1.0);
+    // Sanctuary & Courtyard PointLights (#ffaa33) for soft, serene, warm visibility day & night
+    const mainHallLight = new THREE.PointLight(0xffdc8a, 2.2, 36, 1.35);
     mainHallLight.position.set(0, 7.6, -11.5);
     this.scene.add(mainHallLight);
-    this.nightLights.push({ light: mainHallLight, dayIntensity: 3.4, nightIntensity: 4.5 });
+    this.nightLights.push({ light: mainHallLight, dayIntensity: 1.9, nightIntensity: 2.5 });
 
-    const buddhaAuraLight = new THREE.PointLight(0xffe699, 4.2, 32, 1.0);
+    const buddhaAuraLight = new THREE.PointLight(0xffe094, 2.4, 28, 1.35);
     buddhaAuraLight.position.set(0, 6.5, -18.5);
     this.scene.add(buddhaAuraLight);
-    this.nightLights.push({ light: buddhaAuraLight, dayIntensity: 3.6, nightIntensity: 4.8 });
+    this.nightLights.push({ light: buddhaAuraLight, dayIntensity: 2.1, nightIntensity: 2.7 });
 
     const incenseLight = new THREE.PointLight(0xffaa33, 1.8, 18, 1.3);
     incenseLight.position.set(0, 2.8, -4);
@@ -295,6 +295,11 @@ export class TempleScene {
       this.orbitDistance = 13.8;
       this.orbitPitch = 0.24;
       this.orbitAngle = 0.0;
+    } else if (zoneName === 'DONG_TO_NGUYET') {
+      this.desiredCameraTarget.set(-10.8, 2.05, 19.6);
+      this.orbitDistance = 7.4;
+      this.orbitPitch = 0.16;
+      this.orbitAngle = -0.12;
     } else if (zoneName === 'VUON_BO_DE') {
       this.desiredCameraTarget.set(19.5, 1.6, 21.0);
       this.orbitDistance = 10.8;

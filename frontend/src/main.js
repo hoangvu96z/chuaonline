@@ -495,6 +495,8 @@ class ChuaOnlineApp {
         this._handlePrayDuocSu();
       } else if (hit.type === 'BAO_THAP') {
         this._handlePrayBaoThap();
+      } else if (hit.type === 'TO_NGUYET_STATUE') {
+        this._handlePrayToNguyet();
       } else if (hit.type === 'BODHI_GARDEN') {
         this._handlePlantBodhiTree();
       } else if (hit.type === 'KOI_FISH') {
@@ -598,6 +600,11 @@ class ChuaOnlineApp {
           this.templeScene.focusZone('BAO_THAP');
           this._syncProstrateButtonUI('BAO_THAP');
           this.showToast('☸️ Đã đến Bảo Tháp Xá Lợi 7 Tầng — Nhấn phím [L] hoặc click vào Bảo Tháp để chiêm bái.');
+        } else if (zone === 'DONG_TO_NGUYET') {
+          this._handleMoveToGroundPoint(-10.4, 22.8, false);
+          this.templeScene.focusZone('DONG_TO_NGUYET');
+          this._syncProstrateButtonUI('TO_NGUYET');
+          this.showToast('🧶 Đã đến Núi Đá Nhỏ Ông Tơ Bà Nguyệt (gần Cây Bồ Đề) — Nhấn phím [L] hoặc click vào Tượng để cầu duyên lành & gia đạo hòa hợp.');
         } else if (zone === 'VUON_BO_DE') {
           this._handleMoveToGroundPoint(14.5, 21.0, false);
           this.templeScene.focusZone('VUON_BO_DE');
@@ -817,6 +824,8 @@ class ChuaOnlineApp {
         this._handlePrayDuocSu();
       } else if (nearTarget === 'BAO_THAP') {
         this._handlePrayBaoThap();
+      } else if (nearTarget === 'TO_NGUYET') {
+        this._handlePrayToNguyet();
       } else {
         this._handleProstrateBuddha();
       }
@@ -1366,6 +1375,7 @@ class ChuaOnlineApp {
     if (Math.hypot(x - 26.0, z - -10.2) <= 7.5) return 'DIA_TANG';
     if (Math.hypot(x - 13.8, z - 6.0) <= 5.5) return 'VAN_THU';
     if (Math.hypot(x - 20.5, z - 6.0) <= 6.8) return 'DUOC_SU';
+    if (Math.hypot(x - -10.8, z - 19.6) <= 5.6) return 'TO_NGUYET';
     if (Math.hypot(x - -19.5, z - 21.5) <= 7.2) return 'BAO_THAP';
     return null;
   }
@@ -1392,6 +1402,9 @@ class ChuaOnlineApp {
     } else if (targetType === 'DUOC_SU') {
       if (lbl) lbl.textContent = 'Lạy Dược Sư';
       if (sub) sub.textContent = 'Đài Dược Sư +5';
+    } else if (targetType === 'TO_NGUYET') {
+      if (lbl) lbl.textContent = 'Lễ Tơ Nguyệt';
+      if (sub) sub.textContent = 'Cầu Duyên Lành +5';
     } else if (targetType === 'BAO_THAP') {
       if (lbl) lbl.textContent = 'Lễ Bảo Tháp';
       if (sub) sub.textContent = 'Tháp Xá Lợi +5';
@@ -1826,6 +1839,37 @@ class ChuaOnlineApp {
     this.socketClient.sendMove(matX, matZ, rotFacing, 'PROSTRATE', null);
     this.socketClient.prostrateBuddha(1, 'BAO_THAP', rotFacing);
     this._addLocalOptimisticMerit(5, 'Chiêm Bái Bảo Tháp Xá Lợi');
+  }
+
+  _handlePrayToNguyet() {
+    // Di chuyển đạo hữu đến Bồ Đoàn trước Núi Đá Nhỏ Ông Tơ Bà Nguyệt (-10.4, 22.8)
+    const matX = -10.4;
+    const matZ = 22.8;
+    const rotFacing = Math.atan2(-10.8 - matX, 19.6 - matZ);
+
+    this._syncProstrateButtonUI('TO_NGUYET');
+    this._syncPercussionLocationUI(false);
+
+    const local = this.avatarManager.getLocalAvatar();
+    if (local) local.customSitRotY = rotFacing;
+    this.avatarManager.setLocalTargetPosition(matX, matZ, 'PROSTRATE', null);
+    this.avatarManager.triggerProstration(this.localSocketId, rotFacing);
+    this.templeScene.focusZone('DONG_TO_NGUYET');
+
+    this.zenAudio.playMeditationBell(0.85);
+    setTimeout(() => this.zenAudio.playWoodenFish(0.6), 350);
+
+    const vowText =
+      'Chí tâm kính lễ Nguyệt Hạ Lão Nhân Ông Tơ Bà Nguyệt, nguyện cầu nhân duyên thiện lành, gia đạo thuận hòa, tình nghĩa bền chặt trăm năm.';
+    this.dharmaVoice.speakVerse(vowText);
+    this._setZenTickerText(
+      `🧶 Đạo hữu "${this.profile.dharmaName}" vừa thành tâm kính lễ Ông Tơ Bà Nguyệt tại Núi Đá Nhỏ gần Cây Bồ Đề (+5 Công Đức).`
+    );
+    this.showToast('🧶 Đã thành tâm kính lễ Ông Tơ Bà Nguyệt — Cầu nhân duyên thiện lành & gia đạo hòa hợp (+5 Công Đức)!');
+
+    this.socketClient.sendMove(matX, matZ, rotFacing, 'PROSTRATE', null);
+    this.socketClient.prostrateBuddha(1, 'TO_NGUYET', rotFacing);
+    this._addLocalOptimisticMerit(5, 'Kính Lễ Ông Tơ Bà Nguyệt');
   }
 
   _handlePlantBodhiTree() {
