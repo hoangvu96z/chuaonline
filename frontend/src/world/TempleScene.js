@@ -86,15 +86,15 @@ export class TempleScene {
     this.scene.add(this.dirLight);
 
     // Sanctuary & Courtyard PointLights (#ffaa33) for crisp, warm visibility day & night
-    const mainHallLight = new THREE.PointLight(0xffbb44, 2.5, 36, 1.2);
-    mainHallLight.position.set(0, 7.2, -9);
+    const mainHallLight = new THREE.PointLight(0xffe082, 3.8, 42, 1.0);
+    mainHallLight.position.set(0, 7.6, -11.5);
     this.scene.add(mainHallLight);
-    this.nightLights.push({ light: mainHallLight, dayIntensity: 1.4, nightIntensity: 3.4 });
+    this.nightLights.push({ light: mainHallLight, dayIntensity: 3.4, nightIntensity: 4.5 });
 
-    const buddhaAuraLight = new THREE.PointLight(0xffd700, 2.8, 26, 1.1);
-    buddhaAuraLight.position.set(0, 5.8, -12.5);
+    const buddhaAuraLight = new THREE.PointLight(0xffe699, 4.2, 32, 1.0);
+    buddhaAuraLight.position.set(0, 6.5, -18.5);
     this.scene.add(buddhaAuraLight);
-    this.nightLights.push({ light: buddhaAuraLight, dayIntensity: 1.8, nightIntensity: 3.8 });
+    this.nightLights.push({ light: buddhaAuraLight, dayIntensity: 3.6, nightIntensity: 4.8 });
 
     const incenseLight = new THREE.PointLight(0xffaa33, 1.8, 18, 1.3);
     incenseLight.position.set(0, 2.8, -4);
@@ -266,20 +266,25 @@ export class TempleScene {
       this.orbitPitch = 0.42;
       this.orbitAngle = -0.14;
     } else if (zoneName === 'DAI_QUAN_AM') {
-      this.desiredCameraTarget.set(12.2, 2.6, 16.5);
-      this.orbitDistance = 10.2;
-      this.orbitPitch = 0.24;
-      this.orbitAngle = -0.25;
+      this.desiredCameraTarget.set(-26.0, 2.75, -10.2);
+      this.orbitDistance = 9.6;
+      this.orbitPitch = 0.18;
+      this.orbitAngle = 0.0;
     } else if (zoneName === 'DAI_DI_LAC') {
       this.desiredCameraTarget.set(0.0, 1.95, 14.8);
       this.orbitDistance = 11.2;
       this.orbitPitch = 0.24;
       this.orbitAngle = 0.0;
     } else if (zoneName === 'DAI_DIA_TANG') {
-      this.desiredCameraTarget.set(-11.2, 1.85, 18.8);
-      this.orbitDistance = 8.4;
-      this.orbitPitch = 0.22;
+      this.desiredCameraTarget.set(26.0, 2.75, -10.2);
+      this.orbitDistance = 9.2;
+      this.orbitPitch = 0.18;
       this.orbitAngle = 0.0;
+    } else if (zoneName === 'DAI_VAN_THU') {
+      this.desiredCameraTarget.set(13.8, 2.25, 6.0);
+      this.orbitDistance = 7.8;
+      this.orbitPitch = 0.16;
+      this.orbitAngle = 0.18;
     } else if (zoneName === 'DAI_DUOC_SU') {
       this.desiredCameraTarget.set(20.5, 2.38, 6.0);
       this.orbitDistance = 7.6;

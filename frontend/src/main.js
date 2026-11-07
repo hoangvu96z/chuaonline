@@ -489,6 +489,8 @@ class ChuaOnlineApp {
         this._handlePrayDiLac();
       } else if (hit.type === 'DIA_TANG_STATUE') {
         this._handlePrayDiaTang();
+      } else if (hit.type === 'VAN_THU_STATUE') {
+        this._handlePrayVanThu();
       } else if (hit.type === 'DUOC_SU_STATUE') {
         this._handlePrayDuocSu();
       } else if (hit.type === 'BAO_THAP') {
@@ -567,20 +569,25 @@ class ChuaOnlineApp {
           this.socketClient.sitCushion(3, 0, -4.6);
           this.templeScene.focusZone('CHANH_DIEN');
         } else if (zone === 'DAI_QUAN_AM') {
-          this._handleMoveToGroundPoint(7.8, 18.2, false);
+          this._handleMoveToGroundPoint(-26.0, -6.35, false);
           this.templeScene.focusZone('DAI_QUAN_AM');
           this._syncProstrateButtonUI('QUAN_AM');
-          this.showToast('🙏 Đã đến Đài Quán Thế Âm Bồ Tát — Nhấn phím [L] hoặc nút Lạy Quán Âm để đảnh lễ.');
+          this.showToast('🙏 Đã vào Điện Quán Thế Âm Bồ Tát (Nhà Bên Trái Chánh Điện) — Nhấn phím [L] hoặc click vào Tượng để đảnh lễ.');
         } else if (zone === 'DAI_DI_LAC') {
-          this._handleMoveToGroundPoint(-23.0, 19.0, false);
+          this._handleMoveToGroundPoint(0.0, 19.35, false);
           this.templeScene.focusZone('DAI_DI_LAC');
           this._syncProstrateButtonUI('DI_LAC');
           this.showToast('😄 Đã đến Đài Phật Di Lặc — Nhấn phím [L] hoặc click vào Tượng/Bồ Đoàn để cầu hoan hỷ phúc lộc.');
         } else if (zone === 'DAI_DIA_TANG') {
-          this._handleMoveToGroundPoint(-23.0, 8.4, false);
+          this._handleMoveToGroundPoint(26.0, -6.35, false);
           this.templeScene.focusZone('DAI_DIA_TANG');
           this._syncProstrateButtonUI('DIA_TANG');
-          this.showToast('🔱 Đã đến Đài Địa Tạng Vương Bồ Tát — Nhấn phím [L] hoặc click vào Tượng/Bồ Đoàn để đảnh lễ cầu siêu độ & bình an.');
+          this.showToast('🔱 Đã vào Điện Địa Tạng Vương Bồ Tát — Nhấn phím [L] hoặc click vào Tượng Đứng để đảnh lễ cầu siêu độ & bình an.');
+        } else if (zone === 'DAI_VAN_THU') {
+          this._handleMoveToGroundPoint(13.2, 9.5, false);
+          this.templeScene.focusZone('DAI_VAN_THU');
+          this._syncProstrateButtonUI('VAN_THU');
+          this.showToast('🦁 Đã đến Đài Đức Văn Thù Sư Lợi Bồ Tát (kế bên Phật Dược Sư) — Nhấn phím [L] hoặc click vào Tượng để cầu trí tuệ.');
         } else if (zone === 'DAI_DUOC_SU') {
           this._handleMoveToGroundPoint(19.9, 9.4, false);
           this.templeScene.focusZone('DAI_DUOC_SU');
@@ -804,6 +811,8 @@ class ChuaOnlineApp {
         this._handlePrayDiLac();
       } else if (nearTarget === 'DIA_TANG') {
         this._handlePrayDiaTang();
+      } else if (nearTarget === 'VAN_THU') {
+        this._handlePrayVanThu();
       } else if (nearTarget === 'DUOC_SU') {
         this._handlePrayDuocSu();
       } else if (nearTarget === 'BAO_THAP') {
@@ -1352,9 +1361,10 @@ class ChuaOnlineApp {
     if (!local) return null;
     const x = local.root.position.x;
     const z = local.root.position.z;
-    if (Math.hypot(x - 12.2, z - 16.5) <= 6.5) return 'QUAN_AM';
+    if (Math.hypot(x - -26.0, z - -10.2) <= 7.5) return 'QUAN_AM';
     if (Math.hypot(x - 0.0, z - 14.8) <= 7.0) return 'DI_LAC';
-    if (Math.hypot(x - -11.2, z - 18.8) <= 6.5) return 'DIA_TANG';
+    if (Math.hypot(x - 26.0, z - -10.2) <= 7.5) return 'DIA_TANG';
+    if (Math.hypot(x - 13.8, z - 6.0) <= 5.5) return 'VAN_THU';
     if (Math.hypot(x - 20.5, z - 6.0) <= 6.8) return 'DUOC_SU';
     if (Math.hypot(x - -19.5, z - 21.5) <= 7.2) return 'BAO_THAP';
     return null;
@@ -1369,13 +1379,16 @@ class ChuaOnlineApp {
     const sub = document.getElementById('dock-sub-prostrate');
     if (targetType === true || targetType === 'QUAN_AM') {
       if (lbl) lbl.textContent = 'Lạy Quán Âm';
-      if (sub) sub.textContent = 'Đài Quán Âm +5';
+      if (sub) sub.textContent = 'Điện Quán Âm +5';
     } else if (targetType === 'DI_LAC') {
       if (lbl) lbl.textContent = 'Lạy Di Lặc';
       if (sub) sub.textContent = 'Cầu Hoan Hỷ +5';
     } else if (targetType === 'DIA_TANG') {
       if (lbl) lbl.textContent = 'Lạy Địa Tạng';
-      if (sub) sub.textContent = 'Đài Địa Tạng +5';
+      if (sub) sub.textContent = 'Điện Địa Tạng +5';
+    } else if (targetType === 'VAN_THU') {
+      if (lbl) lbl.textContent = 'Lạy Văn Thù';
+      if (sub) sub.textContent = 'Cầu Trí Tuệ +5';
     } else if (targetType === 'DUOC_SU') {
       if (lbl) lbl.textContent = 'Lạy Dược Sư';
       if (sub) sub.textContent = 'Đài Dược Sư +5';
@@ -1627,10 +1640,10 @@ class ChuaOnlineApp {
   }
 
   _handlePrayQuanAm() {
-    // Di chuyển đạo hữu đến Bồ Đoàn trước Đài Quán Thế Âm Bồ Tát (11.1, 20.6) và thực hiện Lạy Ngũ Thể Đầu Địa!
-    const matX = 11.1;
-    const matZ = 20.6;
-    const rotFacingQuanAm = Math.atan2(12.2 - matX, 16.5 - matZ); // Hướng thẳng về tôn tượng Quán Thế Âm (12.2, 16.5)
+    // Di chuyển đạo hữu vào Bồ Đoàn trong Điện Quán Thế Âm Bồ Tát (-26.0, -6.35) và thực hiện Lạy Ngũ Thể Đầu Địa!
+    const matX = -26.0;
+    const matZ = -6.35;
+    const rotFacingQuanAm = Math.PI; // Hướng thẳng về tôn tượng Quán Thế Âm (-26.0, -10.2)
 
     this.templeScene.focusZone('DAI_QUAN_AM');
     this._syncProstrateButtonUI(true);
@@ -1642,7 +1655,7 @@ class ChuaOnlineApp {
     }
     this.avatarManager.setLocalTargetPosition(matX, matZ, 'PROSTRATE', null);
     this.avatarManager.triggerProstration(this.localSocketId, rotFacingQuanAm);
-    this.templeScene.setFollowTarget(matX, 0.2, matZ);
+    this.templeScene.setFollowTarget(matX, 0.77, matZ);
 
     this.zenAudio.playMeditationBell(0.85);
     setTimeout(() => this.zenAudio.playWoodenFish(0.6), 350);
@@ -1651,7 +1664,7 @@ class ChuaOnlineApp {
       'Chí tâm đảnh lễ: Nam Mô Đại Từ Đại Bi Cứu Khổ Cứu Nạn Quảng Đại Linh Cảm Bạch Y Quán Thế Âm Bồ Tát, nguyện cầu gia đạo bình an, tật bệnh tiêu trừ, vạn sự cát tường.';
     this.dharmaVoice.speakVerse(vowText);
     this._setZenTickerText(
-      `🙏 Đạo hữu "${this.profile.dharmaName}" vừa thành tâm quỳ lạy Ngũ Thể Đầu Địa trước Đài Quán Thế Âm Bồ Tát (+5 Công Đức).`
+      `🙏 Đạo hữu "${this.profile.dharmaName}" vừa thành tâm quỳ lạy Ngũ Thể Đầu Địa trong Điện Quán Thế Âm Bồ Tát (+5 Công Đức).`
     );
     this.showToast('🙏 Nam Mô Đại Bi Quán Thế Âm Bồ Tát — Đã thành tâm quỳ lạy cầu bình an (+5 Công Đức)!');
 
@@ -1692,9 +1705,9 @@ class ChuaOnlineApp {
   }
 
   _handlePrayDiaTang() {
-    // Di chuyển đạo hữu đến Bồ Đoàn trước Đài Địa Tạng Vương Bồ Tát tại (-11.2, 22.65)
-    const matX = -11.2;
-    const matZ = 22.65;
+    // Di chuyển đạo hữu vào Bồ Đoàn trong Điện Địa Tạng Vương Bồ Tát tại (26.0, -6.35)
+    const matX = 26.0;
+    const matZ = -6.35;
     const rotFacing = Math.PI;
 
     this._syncProstrateButtonUI('DIA_TANG');
@@ -1720,6 +1733,37 @@ class ChuaOnlineApp {
     this.socketClient.sendMove(matX, matZ, rotFacing, 'PROSTRATE', null);
     this.socketClient.prostrateBuddha(1, 'DIA_TANG', rotFacing);
     this._addLocalOptimisticMerit(5, 'Đảnh Lễ Địa Tạng Bồ Tát');
+  }
+
+  _handlePrayVanThu() {
+    // Di chuyển đạo hữu đến Bồ Đoàn trước Đài Đức Văn Thù Sư Lợi Bồ Tát Cưỡi Thanh Sư (13.2, 9.5)
+    const matX = 13.2;
+    const matZ = 9.5;
+    const rotFacing = Math.atan2(13.8 - matX, 6.0 - matZ);
+
+    this._syncProstrateButtonUI('VAN_THU');
+    this._syncPercussionLocationUI(false);
+
+    const local = this.avatarManager.getLocalAvatar();
+    if (local) local.customSitRotY = rotFacing;
+    this.avatarManager.setLocalTargetPosition(matX, matZ, 'PROSTRATE', null);
+    this.avatarManager.triggerProstration(this.localSocketId, rotFacing);
+    this.templeScene.focusZone('DAI_VAN_THU');
+
+    this.zenAudio.playMeditationBell(0.85);
+    setTimeout(() => this.zenAudio.playWoodenFish(0.6), 350);
+
+    const vowText =
+      'Chí tâm đảnh lễ: Nam Mô Đại Trí Văn Thù Sư Lợi Bồ Tát, nguyện cầu trí tuệ sáng suốt, tâm Bồ Đề kiên cố, thấu đạt chánh pháp Như Lai.';
+    this.dharmaVoice.speakVerse(vowText);
+    this._setZenTickerText(
+      `🦁 Đạo hữu "${this.profile.dharmaName}" vừa thành tâm đảnh lễ Đức Văn Thù Sư Lợi Bồ Tát cầu trí tuệ (+5 Công Đức).`
+    );
+    this.showToast('🦁 Nam Mô Đại Trí Văn Thù Sư Lợi Bồ Tát — Đã thành tâm đảnh lễ cầu trí tuệ (+5 Công Đức)!');
+
+    this.socketClient.sendMove(matX, matZ, rotFacing, 'PROSTRATE', null);
+    this.socketClient.prostrateBuddha(1, 'VAN_THU', rotFacing);
+    this._addLocalOptimisticMerit(5, 'Đảnh Lễ Văn Thù Bồ Tát');
   }
 
   _handlePrayDuocSu() {

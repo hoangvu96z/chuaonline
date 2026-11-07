@@ -270,6 +270,9 @@ export class AvatarManager {
     if (z < -1.0 && Math.abs(x) < 18.2) {
       return 1.05; // Inside expanded Chánh Điện platform
     }
+    if (z < -1.8 && Math.abs(x) >= 20.2 && Math.abs(x) <= 31.8) {
+      return 0.78; // Inside Left & Right Open Side Wing Halls (Điện Quán Thế Âm & Điện Địa Tạng)
+    }
     if (z >= -1.0 && z <= 0.6 && Math.abs(x) < 4.5) {
       return 0.55; // On Chánh Điện stairs
     }
