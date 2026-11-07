@@ -669,7 +669,7 @@ export class DatabaseManager {
         id BIGINT AUTO_INCREMENT PRIMARY KEY,
         user_id BIGINT NOT NULL,
         dharma_name VARCHAR(50) NOT NULL,
-        wish_type ENUM('INCENSE', 'LANTERN') NOT NULL,
+        wish_type VARCHAR(24) NOT NULL,
         content VARCHAR(200) NOT NULL,
         pos_x FLOAT DEFAULT 0,
         pos_z FLOAT DEFAULT 0,
@@ -678,6 +678,11 @@ export class DatabaseManager {
         INDEX idx_active_wishes (wish_type, expires_at)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+    try {
+      await conn.query(`ALTER TABLE wishes_wall MODIFY COLUMN wish_type VARCHAR(24) NOT NULL`);
+    } catch (_) {
+      // Ignore if already modified
+    }
 
     // 3. province_merits table
     await conn.query(`
@@ -1253,7 +1258,8 @@ export class DatabaseManager {
   }
 
   async createWish({ userId, dharmaName, wishType = 'INCENSE', content, posX = 0, posZ = 34 }) {
-    const type = wishType === 'LANTERN' ? 'LANTERN' : 'INCENSE';
+    const allowedTypes = new Set(['INCENSE', 'LANTERN', 'SKY_LANTERN', 'CAU_DUYEN']);
+    const type = allowedTypes.has(wishType) ? wishType : 'INCENSE';
     const cleanContent = String(content || '').trim().slice(0, 200);
     const expiresAt = new Date(Date.now() + 24 * 3600 * 1000);
 

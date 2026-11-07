@@ -296,10 +296,15 @@ export class TempleScene {
       this.orbitPitch = 0.16;
       this.orbitAngle = 0.18;
     } else if (zoneName === 'DONG_TO_NGUYET') {
-      this.desiredCameraTarget.set(-10.8, 2.05, 19.6);
-      this.orbitDistance = 7.4;
+      this.desiredCameraTarget.set(-27.2, 2.35, 6.2);
+      this.orbitDistance = 7.6;
       this.orbitPitch = 0.16;
-      this.orbitAngle = -0.12;
+      this.orbitAngle = Math.PI / 2;
+    } else if (zoneName === 'DAI_THAN_TAI') {
+      this.desiredCameraTarget.set(-27.2, 2.35, 13.6);
+      this.orbitDistance = 7.6;
+      this.orbitPitch = 0.16;
+      this.orbitAngle = Math.PI / 2;
     } else if (zoneName === 'VUON_BO_DE') {
       this.desiredCameraTarget.set(19.5, 1.6, 21.0);
       this.orbitDistance = 10.8;

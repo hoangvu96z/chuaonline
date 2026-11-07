@@ -70,6 +70,7 @@
           <button type="button" class="zone-btn" data-zone="DAI_DUOC_SU">🔵 Dược Sư</button>
           <button type="button" class="zone-btn" data-zone="BAO_THAP">☸️ Bảo Tháp</button>
           <button type="button" class="zone-btn" data-zone="DONG_TO_NGUYET">🧶 Tơ Nguyệt</button>
+          <button type="button" class="zone-btn" data-zone="DAI_THAN_TAI">💰 Thần Tài</button>
           <button type="button" class="zone-btn" data-zone="VUON_BO_DE">🌱 Vườn Bồ Đề</button>
           <button type="button" class="zone-btn" data-zone="SAN_CHUA">🔔 Sân (<span id="hud-leaf-count">0</span>)</button>
           <button type="button" class="zone-btn" data-zone="HO_HOA_DANG">🪷 Hồ Sen</button>
@@ -428,6 +429,20 @@
         <span class="dock-sub">+10 Công Đức</span>
       </button>
 
+      <button type="button" class="dock-btn highlight" id="dock-sky-lantern" data-shortcut="U" title="Thả Đèn Trời Lời Ước Nguyện bay lên bầu trời Sân Chùa (Phím tắt: U)">
+        <kbd class="dock-kbd">U</kbd>
+        <span class="dock-icon">🏮</span>
+        <span class="dock-label">Thả Đèn Trời</span>
+        <span class="dock-sub">+10 Công Đức</span>
+      </button>
+
+      <button type="button" class="dock-btn highlight" id="dock-cau-duyen" data-shortcut="Y" title="Cầu Duyên Ông Tơ Bà Nguyệt — Nhập Tên 2 Người &amp; Đọc Lời Cầu Xin (Phím tắt: Y)">
+        <kbd class="dock-kbd">Y</kbd>
+        <span class="dock-icon">🧶</span>
+        <span class="dock-label">Cầu Duyên</span>
+        <span class="dock-sub">Ông Tơ Bà Nguyệt</span>
+      </button>
+
       <button type="button" class="dock-btn" id="dock-draw-fortune" data-shortcut="X" title="Xin Xăm Quẻ Phật Giáo Đầu Ngày (Phím tắt: X)">
         <kbd class="dock-kbd">X</kbd>
         <span class="dock-icon">🎋</span>
@@ -505,6 +520,10 @@
           <input type="radio" name="wishType" value="LANTERN" />
           <span>🪷 Thả Hoa Đăng Hồ Sen</span>
         </label>
+        <label class="wish-tab" id="tab-wish-sky-lantern">
+          <input type="radio" name="wishType" value="SKY_LANTERN" />
+          <span>🏮 Thả Đèn Trời Ước Nguyện</span>
+        </label>
       </div>
 
       <label for="input-wish-content" class="field-label">Lời nguyện cầu chân thành của đạo hữu (tối đa 200 ký tự):</label>
@@ -535,6 +554,75 @@
       <h3>🕯️ Bức Tường Tâm Nguyện &amp; Hoa Đăng Đang Sáng</h3>
       <div id="wishes-wall-list" class="wishes-wall-list"></div>
     </div>
+  </dialog>
+
+  <!-- 2B. Cầu Duyên Ông Tơ Bà Nguyệt Modal (Nhập Tên 2 Người & Đọc Lời Cầu Xin) -->
+  <dialog id="dialog-cau-duyen" class="zen-dialog" closedby="any" aria-labelledby="title-cau-duyen">
+    <div class="dialog-header">
+      <div>
+        <span class="dialog-eyebrow">ĐIỆN ÔNG TƠ BÀ NGUYỆT • TƠ HỒNG NGUYỆT LÃO</span>
+        <h2 id="title-cau-duyen">🧶 Cầu Duyên Ông Tơ Bà Nguyệt</h2>
+      </div>
+      <form method="dialog">
+        <button type="submit" class="dialog-close-btn" aria-label="Đóng">✕</button>
+      </form>
+    </div>
+
+    <p class="dialog-desc">
+      Thành tâm nhập <strong>Họ Tên 2 Người</strong> (hoặc tên bạn cùng người thương) và lời ước nguyện. Khi gửi đi, hệ thống sẽ <strong>đọc vang lời sớ cầu xin lên Ông Tơ Bà Nguyệt</strong> và kết dải lụa đỏ tơ hồng trước Điện Ông Tơ Bà Nguyệt!
+    </p>
+
+    <form id="form-cau-duyen" class="wish-form" autocomplete="off">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px;">
+        <div>
+          <label for="input-duyen-name1" class="field-label">👤 Tên Người Thứ Nhất (Tín Chủ):</label>
+          <input
+            type="text"
+            id="input-duyen-name1"
+            name="name1"
+            maxlength="50"
+            required
+            placeholder="Nhập họ tên của bạn..."
+            style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255, 209, 102, 0.45); background: rgba(18, 12, 8, 0.78); color: #fff8e7; font-size: 15px;"
+          />
+        </div>
+        <div>
+          <label for="input-duyen-name2" class="field-label">❤️ Tên Người Thứ Hai (Ý Trung Nhân):</label>
+          <input
+            type="text"
+            id="input-duyen-name2"
+            name="name2"
+            maxlength="50"
+            required
+            placeholder="Nhập họ tên người thương..."
+            style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255, 209, 102, 0.45); background: rgba(18, 12, 8, 0.78); color: #fff8e7; font-size: 15px;"
+          />
+        </div>
+      </div>
+
+      <label for="input-duyen-wish" class="field-label">🧧 Lời Ước Nguyện Gửi Ông Tơ Bà Nguyệt (tối đa 160 ký tự):</label>
+      <textarea
+        id="input-duyen-wish"
+        name="wish"
+        rows="3"
+        maxlength="160"
+        required
+        placeholder="Nguyện xin Ông Tơ se chỉ thắm, Bà Nguyệt nối duyên lành, cho hai chúng con trăm năm tình nghĩa viên mãn, gia đạo hạnh phúc..."
+      ></textarea>
+
+      <div class="quick-wish-chips">
+        <button type="button" class="wish-chip duyen-chip" data-duyen="Xin Ông Tơ se chỉ thắm, Bà Nguyệt nối duyên lành, trăm năm tình nghĩa sắt son viên mãn.">🧶 Trăm năm duyên lành viên mãn</button>
+        <button type="button" class="wish-chip duyen-chip" data-duyen="Cầu cho hai chúng con luôn thấu hiểu, thương yêu, vượt qua mọi thử thách để sớm nên duyên vợ chồng.">💑 Sớm nên duyên vợ chồng</button>
+        <button type="button" class="wish-chip duyen-chip" data-duyen="Cầu gia đạo thuận hòa êm ấm, vợ chồng đồng tâm hiệp lực, hạnh phúc bền lâu.">🏡 Gia đạo thuận hòa êm ấm</button>
+      </div>
+
+      <div class="dialog-footer">
+        <button type="button" class="secondary-zen-btn" id="btn-cancel-cau-duyen">Hủy</button>
+        <button type="submit" class="gold-cta-btn" id="btn-submit-cau-duyen">
+          🧶 Dâng Sớ &amp; Đọc Lời Cầu Xin Ông Tơ Bà Nguyệt (+10 Công Đức)
+        </button>
+      </div>
+    </form>
   </dialog>
 
   <!-- 3. Daily Buddhist Fortune Modal (Xin Xăm Quẻ Phật Giáo) -->

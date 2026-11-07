@@ -201,7 +201,19 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
         emitThrottledGlobalTicker('PROSTRATION_BAO_THAP', 1500, {
           type: 'PROSTRATION_BAO_THAP',
           dharmaName: currentUser.dharmaName,
-          message: `☸️ Đạo hữu "${currentUser.dharmaName}" vừa chiêm bái & đảnh lễ Bảo Tháp Xá Lợi 7 Tầng (+${delta} Công Đức).`
+          message: `☸️ Đạo hữu "${currentUser.dharmaName}" vừa chiêm bái & đảnh lễ Bảo Tháp Phật Tích (+${delta} Công Đức).`
+        });
+      } else if (target === 'ONG_TO_BA_NGUYET') {
+        emitThrottledGlobalTicker('PROSTRATION_ONG_TO_BA_NGUYET', 1500, {
+          type: 'PROSTRATION_ONG_TO_BA_NGUYET',
+          dharmaName: currentUser.dharmaName,
+          message: `🧧 Đạo hữu "${currentUser.dharmaName}" vừa thành tâm kính lễ Ông Tơ Bà Nguyệt cầu nhân duyên viên mãn (+${delta} Công Đức).`
+        });
+      } else if (target === 'THAN_TAI') {
+        emitThrottledGlobalTicker('PROSTRATION_THAN_TAI', 1500, {
+          type: 'PROSTRATION_THAN_TAI',
+          dharmaName: currentUser.dharmaName,
+          message: `💰 Đạo hữu "${currentUser.dharmaName}" vừa thành tâm kính lễ Thần Tài Phú Quý cầu tài lộc hanh thông (+${delta} Công Đức).`
         });
       } else if (payload.bowNumber === 3) {
         emitThrottledGlobalTicker('PROSTRATION_BUDDHA', 800, {
@@ -284,13 +296,14 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
       }
     });
 
-    // 9. Make Wish: Offer Incense or Release Lotus Lantern (+10 Công Đức)
+    // 9. Make Wish: Offer Incense, Release Lotus Lantern, Release Sky Lantern, or Pray Cau Duyen (+10 Công Đức)
     socket.on('make_wish', async (payload = {}) => {
       if (!currentUser) return;
       const content = String(payload.content || '').trim();
       if (!content) return;
 
-      const wishType = payload.wishType === 'LANTERN' ? 'LANTERN' : 'INCENSE';
+      const allowedTypes = new Set(['INCENSE', 'LANTERN', 'SKY_LANTERN', 'CAU_DUYEN']);
+      const wishType = allowedTypes.has(payload.wishType) ? payload.wishType : 'INCENSE';
       const savedWish = await db.createWish({
         userId: currentUser.id,
         dharmaName: currentUser.dharmaName,
@@ -311,12 +324,23 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
       });
 
       io.emit('new_wish', savedWish);
-      const actionLabel = wishType === 'LANTERN' ? 'thả đèn Hoa Đăng' : 'dâng nén Tâm Hương';
+      let actionLabel = 'dâng nén Tâm Hương cầu nguyện';
+      let icon = '🪷';
+      if (wishType === 'LANTERN') {
+        actionLabel = 'thả đèn Hoa Đăng cầu nguyện';
+        icon = '🪷';
+      } else if (wishType === 'SKY_LANTERN') {
+        actionLabel = 'thả Đèn Trời gửi lời ước nguyện';
+        icon = '🏮';
+      } else if (wishType === 'CAU_DUYEN') {
+        actionLabel = 'dâng lời ước nguyện Cầu Duyên lên Ông Tơ Bà Nguyệt';
+        icon = '🧧';
+      }
       io.emit('zen_ticker', {
         type: 'WISH',
         dharmaName: currentUser.dharmaName,
         wishType,
-        message: `🪷 Đạo hữu "${currentUser.dharmaName}" vừa ${actionLabel} cầu nguyện: "${content.slice(0, 80)}"`
+        message: `${icon} Đạo hữu "${currentUser.dharmaName}" vừa ${actionLabel}: "${content.slice(0, 90)}"`
       });
     });
 

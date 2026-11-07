@@ -496,7 +496,9 @@ class ChuaOnlineApp {
       } else if (hit.type === 'BAO_THAP') {
         this._handlePrayBaoThap();
       } else if (hit.type === 'TO_NGUYET_STATUE') {
-        this._handlePrayToNguyet();
+        this._openCauDuyenModal();
+      } else if (hit.type === 'THAN_TAI_STATUE') {
+        this._handlePrayThanTai();
       } else if (hit.type === 'BODHI_GARDEN') {
         this._handlePlantBodhiTree();
       } else if (hit.type === 'KOI_FISH') {
@@ -601,10 +603,15 @@ class ChuaOnlineApp {
           this._syncProstrateButtonUI('BAO_THAP');
           this.showToast('☸️ Đã đến Bảo Tháp Xá Lợi 7 Tầng — Nhấn phím [L] hoặc click vào Bảo Tháp để chiêm bái.');
         } else if (zone === 'DONG_TO_NGUYET') {
-          this._handleMoveToGroundPoint(-10.4, 22.8, false);
+          this._handleMoveToGroundPoint(-24.25, 6.2, false);
           this.templeScene.focusZone('DONG_TO_NGUYET');
           this._syncProstrateButtonUI('TO_NGUYET');
-          this.showToast('🧶 Đã đến Núi Đá Nhỏ Ông Tơ Bà Nguyệt (gần Cây Bồ Đề) — Nhấn phím [L] hoặc click vào Tượng để cầu duyên lành & gia đạo hòa hợp.');
+          this.showToast('🧶 Đã đến Điện Ông Tơ Bà Nguyệt — Nhấn [Y] hoặc click vào Tượng để nhập tên 2 người & đọc sớ Cầu Duyên!');
+        } else if (zone === 'DAI_THAN_TAI') {
+          this._handleMoveToGroundPoint(-24.25, 13.6, false);
+          this.templeScene.focusZone('DAI_THAN_TAI');
+          this._syncProstrateButtonUI('THAN_TAI');
+          this.showToast('💰 Đã đến Điện Thần Tài Phú Quý — Nhấn [L] hoặc click vào Tượng Thần Tài để cầu tài lộc hanh thông!');
         } else if (zone === 'VUON_BO_DE') {
           this._handleMoveToGroundPoint(14.5, 21.0, false);
           this.templeScene.focusZone('VUON_BO_DE');
@@ -826,6 +833,8 @@ class ChuaOnlineApp {
         this._handlePrayBaoThap();
       } else if (nearTarget === 'TO_NGUYET') {
         this._handlePrayToNguyet();
+      } else if (nearTarget === 'THAN_TAI') {
+        this._handlePrayThanTai();
       } else {
         this._handleProstrateBuddha();
       }
@@ -866,6 +875,16 @@ class ChuaOnlineApp {
     document.getElementById('dock-release-lantern')?.addEventListener('click', () => {
       autoDismissBanner();
       this._openWishModal('LANTERN');
+    });
+
+    document.getElementById('dock-sky-lantern')?.addEventListener('click', () => {
+      autoDismissBanner();
+      this._openWishModal('SKY_LANTERN');
+    });
+
+    document.getElementById('dock-cau-duyen')?.addEventListener('click', () => {
+      autoDismissBanner();
+      this._openCauDuyenModal();
     });
 
     document.getElementById('dock-ring-bell')?.addEventListener('click', () => {
@@ -1182,25 +1201,31 @@ class ChuaOnlineApp {
       this._joinGlobalChantingSession();
     });
 
-    // Wish Modal Events
+    // Wish Modal Events (INCENSE, LANTERN, SKY_LANTERN)
     const formWish = document.getElementById('form-make-wish');
     const tabIncense = document.getElementById('tab-wish-incense');
     const tabLantern = document.getElementById('tab-wish-lantern');
+    const tabSkyLantern = document.getElementById('tab-wish-sky-lantern');
     formWish?.querySelectorAll('input[name="wishType"]').forEach((radio) => {
       radio.addEventListener('change', () => {
-        const isIncense = radio.value === 'INCENSE';
-        tabIncense?.classList.toggle('active', isIncense);
-        tabLantern?.classList.toggle('active', !isIncense);
+        const val = radio.value;
+        tabIncense?.classList.toggle('active', val === 'INCENSE');
+        tabLantern?.classList.toggle('active', val === 'LANTERN');
+        tabSkyLantern?.classList.toggle('active', val === 'SKY_LANTERN');
         const titleEl = document.getElementById('title-make-wish');
         if (titleEl) {
-          titleEl.textContent = isIncense
-            ? '🪔 Dâng Nén Tâm Hương Cầu Nguyện'
-            : '🪷 Thả Đèn Hoa Đăng Trên Hồ Sen';
+          if (val === 'SKY_LANTERN') {
+            titleEl.textContent = '🏮 Thả Đèn Trời Gửi Lời Ước Nguyện';
+          } else if (val === 'LANTERN') {
+            titleEl.textContent = '🪷 Thả Đèn Hoa Đăng Trên Hồ Sen';
+          } else {
+            titleEl.textContent = '🪔 Dâng Nén Tâm Hương Cầu Nguyện';
+          }
         }
       });
     });
 
-    document.querySelectorAll('.wish-chip').forEach((chip) => {
+    document.querySelectorAll('.wish-chip:not(.duyen-chip)').forEach((chip) => {
       chip.addEventListener('click', () => {
         const textarea = document.getElementById('input-wish-content');
         if (textarea) textarea.value = chip.getAttribute('data-wish') || '';
@@ -1219,8 +1244,15 @@ class ChuaOnlineApp {
       if (!content) return;
 
       const side = Math.random() > 0.5 ? 1 : -1;
-      const posX = wishType === 'LANTERN' ? side * (3.5 + Math.random() * 8) : 0;
-      const posZ = wishType === 'LANTERN' ? 28 + Math.random() * 11 : -4;
+      let posX = 0;
+      let posZ = -4;
+      if (wishType === 'LANTERN') {
+        posX = side * (3.5 + Math.random() * 8);
+        posZ = 28 + Math.random() * 11;
+      } else if (wishType === 'SKY_LANTERN') {
+        posX = (Math.random() - 0.5) * 14;
+        posZ = 9 + Math.random() * 11;
+      }
 
       this.zenAudio.playIncenseChime(0.6);
       this.socketClient.makeWish(wishType, content, posX, posZ);
@@ -1234,13 +1266,34 @@ class ChuaOnlineApp {
         pos_x: posX,
         pos_z: posZ
       };
-      this.interactables.addWishVisual(wishObj, wishType === 'LANTERN');
+      this.interactables.addWishVisual(
+        wishObj,
+        wishType === 'LANTERN' || wishType === 'SKY_LANTERN'
+      );
       this._prependWishToWall(wishObj);
-      this._addLocalOptimisticMerit(10, wishType === 'INCENSE' ? 'Dâng Hương' : 'Thả Hoa Đăng');
+      const meritLabel =
+        wishType === 'SKY_LANTERN'
+          ? 'Thả Đèn Trời Ước Nguyện'
+          : wishType === 'LANTERN'
+            ? 'Thả Hoa Đăng'
+            : 'Dâng Hương';
+      this._addLocalOptimisticMerit(10, meritLabel);
 
       formWish.reset();
       document.getElementById('dialog-make-wish')?.close();
-      if (wishType === 'LANTERN') {
+      if (wishType === 'SKY_LANTERN') {
+        this._handleMoveToGroundPoint(0, 11.5, false);
+        this.templeScene.focusZone('SAN_CHUA');
+        document.querySelectorAll('.zone-btn').forEach((b) => {
+          b.classList.toggle('active', b.getAttribute('data-zone') === 'SAN_CHUA');
+        });
+        this.dharmaVoice.speakVerse(
+          `Nam Mô A Di Đà Phật. Đèn trời ước nguyện của đạo hữu ${this.profile.dharmaName} đang bay lên bầu trời tịnh độ: ${content}`
+        );
+        this.showToast(
+          `🏮 Đèn Trời ước nguyện của "${this.profile.dharmaName}" đang tỏa sáng bay lên bầu trời Sân Chùa (+10 Công Đức)!`
+        );
+      } else if (wishType === 'LANTERN') {
         this._handleMoveToGroundPoint(0, 29.0, false);
         this.templeScene.focusZone('HO_HOA_DANG');
         document.querySelectorAll('.zone-btn').forEach((b) => {
@@ -1252,6 +1305,32 @@ class ChuaOnlineApp {
         this.templeScene.focusZone('LU_HUONG');
         this.showToast(`🪔 Đã dâng nén tâm hương cầu nguyện lên Lư Hương Đồng Chạm Rồng ngoài thềm Chánh Điện!`);
       }
+    });
+
+    // Cầu Duyên Ông Tơ Bà Nguyệt Modal Events (Nhập Tên 2 Người + Đọc Sớ Cầu Xin)
+    const formCauDuyen = document.getElementById('form-cau-duyen');
+    document.querySelectorAll('.duyen-chip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const textarea = document.getElementById('input-duyen-wish');
+        if (textarea) textarea.value = chip.getAttribute('data-duyen') || '';
+      });
+    });
+
+    document.getElementById('btn-cancel-cau-duyen')?.addEventListener('click', () => {
+      document.getElementById('dialog-cau-duyen')?.close();
+    });
+
+    formCauDuyen?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name1 = String(
+        document.getElementById('input-duyen-name1')?.value || this.profile.dharmaName || 'Tín chủ'
+      ).trim();
+      const name2 = String(document.getElementById('input-duyen-name2')?.value || '').trim();
+      const wishText = String(document.getElementById('input-duyen-wish')?.value || '').trim();
+      if (!name1 || !wishText) return;
+
+      document.getElementById('dialog-cau-duyen')?.close();
+      this._submitCauDuyenPrayer(name1, name2, wishText);
     });
 
     // Fortune Modal Events
@@ -1343,6 +1422,8 @@ class ChuaOnlineApp {
         Q: 'dock-sweep-leaves',
         H: 'dock-offer-incense',
         D: 'dock-release-lantern',
+        U: 'dock-sky-lantern',
+        Y: 'dock-cau-duyen',
         X: 'dock-draw-fortune',
         P: 'dock-music-player',
         B: 'dock-leaderboard'
@@ -1375,7 +1456,8 @@ class ChuaOnlineApp {
     if (Math.hypot(x - 26.0, z - -10.2) <= 7.5) return 'DIA_TANG';
     if (Math.hypot(x - 13.8, z - 6.0) <= 5.5) return 'VAN_THU';
     if (Math.hypot(x - 10.8, z - 21.2) <= 6.8) return 'DUOC_SU';
-    if (Math.hypot(x - -10.8, z - 19.6) <= 5.6) return 'TO_NGUYET';
+    if (Math.hypot(x - -27.2, z - 6.2) <= 5.2) return 'TO_NGUYET';
+    if (Math.hypot(x - -27.2, z - 13.6) <= 5.2) return 'THAN_TAI';
     if (Math.hypot(x - -19.5, z - 21.5) <= 7.2) return 'BAO_THAP';
     return null;
   }
@@ -1404,10 +1486,13 @@ class ChuaOnlineApp {
       if (sub) sub.textContent = 'Đài Dược Sư +5';
     } else if (targetType === 'TO_NGUYET') {
       if (lbl) lbl.textContent = 'Lễ Tơ Nguyệt';
-      if (sub) sub.textContent = 'Cầu Duyên Lành +5';
+      if (sub) sub.textContent = 'Cầu Duyên Lành +10';
+    } else if (targetType === 'THAN_TAI') {
+      if (lbl) lbl.textContent = 'Lễ Thần Tài';
+      if (sub) sub.textContent = 'Cầu Tài Lộc +5';
     } else if (targetType === 'BAO_THAP') {
       if (lbl) lbl.textContent = 'Lễ Bảo Tháp';
-      if (sub) sub.textContent = 'Tháp Xá Lợi +5';
+      if (sub) sub.textContent = 'Tháp Phật Tích +5';
     } else {
       if (lbl) lbl.textContent = 'Lạy Phật';
       if (sub) sub.textContent = '+5 Công Đức';
@@ -1841,11 +1926,82 @@ class ChuaOnlineApp {
     this._addLocalOptimisticMerit(5, 'Chiêm Bái Bảo Tháp Xá Lợi');
   }
 
+  _openCauDuyenModal() {
+    this._handleMoveToGroundPoint(-24.25, 6.2, false);
+    this.templeScene.focusZone('DONG_TO_NGUYET');
+    this._syncProstrateButtonUI('TO_NGUYET');
+    document.querySelectorAll('.zone-btn').forEach((b) => {
+      b.classList.toggle('active', b.getAttribute('data-zone') === 'DONG_TO_NGUYET');
+    });
+
+    const name1Input = document.getElementById('input-duyen-name1');
+    if (name1Input && !name1Input.value) {
+      name1Input.value = this.profile.dharmaName || '';
+    }
+    const dlg = document.getElementById('dialog-cau-duyen');
+    if (dlg && !dlg.open) {
+      dlg.showModal();
+    }
+  }
+
+  _submitCauDuyenPrayer(name1, name2, wishText) {
+    // Di chuyển đạo hữu quỳ lạy trước Mái Hiên Ông Tơ Bà Nguyệt (-24.25, 6.2), quay mặt hướng Tây (-Math.PI / 2) vào Điện Ông Tơ Bà Nguyệt
+    const matX = -24.25;
+    const matZ = 6.2;
+    const rotFacing = -Math.PI / 2;
+
+    this._syncProstrateButtonUI('TO_NGUYET');
+    this._syncPercussionLocationUI(false);
+
+    const local = this.avatarManager.getLocalAvatar();
+    if (local) local.customSitRotY = rotFacing;
+    this.avatarManager.setLocalTargetPosition(matX, matZ, 'PROSTRATE', null);
+    this.avatarManager.triggerProstration(this.localSocketId, rotFacing);
+    this.templeScene.focusZone('DONG_TO_NGUYET');
+
+    this.zenAudio.playMeditationBell(0.85);
+    setTimeout(() => this.zenAudio.playWoodenFish(0.6), 350);
+
+    const coupleLabel = name2 ? `${name1} ❤ ${name2}` : name1;
+    const spokenPrayer = name2
+      ? `Nam Mô Nguyệt Hạ Lão Nhân, Hồng Loan Tinh Quân. Hôm nay tín chủ ${name1} thành tâm kết duyên cùng ${name2}, kính dâng lời ước nguyện lên Ông Tơ Bà Nguyệt: ${wishText}. Nguyện xin Ông Tơ se chỉ thắm, Bà Nguyệt nối duyên lành, cho ${name1} và ${name2} trăm năm tình nghĩa sắt son viên mãn.`
+      : `Nam Mô Nguyệt Hạ Lão Nhân, Hồng Loan Tinh Quân. Hôm nay tín chủ ${name1} thành tâm kính dâng lời ước nguyện lên Ông Tơ Bà Nguyệt: ${wishText}. Nguyện xin Ông Tơ Bà Nguyệt chứng giám, ban cho nhân duyên tốt đẹp, gia đạo bình an hạnh phúc.`;
+
+    // Đọc vang lời sớ cầu duyên gửi Ông Tơ Bà Nguyệt bằng giọng đọc Pháp Âm TTS
+    this.dharmaVoice.speakVerse(spokenPrayer);
+
+    const combinedContent = name2
+      ? `[${name1} ❤ ${name2}] ${wishText}`
+      : `[${name1}] ${wishText}`;
+    this.socketClient.makeWish('CAU_DUYEN', combinedContent, -25.2, 6.2);
+    this.socketClient.sendMove(matX, matZ, rotFacing, 'PROSTRATE', null);
+    this.socketClient.prostrateBuddha(1, 'ONG_TO_BA_NGUYET', rotFacing);
+
+    const wishObj = {
+      id: 'local-duyen-' + Date.now(),
+      dharma_name: coupleLabel,
+      wish_type: 'CAU_DUYEN',
+      content: wishText,
+      pos_x: -25.2,
+      pos_z: 6.2
+    };
+    this.interactables.addWishVisual(wishObj, true);
+    this._prependWishToWall(wishObj);
+    this._addLocalOptimisticMerit(10, 'Cầu Duyên Ông Tơ Bà Nguyệt');
+
+    this._setZenTickerText(
+      `🧶 Tín chủ "${coupleLabel}" vừa thành tâm dâng sớ Cầu Duyên lên Ông Tơ Bà Nguyệt: "${wishText}" (+10 Công Đức).`
+    );
+    this.showToast(
+      `🧶 Đang đọc sớ Cầu Duyên cho "${coupleLabel}" trước Điện Ông Tơ Bà Nguyệt (+10 Công Đức)!`
+    );
+  }
+
   _handlePrayToNguyet() {
-    // Di chuyển đạo hữu đến Bồ Đoàn trước Núi Đá Nhỏ Ông Tơ Bà Nguyệt (-10.4, 22.8)
-    const matX = -10.4;
-    const matZ = 22.8;
-    const rotFacing = Math.atan2(-10.8 - matX, 19.6 - matZ);
+    // Di chuyển đạo hữu đến Bồ Đoàn trước Điện Ông Tơ Bà Nguyệt (-24.25, 6.2)
+    const matX = -24.25;
+    const matZ = 6.2;
+    const rotFacing = -Math.PI / 2;
 
     this._syncProstrateButtonUI('TO_NGUYET');
     this._syncPercussionLocationUI(false);
@@ -1863,13 +2019,47 @@ class ChuaOnlineApp {
       'Chí tâm kính lễ Nguyệt Hạ Lão Nhân Ông Tơ Bà Nguyệt, nguyện cầu nhân duyên thiện lành, gia đạo thuận hòa, tình nghĩa bền chặt trăm năm.';
     this.dharmaVoice.speakVerse(vowText);
     this._setZenTickerText(
-      `🧶 Đạo hữu "${this.profile.dharmaName}" vừa thành tâm kính lễ Ông Tơ Bà Nguyệt tại Núi Đá Nhỏ gần Cây Bồ Đề (+5 Công Đức).`
+      `🧶 Đạo hữu "${this.profile.dharmaName}" vừa thành tâm kính lễ Ông Tơ Bà Nguyệt cầu nhân duyên viên mãn (+5 Công Đức).`
     );
-    this.showToast('🧶 Đã thành tâm kính lễ Ông Tơ Bà Nguyệt — Cầu nhân duyên thiện lành & gia đạo hòa hợp (+5 Công Đức)!');
+    this.showToast('🧶 Đã thành tâm kính lễ Ông Tơ Bà Nguyệt — Bấm nút [Cầu Duyên] để nhập tên 2 người & đọc sớ cầu xin!');
 
     this.socketClient.sendMove(matX, matZ, rotFacing, 'PROSTRATE', null);
-    this.socketClient.prostrateBuddha(1, 'TO_NGUYET', rotFacing);
+    this.socketClient.prostrateBuddha(1, 'ONG_TO_BA_NGUYET', rotFacing);
     this._addLocalOptimisticMerit(5, 'Kính Lễ Ông Tơ Bà Nguyệt');
+  }
+
+  _handlePrayThanTai() {
+    // Di chuyển đạo hữu đến Bồ Đoàn trước Điện Thần Tài Phú Quý (-24.25, 13.6), quay mặt hướng Tây (-Math.PI / 2)
+    const matX = -24.25;
+    const matZ = 13.6;
+    const rotFacing = -Math.PI / 2;
+
+    this._syncProstrateButtonUI('THAN_TAI');
+    this._syncPercussionLocationUI(false);
+
+    const local = this.avatarManager.getLocalAvatar();
+    if (local) local.customSitRotY = rotFacing;
+    this.avatarManager.setLocalTargetPosition(matX, matZ, 'PROSTRATE', null);
+    this.avatarManager.triggerProstration(this.localSocketId, rotFacing);
+    this.templeScene.focusZone('DAI_THAN_TAI');
+    document.querySelectorAll('.zone-btn').forEach((b) => {
+      b.classList.toggle('active', b.getAttribute('data-zone') === 'DAI_THAN_TAI');
+    });
+
+    this.zenAudio.playMeditationBell(0.85);
+    setTimeout(() => this.zenAudio.playWoodenFish(0.6), 350);
+
+    const vowText =
+      'Chí tâm kính lễ Thần Tài Phú Quý Tiên Ông, nguyện cầu công việc hanh thông, tài lộc dồi dào, tâm hành thiện sự, phúc lộc vẹn toàn.';
+    this.dharmaVoice.speakVerse(vowText);
+    this._setZenTickerText(
+      `💰 Đạo hữu "${this.profile.dharmaName}" vừa thành tâm đảnh lễ Thần Tài Phú Quý cầu tài lộc hanh thông (+5 Công Đức).`
+    );
+    this.showToast('💰 Đã thành tâm đảnh lễ Thần Tài Phú Quý — Cầu tài lộc hanh thông & phúc lộc viên mãn (+5 Công Đức)!');
+
+    this.socketClient.sendMove(matX, matZ, rotFacing, 'PROSTRATE', null);
+    this.socketClient.prostrateBuddha(1, 'THAN_TAI', rotFacing);
+    this._addLocalOptimisticMerit(5, 'Đảnh Lễ Thần Tài Phú Quý');
   }
 
   _handlePlantBodhiTree() {
@@ -2228,7 +2418,8 @@ class ChuaOnlineApp {
     if (!list || !w) return;
     const item = document.createElement('div');
     item.className = 'wish-wall-item';
-    const icon = (w.wish_type || w.wishType) === 'LANTERN' ? '🪷' : '🪔';
+    const wt = w.wish_type || w.wishType || 'INCENSE';
+    const icon = wt === 'SKY_LANTERN' ? '🏮' : wt === 'CAU_DUYEN' ? '🧶' : wt === 'LANTERN' ? '🪷' : '🪔';
     const author = w.dharma_name || w.dharmaName || 'Đạo hữu';
     item.textContent = `${icon} ${author}: "${w.content}"`;
     if (append) list.appendChild(item);
