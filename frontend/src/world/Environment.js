@@ -1225,104 +1225,117 @@ export class Environment {
         this.walkableMeshes.push(stair);
       }
 
-      // 2. Kết Cấu Điện Thờ Chữ U Mở Toang Cửa Chính (Không dùng hộp kín để nhìn rõ toàn bộ nội điện sáng rực)
+      // 2. Kết Cấu Điện Thờ Chữ U Mở Toang Cửa Chính — Nâng chiều cao bằng đúng Đại Hùng Bảo Điện (Tường cao 9.5m, Mái 2 tầng đạt đỉnh Y = 16.35m)
       // Tường hậu cung phía sau (local Z = -6.2)
-      const backWall = new THREE.Mesh(new THREE.BoxGeometry(10.0, 5.8, 0.45), brightInteriorWallMat);
-      backWall.position.set(0, 3.62, -6.2);
+      const backWall = new THREE.Mesh(new THREE.BoxGeometry(10.0, 9.5, 0.48), brightInteriorWallMat);
+      backWall.position.set(0, 5.55, -6.2);
       backWall.receiveShadow = true;
       wingGroup.add(backWall);
 
-      const backWainscot = new THREE.Mesh(new THREE.BoxGeometry(9.9, 1.35, 0.52), wainscotCrimsonMat);
-      backWainscot.position.set(0, 1.4, -6.18);
+      const backWainscot = new THREE.Mesh(new THREE.BoxGeometry(9.9, 1.8, 0.54), wainscotCrimsonMat);
+      backWainscot.position.set(0, 1.62, -6.18);
       wingGroup.add(backWainscot);
 
-      const backGoldTrim = new THREE.Mesh(new THREE.BoxGeometry(9.9, 0.14, 0.55), goldMat);
-      backGoldTrim.position.set(0, 2.12, -6.16);
+      const backGoldTrim = new THREE.Mesh(new THREE.BoxGeometry(9.9, 0.18, 0.58), goldMat);
+      backGoldTrim.position.set(0, 2.58, -6.16);
       wingGroup.add(backGoldTrim);
 
       // Vách Hào Quang Liên Hoa Hoàng Kim lớn phía sau Tôn Tượng trên tường hậu cung
-      const backHaloDisc = new THREE.Mesh(new THREE.CircleGeometry(2.35, 36), haloDiscMat);
-      backHaloDisc.position.set(0, 3.85, -5.92);
+      const backHaloDisc = new THREE.Mesh(new THREE.CircleGeometry(2.75, 36), haloDiscMat);
+      backHaloDisc.position.set(0, 4.65, -5.92);
       wingGroup.add(backHaloDisc);
 
-      const backHaloRing = new THREE.Mesh(new THREE.TorusGeometry(2.35, 0.075, 10, 36), goldMat);
-      backHaloRing.position.set(0, 3.85, -5.9);
+      const backHaloRing = new THREE.Mesh(new THREE.TorusGeometry(2.75, 0.085, 10, 36), goldMat);
+      backHaloRing.position.set(0, 4.65, -5.9);
       wingGroup.add(backHaloRing);
 
-      // Tường biên hai bên Trái - Phải (local X = ±4.85)
+      // Tường biên hai bên Trái - Phải (local X = ±4.85, cao 9.5m ngang bằng tường biên Chánh Điện)
       for (const sSide of [-1, 1]) {
-        const sideWall = new THREE.Mesh(new THREE.BoxGeometry(0.42, 5.8, 12.8), brightInteriorWallMat);
-        sideWall.position.set(sSide * 4.85, 3.62, 0.0);
+        const sideWall = new THREE.Mesh(new THREE.BoxGeometry(0.45, 9.5, 12.8), brightInteriorWallMat);
+        sideWall.position.set(sSide * 4.85, 5.55, 0.0);
         sideWall.receiveShadow = true;
         wingGroup.add(sideWall);
 
-        const sideWainscot = new THREE.Mesh(new THREE.BoxGeometry(0.48, 1.35, 12.6), wainscotCrimsonMat);
-        sideWainscot.position.set(sSide * 4.82, 1.4, 0.0);
+        const sideWainscot = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.8, 12.6), wainscotCrimsonMat);
+        sideWainscot.position.set(sSide * 4.82, 1.62, 0.0);
         wingGroup.add(sideWainscot);
 
-        const sideGoldTrim = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.14, 12.6), goldMat);
-        sideGoldTrim.position.set(sSide * 4.80, 2.12, 0.0);
+        const sideGoldTrim = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.18, 12.6), goldMat);
+        sideGoldTrim.position.set(sSide * 4.8, 2.58, 0.0);
         wingGroup.add(sideGoldTrim);
       }
 
-      // 3. Mặt Tiền Mở Cửa Rộng Thoáng (Lối vào rộng 7.4m x cao 5.6m tại local Z = +6.4 -> Z thế giới = -3.2)
+      // 3. Mặt Tiền Mở Cửa Rộng Thoáng Cao Bằng Chánh Điện (Cột cao 9.2m tại local Z = +6.4 -> Z thế giới = -3.2)
       for (const px of [-4.65, -3.7, 3.7, 4.65]) {
-        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.30, 5.8, 14), woodMat);
-        pillar.position.set(px, 3.62, 6.4);
+        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.4, 9.2, 14), woodMat);
+        pillar.position.set(px, 5.45, 6.4);
         pillar.castShadow = true;
         wingGroup.add(pillar);
 
-        const pBase = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.44, 0.26, 12), stoneMat);
-        pBase.position.set(px, 0.85, 6.4);
+        const pBase = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.52, 0.3, 12), stoneMat);
+        pBase.position.set(px, 0.87, 6.4);
         wingGroup.add(pBase);
       }
 
-      // Bộ Cửa Gỗ Bức Bàn Mở Rộng Sang 2 Bên (Open Folding Lattice Doors)
+      // Thượng lương & Cổ diềm gỗ lim mặt tiền ở cao độ Y = 9.45m (đồng bộ với mặt tiền Chánh Điện)
+      const frontTopBeam = new THREE.Mesh(new THREE.BoxGeometry(10.1, 0.42, 0.58), woodMat);
+      frontTopBeam.position.set(0, 9.45, 6.4);
+      wingGroup.add(frontTopBeam);
+
+      const frontUpperTransom = new THREE.Mesh(new THREE.BoxGeometry(9.8, 1.25, 0.36), wainscotCrimsonMat);
+      frontUpperTransom.position.set(0, 8.65, 6.38);
+      wingGroup.add(frontUpperTransom);
+
+      const frontTransomGold = new THREE.Mesh(new THREE.BoxGeometry(9.9, 0.14, 0.42), goldMat);
+      frontTransomGold.position.set(0, 8.02, 6.4);
+      wingGroup.add(frontTransomGold);
+
+      // Bộ Cửa Gỗ Bức Bàn Mở Rộng Sang 2 Bên (Open Folding Lattice Doors — nâng cao cân xứng với điện cao 9.5m)
       for (const dSide of [-1, 1]) {
         const openDoorGroup = new THREE.Group();
-        openDoorGroup.position.set(dSide * 3.65, 2.85, 6.42);
+        openDoorGroup.position.set(dSide * 3.65, 3.85, 6.42);
         // Xoay mở toang cánh cửa ra hai bên hiên để đón ánh sáng và đạo hữu vào lễ bái
         openDoorGroup.rotation.y = dSide * 1.18;
 
-        const doorLeaf1 = new THREE.Mesh(new THREE.BoxGeometry(1.15, 4.2, 0.12), woodMat);
-        doorLeaf1.position.x = -dSide * 0.58;
+        const doorLeaf1 = new THREE.Mesh(new THREE.BoxGeometry(1.22, 6.2, 0.12), woodMat);
+        doorLeaf1.position.x = -dSide * 0.61;
         openDoorGroup.add(doorLeaf1);
 
-        const doorGoldFrame = new THREE.Mesh(new THREE.BoxGeometry(1.02, 3.95, 0.14), goldMat);
-        doorGoldFrame.position.x = -dSide * 0.58;
+        const doorGoldFrame = new THREE.Mesh(new THREE.BoxGeometry(1.08, 5.85, 0.14), goldMat);
+        doorGoldFrame.position.x = -dSide * 0.61;
         openDoorGroup.add(doorGoldFrame);
 
-        const doorInnerPanel = new THREE.Mesh(new THREE.BoxGeometry(0.86, 3.75, 0.16), wainscotCrimsonMat);
-        doorInnerPanel.position.x = -dSide * 0.58;
+        const doorInnerPanel = new THREE.Mesh(new THREE.BoxGeometry(0.92, 5.55, 0.16), wainscotCrimsonMat);
+        doorInnerPanel.position.x = -dSide * 0.61;
         openDoorGroup.add(doorInnerPanel);
 
-        const lotusBoss = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.035, 8, 20), goldMat);
-        lotusBoss.position.set(-dSide * 0.58, 0.45, 0.09);
+        const lotusBoss = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.038, 8, 20), goldMat);
+        lotusBoss.position.set(-dSide * 0.61, 0.65, 0.09);
         openDoorGroup.add(lotusBoss);
 
         wingGroup.add(openDoorGroup);
       }
 
-      // 4. Mái Đao Ngói Đỏ 2 Tầng Nâng Cao Thoáng Đãng (tắt castShadow để nội điện luôn sáng rực)
-      const roofLower = new THREE.Mesh(new THREE.ConeGeometry(8.9, 2.5, 4), roofMat);
+      // 4. Mái Đao Ngói Đỏ 2 Tầng Cao Ngang Bằng Mái Đại Hùng Bảo Điện (Tầng 1: Y = 11.8m, Tầng 2: Y = 14.5m)
+      const roofLower = new THREE.Mesh(new THREE.ConeGeometry(9.6, 4.2, 4), roofMat);
       roofLower.rotation.y = Math.PI / 4;
       roofLower.scale.set(0.98, 1.0, 1.32);
-      roofLower.position.set(0, 7.55, 0.0);
+      roofLower.position.set(0, 11.75, 0.0);
       roofLower.castShadow = false;
       wingGroup.add(roofLower);
 
-      const roofUpper = new THREE.Mesh(new THREE.ConeGeometry(6.5, 2.1, 4), roofMat);
+      const roofUpper = new THREE.Mesh(new THREE.ConeGeometry(7.2, 3.6, 4), roofMat);
       roofUpper.rotation.y = Math.PI / 4;
       roofUpper.scale.set(0.98, 1.0, 1.28);
-      roofUpper.position.set(0, 9.25, 0.0);
+      roofUpper.position.set(0, 14.45, 0.0);
       roofUpper.castShadow = false;
       wingGroup.add(roofUpper);
 
-      const ridgeFinial = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 12), goldMat);
-      ridgeFinial.position.set(0, 10.4, 0.0);
+      const ridgeFinial = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 12), goldMat);
+      ridgeFinial.position.set(0, 16.3, 0.0);
       wingGroup.add(ridgeFinial);
 
-      // 5. Bảng Hoành Phi Sơn Son Thếp Vàng Trên Cửa Điện Mở Rộng
+      // 5. Bảng Hoành Phi Sơn Son Thếp Vàng Trên Cửa Điện Mở Rộng (Đặt tại Y = 9.15m ngang bằng Hoành Phi Đại Hùng Bảo Điện)
       const wCanvas = document.createElement('canvas');
       wCanvas.width = 640;
       wCanvas.height = 160;
@@ -1343,35 +1356,39 @@ export class Environment {
       const wTex = new THREE.CanvasTexture(wCanvas);
       wTex.colorSpace = THREE.SRGBColorSpace;
       const wPlaque = new THREE.Mesh(
-        new THREE.BoxGeometry(5.2, 1.18, 0.18),
+        new THREE.BoxGeometry(5.8, 1.32, 0.22),
         new THREE.MeshBasicMaterial({ map: wTex })
       );
-      wPlaque.position.set(0, 5.85, 6.65);
+      wPlaque.position.set(0, 9.15, 6.68);
       wingGroup.add(wPlaque);
 
-      // 6. Đèn Lồng Cung Đình & Hệ Đèn Chiếu Sáng Nội Điện Rực Rỡ
+      const wPlaqueBorder = new THREE.Mesh(new THREE.BoxGeometry(6.02, 1.48, 0.16), goldMat);
+      wPlaqueBorder.position.set(0, 9.15, 6.62);
+      wingGroup.add(wPlaqueBorder);
+
+      // 6. Đèn Lồng Cung Đình & Hệ Đèn Chiếu Sáng Nội Điện
       for (const [lx, ly, lz] of [
-        [-2.9, 5.35, 6.6],
-        [2.9, 5.35, 6.6],
-        [-2.6, 5.4, 0.8],
-        [2.6, 5.4, 0.8]
+        [-2.9, 7.55, 6.6],
+        [2.9, 7.55, 6.6],
+        [-2.6, 7.45, 0.8],
+        [2.6, 7.45, 0.8]
       ]) {
-        const lantern = new THREE.Mesh(new THREE.SphereGeometry(0.34, 14, 12), lanternRedMat);
+        const lantern = new THREE.Mesh(new THREE.SphereGeometry(0.36, 14, 12), lanternRedMat);
         lantern.scale.set(1.0, 1.25, 1.0);
         lantern.position.set(lx, ly, lz);
         wingGroup.add(lantern);
 
         const capTop = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.08, 10), goldMat);
-        capTop.position.set(lx, ly + 0.42, lz);
+        capTop.position.set(lx, ly + 0.44, lz);
         wingGroup.add(capTop);
       }
 
-      const interiorMainLight = new THREE.PointLight(0xffe599, 4.4, 24, 1.0);
-      interiorMainLight.position.set(0, 5.4, 1.6);
+      const interiorMainLight = new THREE.PointLight(0xffe599, 4.4, 26, 1.0);
+      interiorMainLight.position.set(0, 7.2, 1.6);
       wingGroup.add(interiorMainLight);
 
-      const altarSpotLight = new THREE.PointLight(0xfff4cc, 3.6, 18, 1.0);
-      altarSpotLight.position.set(0, 4.5, -1.5);
+      const altarSpotLight = new THREE.PointLight(0xfff4cc, 3.6, 20, 1.0);
+      altarSpotLight.position.set(0, 5.2, -1.5);
       wingGroup.add(altarSpotLight);
 
       this.group.add(wingGroup);
