@@ -74,11 +74,7 @@ export class Interactables {
       { id: 'seed-sky-3', dharma_name: 'Diệu Liên', wish_type: 'SKY_LANTERN', content: 'Cầu quốc thái dân an, thế giới hòa bình an lạc', pos_x: -11.5, pos_z: 15.8 },
       { id: 'seed-sky-4', dharma_name: 'Phúc Đức', wish_type: 'SKY_LANTERN', content: 'Nguyện tâm sáng như trăng rằm, trí tuệ viên mãn', pos_x: 11.2, pos_z: 16.4 },
       { id: 'seed-sky-5', dharma_name: 'An Lạc', wish_type: 'SKY_LANTERN', content: 'Cầu công việc thuận buồm xuôi gió, tài lộc hanh thông', pos_x: -3.2, pos_z: 19.5 },
-      { id: 'seed-sky-6', dharma_name: 'Tịnh Tâm', wish_type: 'SKY_LANTERN', content: 'Nguyện khắp pháp giới chúng sanh đồng trọn thành Phật đạo', pos_x: 4.4, pos_z: 20.2 },
-      // Seed 3 Red Silk Love Wishes (Dải Tơ Hồng Cầu Duyên) at Điện Ông Tơ Bà Nguyệt
-      { id: 'seed-duyen-1', dharma_name: 'Minh Quân ❤ Thanh Hà', wish_type: 'CAU_DUYEN', content: 'Nguyện Ông Tơ Bà Nguyệt se chỉ hồng trăm năm hạnh phúc viên mãn', pos_x: -25.2, pos_z: 4.8 },
-      { id: 'seed-duyen-2', dharma_name: 'Hoàng Nam ❤ Ngọc Ánh', wish_type: 'CAU_DUYEN', content: 'Cầu duyên lành bền chặt, gia đạo thuận hòa êm ấm', pos_x: -25.2, pos_z: 6.2 },
-      { id: 'seed-duyen-3', dharma_name: 'Bảo Ngọc', wish_type: 'CAU_DUYEN', content: 'Xin Ông Tơ Bà Nguyệt ban cho sớm gặp ý trung nhân chân thành', pos_x: -25.2, pos_z: 7.6 }
+      { id: 'seed-sky-6', dharma_name: 'Tịnh Tâm', wish_type: 'SKY_LANTERN', content: 'Nguyện khắp pháp giới chúng sanh đồng trọn thành Phật đạo', pos_x: 4.4, pos_z: 20.2 }
     ];
     for (const w of initialWishes) {
       this.addWishVisual(w, false);
@@ -179,7 +175,10 @@ export class Interactables {
     }
 
     if (wType === 'CAU_DUYEN') {
-      this._addCauDuyenRibbonVisual(wishId, wish, animateRelease);
+      // Chỉ hiển thị chữ Cầu Duyên 1 lần khi lời nguyện đang được đọc (animateRelease === true), rồi tự tắt sau khi đọc xong
+      if (animateRelease) {
+        this._addCauDuyenRibbonVisual(wishId, wish, true);
+      }
       return;
     }
 
@@ -415,75 +414,68 @@ export class Interactables {
   }
 
   /**
-   * Treo Dải Lụa Đỏ Tơ Hồng Cầu Duyên tại Điện Ông Tơ - Bà Nguyệt (-25.2, Z = 4.6 .. 7.8)
+   * Hiển thị bảng sớ Cầu Duyên 1 lần khi lời nguyện đang được đọc trước Điện Ông Tơ - Bà Nguyệt rồi tự tắt đi
    */
-  _addCauDuyenRibbonVisual(wishId, wish, animateRelease = false) {
-    if (this.activeCauDuyenWishes.has(wishId)) return;
-
-    const idx = this.activeCauDuyenWishes.size;
-    const rx = -25.15 + (idx % 2) * 0.22;
-    const rz = 4.75 + ((idx * 0.68) % 2.9);
-    const ry = 2.35 + (idx % 3) * 0.36;
+  _addCauDuyenRibbonVisual(wishId, wish) {
+    // Xóa các bảng Cầu Duyên cũ (chỉ hiển thị 1 bảng duy nhất đang đọc)
+    for (const oldId of Array.from(this.activeCauDuyenWishes.keys())) {
+      this.removeCauDuyenVisual(oldId);
+    }
 
     const ribbonGroup = new THREE.Group();
-    ribbonGroup.position.set(rx, ry, rz);
-
-    const ribbonMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(0.06, 0.65, 0.16),
-      new THREE.MeshStandardMaterial({
-        color: 0xe61919,
-        roughness: 0.32,
-        emissive: 0x660808,
-        emissiveIntensity: 0.45
-      })
-    );
-    ribbonMesh.userData = { type: 'WISH_LANTERN', wish };
-    ribbonGroup.add(ribbonMesh);
-
-    const goldKnot = new THREE.Mesh(
-      new THREE.TorusGeometry(0.075, 0.022, 8, 16),
-      new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.8, roughness: 0.2 })
-    );
-    goldKnot.rotation.y = Math.PI / 2;
-    goldKnot.position.y = 0.34;
-    ribbonGroup.add(goldKnot);
+    ribbonGroup.position.set(-24.85, 2.75, 6.2);
 
     const labelCanvas = document.createElement('canvas');
-    labelCanvas.width = 360;
-    labelCanvas.height = 68;
+    labelCanvas.width = 420;
+    labelCanvas.height = 76;
     const ctx = labelCanvas.getContext('2d');
-    ctx.fillStyle = 'rgba(68, 8, 14, 0.86)';
+    ctx.fillStyle = 'rgba(68, 8, 14, 0.90)';
     ctx.strokeStyle = '#ffd700';
     ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.roundRect(4, 4, 352, 60, 12);
+    ctx.roundRect(4, 4, 412, 68, 12);
     ctx.fill();
     ctx.stroke();
     ctx.fillStyle = '#ffeb3b';
-    ctx.font = 'bold 17px sans-serif';
-    const author = String(wish.dharma_name || wish.dharmaName || 'Tín chủ').slice(0, 22);
-    ctx.fillText(`🧶 ${author}`, 14, 27);
+    ctx.font = 'bold 18px sans-serif';
+    const author = String(wish.dharma_name || wish.dharmaName || 'Tín chủ').slice(0, 26);
+    ctx.fillText(`🧶 Sớ Cầu Duyên: ${author}`, 14, 29);
     ctx.fillStyle = '#ffffff';
-    ctx.font = '14px sans-serif';
-    const snippet = String(wish.content || '').slice(0, 32);
-    ctx.fillText(`"${snippet}..."`, 14, 50);
+    ctx.font = '15px sans-serif';
+    const snippet = String(wish.content || '').slice(0, 38);
+    ctx.fillText(`"${snippet}..."`, 14, 54);
 
     const labelTex = new THREE.CanvasTexture(labelCanvas);
-    const labelSprite = new THREE.Sprite(
-      new THREE.SpriteMaterial({ map: labelTex, transparent: true })
-    );
-    labelSprite.position.set(0.35, 0.55, 0);
-    labelSprite.scale.set(2.2, 0.42, 1);
+    const spriteMat = new THREE.SpriteMaterial({ map: labelTex, transparent: true, opacity: 1.0 });
+    const labelSprite = new THREE.Sprite(spriteMat);
+    labelSprite.scale.set(2.55, 0.46, 1);
     ribbonGroup.add(labelSprite);
 
     this.lanternsGroup.add(ribbonGroup);
     this.activeCauDuyenWishes.set(wishId, {
       group: ribbonGroup,
-      ribbonMesh,
+      spriteMat,
+      labelTex,
       data: wish,
-      baseY: ry,
+      baseY: 2.75,
+      ttl: 12.5,
+      fadingOut: false,
       phase: Math.random() * Math.PI * 2
     });
+  }
+
+  removeCauDuyenVisual(wishId = null) {
+    const keys = wishId && this.activeCauDuyenWishes.has(String(wishId))
+      ? [String(wishId)]
+      : Array.from(this.activeCauDuyenWishes.keys());
+    for (const key of keys) {
+      const item = this.activeCauDuyenWishes.get(key);
+      if (!item) continue;
+      this.lanternsGroup.remove(item.group);
+      if (item.labelTex) item.labelTex.dispose();
+      if (item.spriteMat) item.spriteMat.dispose();
+      this.activeCauDuyenWishes.delete(key);
+    }
   }
 
   showClickIndicator(x, y, z) {
@@ -516,9 +508,6 @@ export class Interactables {
     }
     for (const skyItem of this.activeSkyLanterns.values()) {
       lanternMeshes.push(skyItem.bodyMesh, skyItem.flameMesh);
-    }
-    for (const cdItem of this.activeCauDuyenWishes.values()) {
-      lanternMeshes.push(cdItem.ribbonMesh);
     }
     if (lanternMeshes.length > 0) {
       const lanternHits = raycaster.intersectObjects(lanternMeshes, false);
@@ -590,10 +579,19 @@ export class Interactables {
       sky.group.rotation.z = Math.sin(elapsed * 1.1 + sky.phase) * 0.06;
     }
 
-    // Animate Red Silk Love Ribbons swaying in the breeze at Điện Ông Tơ Bà Nguyệt
-    for (const cd of this.activeCauDuyenWishes.values()) {
-      cd.ribbonMesh.rotation.x = Math.sin(elapsed * 2.1 + cd.phase) * 0.16;
-      cd.ribbonMesh.rotation.z = Math.cos(elapsed * 1.7 + cd.phase) * 0.12;
+    // Animate temporary Cầu Duyên banner (shows 1 time while prayer is read, then fades out & removes itself)
+    for (const [cdId, cd] of this.activeCauDuyenWishes.entries()) {
+      cd.ttl -= dt;
+      cd.group.position.y = cd.baseY + Math.sin(elapsed * 2.0 + cd.phase) * 0.05;
+      if (cd.ttl <= 0.65 && cd.spriteMat) {
+        cd.spriteMat.opacity = Math.max(0, cd.ttl / 0.65);
+      }
+      if (cd.ttl <= 0) {
+        this.lanternsGroup.remove(cd.group);
+        if (cd.labelTex) cd.labelTex.dispose();
+        if (cd.spriteMat) cd.spriteMat.dispose();
+        this.activeCauDuyenWishes.delete(cdId);
+      }
     }
 
     // Animate click ring indicator

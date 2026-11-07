@@ -429,7 +429,7 @@ class ChuaOnlineApp {
 
       onNewWish: (wish) => {
         if (!wish) return;
-        this.interactables.addWishVisual(wish);
+        this.interactables.addWishVisual(wish, true);
         this._prependWishToWall(wish);
       },
 
@@ -496,7 +496,7 @@ class ChuaOnlineApp {
       } else if (hit.type === 'BAO_THAP') {
         this._handlePrayBaoThap();
       } else if (hit.type === 'TO_NGUYET_STATUE') {
-        this._openCauDuyenModal();
+        this._handlePrayToNguyet();
       } else if (hit.type === 'THAN_TAI_STATUE') {
         this._handlePrayThanTai();
       } else if (hit.type === 'BODHI_GARDEN') {
@@ -1967,16 +1967,6 @@ class ChuaOnlineApp {
       ? `Nam Mô Nguyệt Hạ Lão Nhân, Hồng Loan Tinh Quân. Hôm nay tín chủ ${name1} thành tâm kết duyên cùng ${name2}, kính dâng lời ước nguyện lên Ông Tơ Bà Nguyệt: ${wishText}. Nguyện xin Ông Tơ se chỉ thắm, Bà Nguyệt nối duyên lành, cho ${name1} và ${name2} trăm năm tình nghĩa sắt son viên mãn.`
       : `Nam Mô Nguyệt Hạ Lão Nhân, Hồng Loan Tinh Quân. Hôm nay tín chủ ${name1} thành tâm kính dâng lời ước nguyện lên Ông Tơ Bà Nguyệt: ${wishText}. Nguyện xin Ông Tơ Bà Nguyệt chứng giám, ban cho nhân duyên tốt đẹp, gia đạo bình an hạnh phúc.`;
 
-    // Đọc vang lời sớ cầu duyên gửi Ông Tơ Bà Nguyệt bằng giọng đọc Pháp Âm TTS
-    this.dharmaVoice.speakVerse(spokenPrayer);
-
-    const combinedContent = name2
-      ? `[${name1} ❤ ${name2}] ${wishText}`
-      : `[${name1}] ${wishText}`;
-    this.socketClient.makeWish('CAU_DUYEN', combinedContent, -25.2, 6.2);
-    this.socketClient.sendMove(matX, matZ, rotFacing, 'PROSTRATE', null);
-    this.socketClient.prostrateBuddha(1, 'ONG_TO_BA_NGUYET', rotFacing);
-
     const wishObj = {
       id: 'local-duyen-' + Date.now(),
       dharma_name: coupleLabel,
@@ -1986,6 +1976,19 @@ class ChuaOnlineApp {
       pos_z: 6.2
     };
     this.interactables.addWishVisual(wishObj, true);
+
+    // Đọc vang lời sớ cầu duyên gửi Ông Tơ Bà Nguyệt bằng giọng đọc Pháp Âm TTS; ngay khi đọc xong thì tắt chữ Cầu Duyên đi
+    this.dharmaVoice.speakVerse(spokenPrayer, () => {
+      this.interactables.removeCauDuyenVisual(wishObj.id);
+    });
+
+    const combinedContent = name2
+      ? `[${name1} ❤ ${name2}] ${wishText}`
+      : `[${name1}] ${wishText}`;
+    this.socketClient.makeWish('CAU_DUYEN', combinedContent, -25.2, 6.2);
+    this.socketClient.sendMove(matX, matZ, rotFacing, 'PROSTRATE', null);
+    this.socketClient.prostrateBuddha(1, 'ONG_TO_BA_NGUYET', rotFacing);
+
     this._prependWishToWall(wishObj);
     this._addLocalOptimisticMerit(10, 'Cầu Duyên Ông Tơ Bà Nguyệt');
 
