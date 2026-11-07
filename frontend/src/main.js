@@ -586,15 +586,15 @@ class ChuaOnlineApp {
           this._syncProstrateButtonUI('DIA_TANG');
           this.showToast('🔱 Đã vào Điện Địa Tạng Vương Bồ Tát — Nhấn phím [L] hoặc click vào Tượng Đứng để đảnh lễ cầu siêu độ & bình an.');
         } else if (zone === 'DAI_VAN_THU') {
-          this._handleMoveToGroundPoint(13.2, 9.5, false);
+          this._handleMoveToGroundPoint(13.8, 9.65, false);
           this.templeScene.focusZone('DAI_VAN_THU');
           this._syncProstrateButtonUI('VAN_THU');
-          this.showToast('🦁 Đã đến Đài Đức Văn Thù Sư Lợi Bồ Tát (kế bên Phật Dược Sư) — Nhấn phím [L] hoặc click vào Tượng để cầu trí tuệ.');
+          this.showToast('🦁 Đã đến Đài Đức Văn Thù Sư Lợi Bồ Tát — Nhấn phím [L] hoặc click vào Tượng để cầu trí tuệ.');
         } else if (zone === 'DAI_DUOC_SU') {
-          this._handleMoveToGroundPoint(19.9, 9.4, false);
+          this._handleMoveToGroundPoint(10.8, 17.55, false);
           this.templeScene.focusZone('DAI_DUOC_SU');
           this._syncProstrateButtonUI('DUOC_SU');
-          this.showToast('🔵 Đã đến Đài Phật Dược Sư Lưu Ly Quang (Đông Phương) — Nhấn phím [L] hoặc click vào Tượng/Bồ Đoàn để đảnh lễ cầu tiêu tai diên thọ.');
+          this.showToast('🔵 Đã đến Đài Phật Dược Sư Lưu Ly Quang (đối diện Văn Thù Bồ Tát) — Nhấn phím [L] hoặc click vào Tượng/Bồ Đoàn để đảnh lễ cầu tiêu tai diên thọ.');
         } else if (zone === 'BAO_THAP') {
           this._handleMoveToGroundPoint(-19.5, 25.9, false);
           this.templeScene.focusZone('BAO_THAP');
@@ -1374,7 +1374,7 @@ class ChuaOnlineApp {
     if (Math.hypot(x - 0.0, z - 14.8) <= 7.0) return 'DI_LAC';
     if (Math.hypot(x - 26.0, z - -10.2) <= 7.5) return 'DIA_TANG';
     if (Math.hypot(x - 13.8, z - 6.0) <= 5.5) return 'VAN_THU';
-    if (Math.hypot(x - 20.5, z - 6.0) <= 6.8) return 'DUOC_SU';
+    if (Math.hypot(x - 10.8, z - 21.2) <= 6.8) return 'DUOC_SU';
     if (Math.hypot(x - -10.8, z - 19.6) <= 5.6) return 'TO_NGUYET';
     if (Math.hypot(x - -19.5, z - 21.5) <= 7.2) return 'BAO_THAP';
     return null;
@@ -1749,10 +1749,10 @@ class ChuaOnlineApp {
   }
 
   _handlePrayVanThu() {
-    // Di chuyển đạo hữu đến Bồ Đoàn trước Đài Đức Văn Thù Sư Lợi Bồ Tát Cưỡi Thanh Sư (13.2, 9.5)
-    const matX = 13.2;
-    const matZ = 9.5;
-    const rotFacing = Math.atan2(13.8 - matX, 6.0 - matZ);
+    // Di chuyển đạo hữu đến Bồ Đoàn trước Đài Đức Văn Thù Sư Lợi Bồ Tát Cưỡi Thanh Sư (13.8, 9.65)
+    const matX = 13.8;
+    const matZ = 9.65;
+    const rotFacing = Math.PI;
 
     this._syncProstrateButtonUI('VAN_THU');
     this._syncPercussionLocationUI(false);
@@ -1780,10 +1780,10 @@ class ChuaOnlineApp {
   }
 
   _handlePrayDuocSu() {
-    // Di chuyển đạo hữu đến Bồ Đoàn trước Đài Phật Dược Sư Lưu Ly Quang (19.9, 9.4)
-    const matX = 19.9;
-    const matZ = 9.4;
-    const rotFacing = Math.atan2(20.5 - matX, 6.0 - matZ);
+    // Di chuyển đạo hữu đến Bồ Đoàn trước Đài Phật Dược Sư Lưu Ly Quang (10.8, 17.55 — đối diện Văn Thù Bồ Tát)
+    const matX = 10.8;
+    const matZ = 17.55;
+    const rotFacing = 0.0; // Quay mặt hướng Nam (+Z) về phía Tượng Phật Dược Sư tại (10.8, 21.2)
 
     this._syncProstrateButtonUI('DUOC_SU');
     this._syncPercussionLocationUI(false);

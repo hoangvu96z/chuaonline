@@ -4357,10 +4357,10 @@ export class Environment {
   }
 
   _buildManjushriStatue() {
-    // Đài Đức Văn Thù Sư Lợi Bồ Tát Cưỡi Thanh Sư đặt kế bên Phật Dược Sư (X = 13.8, Y = 0.05, Z = 6.0)
+    // Đài Đức Văn Thù Sư Lợi Bồ Tát Cưỡi Thanh Sư (X = 13.8, Y = 0.05, Z = 6.0, hướng Nam +Z đối diện Phật Dược Sư)
     const vanThuShrine = new THREE.Group();
     vanThuShrine.position.set(13.8, 0.05, 6.0);
-    vanThuShrine.rotation.y = -0.18; // Cùng góc hướng về trung tâm Sân Chùa như Phật Dược Sư bên cạnh
+    vanThuShrine.rotation.y = 0.0;
 
     const stonePlinthMat = new THREE.MeshStandardMaterial({ color: 0x707571, roughness: 0.8 });
     const stoneStep = new THREE.Mesh(new THREE.CylinderGeometry(2.15, 2.35, 0.24, 16), stonePlinthMat);
@@ -6192,7 +6192,7 @@ export class Environment {
   }
 
   _buildMedicineBuddhaShrine() {
-    // Đài Đức Phật Dược Sư Lưu Ly Quang Như Lai (Chuyển sang Cánh Đông Bắc Sân Chùa — Đông Phương Tịnh Lưu Ly: X = 20.5, Z = 6.0)
+    // Đài Đức Phật Dược Sư Lưu Ly Quang Như Lai (Chuyển ra vị trí cạnh Vườn Bồ Đề & Hồ Sen: X = 10.8, Z = 21.2, quay mặt hướng Bắc -Z đối diện Đức Văn Thù Sư Lợi Bồ Tát)
     // Điêu khắc 3D nguyên bản theo Mẫu Bộ Phật Dược Sư Phúc Đan 3D (https://phucdan3d.com/file-mau-bo-phat-duoc-su/):
     // - Bệ Đá Tu Di 5 cấp chạm hoa văn mây xoắn, Pháp Luân & Lan Can Câu Lan tứ giác chạm lộng
     // - Đài Sen Cánh Bầu dày dặn kèm đôi cuống mây xoắn chữ S hai bên đỡ Lá Đề
@@ -6200,8 +6200,8 @@ export class Environment {
     // - Tôn tượng Đức Phật Dược Sư ngồi Kiết Già, ngực chạm nổi Chữ Vạn (卍), hai tay kết Ấn Dược Sư trước ngực, tóc xoắn ốc nổi rõ từng hạt
     // - Bao quanh bởi 4 Trụ Đèn Lưu Ly & Hoàng Kim phát sáng ban đêm, Đôi Cây Hoa Đào Tiên / Hoa Đại & 4 Chậu Hoa Cúc Vàng trang nghiêm
     const duocSuGroup = new THREE.Group();
-    duocSuGroup.position.set(20.5, 0.05, 6.0);
-    duocSuGroup.rotation.y = -0.18; // Hướng nhẹ về trung tâm Sân Chùa thoáng đãng, không vướng Cây Đa hay Đài Quán Âm
+    duocSuGroup.position.set(10.8, 0.05, 21.2);
+    duocSuGroup.rotation.y = Math.PI; // Quay mặt hướng Bắc (-Z) đối diện trực tiếp với Đức Văn Thù Sư Lợi Bồ Tát qua sân chùa
 
     // Chất liệu Đá Bạch Ngọc Ngà Chạm Khắc CNC Cao Cấp (Sculpted Ivory-Alabaster Stone with Warm Golden-Ivory Glow at Night)
     const ivoryStoneMat = new THREE.MeshStandardMaterial({
