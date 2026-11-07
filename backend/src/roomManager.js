@@ -130,7 +130,9 @@ export class RoomManager {
     };
 
     room.players.set(socket.id, playerState);
+    playerState._dirty = true;
     room.dirty = true;
+    room.fullSyncNeeded = true;
     this.socketToRoom.set(socket.id, room.id);
 
     if (typeof socket.join === 'function') {
@@ -159,6 +161,7 @@ export class RoomManager {
     if (room) {
       room.players.delete(socket.id);
       room.dirty = true;
+      room.fullSyncNeeded = true;
       if (typeof socket.leave === 'function') {
         socket.leave(roomId);
       }
@@ -195,6 +198,7 @@ export class RoomManager {
       player.cushionIndex = cushionIndex;
     }
 
+    player._dirty = true;
     room.dirty = true;
     return player;
   }
@@ -207,6 +211,7 @@ export class RoomManager {
 
     player.state = state || 'IDLE';
     player.cushionIndex = cushionIndex;
+    player._dirty = true;
     room.dirty = true;
     return player;
   }
@@ -223,6 +228,7 @@ export class RoomManager {
     player.provinceCode = user.provinceCode;
     player.meritPoints = user.meritPoints;
     player.realmLevel = user.realmLevel;
+    player._dirty = true;
     room.dirty = true;
   }
 
@@ -312,14 +318,42 @@ export class RoomManager {
 
   broadcastRoomStates() {
     if (!this.io) return;
+    this._tickCounter = (this._tickCounter || 0) + 1;
+    const forceFull = this._tickCounter % 20 === 0;
+
     for (const room of this.rooms.values()) {
       if (!room.dirty || room.players.size === 0) continue;
       room.dirty = false;
-      const snapshot = Array.from(room.players.values()).map((p) => this._serializePlayer(p));
-      this.io.to(room.id).emit('room_state_tick', {
-        roomId: room.id,
-        players: snapshot
-      });
+
+      if (room.fullSyncNeeded || forceFull) {
+        room.fullSyncNeeded = false;
+        const snapshot = [];
+        for (const p of room.players.values()) {
+          p._dirty = false;
+          snapshot.push(this._serializePlayer(p));
+        }
+        this.io.to(room.id).emit('room_state_tick', {
+          roomId: room.id,
+          isDelta: false,
+          playerCount: room.players.size,
+          players: snapshot
+        });
+      } else {
+        const changed = [];
+        for (const p of room.players.values()) {
+          if (!p._dirty) continue;
+          p._dirty = false;
+          changed.push(this._serializePlayer(p));
+        }
+        if (changed.length > 0) {
+          this.io.to(room.id).emit('room_state_tick', {
+            roomId: room.id,
+            isDelta: true,
+            playerCount: room.players.size,
+            players: changed
+          });
+        }
+      }
     }
   }
 

@@ -193,7 +193,9 @@ class ChuaOnlineApp {
     // Initialize 3D Scene, Environment, Avatars & Interactables
     const container = document.getElementById('temple-canvas-container');
     this.templeScene = new TempleScene(container);
-    this.environment = new Environment(this.templeScene.scene);
+    this.environment = new Environment(this.templeScene.scene, () =>
+      this.templeScene.requestShadowUpdate()
+    );
     this.avatarManager = new AvatarManager(this.templeScene.scene);
     this.interactables = new Interactables(this.templeScene.scene, this.environment);
 
@@ -331,7 +333,19 @@ class ChuaOnlineApp {
 
       onRoomStateTick: (payload) => {
         const players = Array.isArray(payload) ? payload : payload?.players;
-        if (Array.isArray(players)) {
+        if (!Array.isArray(players)) return;
+        if (payload?.isDelta) {
+          for (const p of players) {
+            if (p.socketId !== this.localSocketId) {
+              this.avatarManager.upsertPlayer(p);
+            }
+          }
+          const totalCount =
+            typeof payload.playerCount === 'number'
+              ? payload.playerCount
+              : this.avatarManager.avatars.size;
+          this._updateRoomChannelUI(this.currentRoomId, totalCount);
+        } else {
           this.avatarManager.syncRoomPlayers(players);
           this._updateRoomChannelUI(this.currentRoomId, players.length);
         }

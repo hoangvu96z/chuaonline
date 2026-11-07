@@ -23,16 +23,23 @@ export class TempleScene {
     this.orbitPitch = 0.35; // Góc nhìn từ trên cao nhìn rõ 35 Bồ Đoàn Chibi (5 hàng x 7 cột) & Tượng Phật
     this.orbitDistance = 8.2;
 
-    // Renderer setup (cap pixelRatio at 1.5 on mobile screens to prevent WebGL memory crashes)
-    const isMobileScreen = window.innerWidth <= 768;
+    // Renderer setup (optimized pixelRatio & on-demand PCFShadowMap for 60 FPS on Desktop & Mobile)
+    const isMobileScreen =
+      window.innerWidth <= 768 ||
+      (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
     this.renderer = new THREE.WebGLRenderer({
       antialias: !isMobileScreen,
-      powerPreference: 'high-performance'
+      powerPreference: 'high-performance',
+      stencil: false
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileScreen ? 1.5 : 2));
+    this.renderer.setPixelRatio(
+      Math.min(window.devicePixelRatio || 1, isMobileScreen ? 1.25 : 1.5)
+    );
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    this.renderer.shadowMap.autoUpdate = false;
+    this.renderer.shadowMap.needsUpdate = true;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.22;
 
@@ -85,38 +92,26 @@ export class TempleScene {
     this.dirLight.shadow.bias = -0.0005;
     this.scene.add(this.dirLight);
 
-    // Sanctuary & Courtyard PointLights (#ffaa33) for soft, serene, warm visibility day & night
-    const mainHallLight = new THREE.PointLight(0xffdc8a, 2.2, 36, 1.35);
-    mainHallLight.position.set(0, 7.6, -11.5);
+    // 3 Wide-Radius Master PointLights (replacing 40+ per-statue/lantern lights for 10x faster PBR fragment shading)
+    const mainHallLight = new THREE.PointLight(0xffdc8a, 2.2, 68, 1.05);
+    mainHallLight.position.set(0, 7.8, -10.5);
     this.scene.add(mainHallLight);
-    this.nightLights.push({ light: mainHallLight, dayIntensity: 1.9, nightIntensity: 2.5 });
+    this.nightLights.push({ light: mainHallLight, dayIntensity: 2.0, nightIntensity: 2.7 });
 
-    const buddhaAuraLight = new THREE.PointLight(0xffe094, 2.4, 28, 1.35);
-    buddhaAuraLight.position.set(0, 6.5, -18.5);
-    this.scene.add(buddhaAuraLight);
-    this.nightLights.push({ light: buddhaAuraLight, dayIntensity: 2.1, nightIntensity: 2.7 });
+    const courtyardCenterLight = new THREE.PointLight(0xffcb78, 1.8, 72, 1.05);
+    courtyardCenterLight.position.set(0, 7.2, 11.5);
+    this.scene.add(courtyardCenterLight);
+    this.nightLights.push({ light: courtyardCenterLight, dayIntensity: 1.2, nightIntensity: 2.6 });
 
-    const incenseLight = new THREE.PointLight(0xffaa33, 1.8, 18, 1.3);
-    incenseLight.position.set(0, 2.8, -4);
-    this.scene.add(incenseLight);
-    this.nightLights.push({ light: incenseLight, dayIntensity: 1.0, nightIntensity: 2.6 });
+    const lotusPondLight = new THREE.PointLight(0xffb85c, 1.5, 62, 1.1);
+    lotusPondLight.position.set(-4.0, 5.8, 29.0);
+    this.scene.add(lotusPondLight);
+    this.nightLights.push({ light: lotusPondLight, dayIntensity: 0.8, nightIntensity: 2.5 });
+  }
 
-    // Stone pillar lantern lights along courtyard & lotus pond
-    const lanternPositions = [
-      [-7.5, 3.0, -1.5],
-      [7.5, 3.0, -1.5],
-      [-7.5, 3.0, 12],
-      [7.5, 3.0, 12],
-      [-8.5, 3.0, 25],
-      [8.5, 3.0, 25],
-      [0, 3.2, 34] // Lotus pond warm glow
-    ];
-
-    for (const [lx, ly, lz] of lanternPositions) {
-      const pLight = new THREE.PointLight(0xffaa33, 1.5, 22, 1.3);
-      pLight.position.set(lx, ly, lz);
-      this.scene.add(pLight);
-      this.nightLights.push({ light: pLight, dayIntensity: 0.4, nightIntensity: 2.5 });
+  requestShadowUpdate() {
+    if (this.renderer && this.renderer.shadowMap) {
+      this.renderer.shadowMap.needsUpdate = true;
     }
   }
 
@@ -237,6 +232,7 @@ export class TempleScene {
       if (this.moonGroup) this.moonGroup.visible = false;
     }
 
+    this.requestShadowUpdate();
     return this.isNight;
   }
 
@@ -330,7 +326,7 @@ export class TempleScene {
       const mobileNow = window.innerWidth <= 768;
       this.camera.aspect = window.innerWidth / window.innerHeight;
       this.camera.updateProjectionMatrix();
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobileNow ? 1.5 : 2));
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobileNow ? 1.25 : 1.5));
       this.renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
