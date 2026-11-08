@@ -124,7 +124,7 @@ export class NhaThoOnlineApp {
     // Initialize Sacred Cathedral Audio, Choir/Organ Music & Lector/Priest Voice Engines
     this.sacredAudio = new SacredAudio();
     this.sacredMusicPlayer = new SacredMusicPlayer(this.sacredAudio);
-    this.lectorVoice = new LectorVoice();
+    this.lectorVoice = new LectorVoice(this.sacredAudio);
     this.rosaryGuide = new RosaryGuide(
       this.sacredAudio,
       this.lectorVoice,

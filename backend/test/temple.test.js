@@ -1235,6 +1235,11 @@ describe('Suite 4: Full End-to-End Socket.io & REST API Integration', () => {
       };
 
       const voice = new DharmaVoice();
+      // Verify production domain resolves to https://api.vunph.io.vn instead of relative HTML SPA fallback
+      globalThis.window.location = { protocol: 'https:', port: '', hostname: 'chua.vunph.io.vn' };
+      assert.strictEqual(voice._getBackendBaseUrl(), 'https://api.vunph.io.vn');
+      globalThis.window.location = { protocol: 'file:', port: '', hostname: 'localhost' };
+
       voice.setSpeedMultiplier(1.8);
       let finishedAt = 0;
       const startedAt = Date.now();

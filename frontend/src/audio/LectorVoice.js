@@ -62,7 +62,8 @@ export const LECTOR_VOICE_PROFILES = [
 ];
 
 export class LectorVoice {
-  constructor() {
+  constructor(sharedAudioEngine = null) {
+    this._sharedAudioEngine = sharedAudioEngine;
     this.synth =
       typeof window !== 'undefined' && 'speechSynthesis' in window
         ? window.speechSynthesis
@@ -151,6 +152,27 @@ export class LectorVoice {
     }
   }
 
+  _getBackendBaseUrl() {
+    try {
+      if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_URL) {
+        return String(import.meta.env.VITE_BACKEND_URL).replace(/\/+$/, '');
+      }
+    } catch {
+      // ignore
+    }
+    if (typeof window !== 'undefined' && window.location) {
+      const port = String(window.location.port || '');
+      const host = String(window.location.hostname || '');
+      if (port === '5173' || port === '4173') {
+        return `${window.location.protocol}//${host}:3001`;
+      }
+      if (host.endsWith('vunph.io.vn') && host !== 'api.vunph.io.vn') {
+        return 'https://api.vunph.io.vn';
+      }
+    }
+    return '';
+  }
+
   _canUseNeuralTts() {
     if (typeof window === 'undefined') return false;
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -161,11 +183,24 @@ export class LectorVoice {
 
   _ensureAudioContext() {
     if (!this._canUseNeuralTts()) return null;
+    if (this._sharedAudioEngine) {
+      try {
+        if (typeof this._sharedAudioEngine._initContext === 'function') {
+          this._sharedAudioEngine._initContext();
+        }
+        if (this._sharedAudioEngine.ctx && this._audioCtx !== this._sharedAudioEngine.ctx) {
+          this._audioCtx = this._sharedAudioEngine.ctx;
+          this._reverbImpulse = null;
+        }
+      } catch {
+        // ignore
+      }
+    }
     if (!this._audioCtx) {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       this._audioCtx = new AudioCtx();
     }
-    if (this._audioCtx.state === 'suspended') {
+    if (this._audioCtx.state === 'suspended' || this._audioCtx.state === 'interrupted') {
       this._audioCtx.resume().catch(() => {});
     }
     if (!this._reverbImpulse && this._audioCtx) {
@@ -295,14 +330,28 @@ export class LectorVoice {
     const ctx = this._ensureAudioContext();
     if (!ctx) throw new Error('AudioContext unavailable');
 
-    const url = `/api/nhatho/tts?profile=${encodeURIComponent(profileId)}&text=${encodeURIComponent(cleanText)}`;
-    const response = await window.fetch(url, {
+    const baseUrl = this._getBackendBaseUrl();
+    const query = `/api/nhatho/tts?profile=${encodeURIComponent(profileId)}&text=${encodeURIComponent(cleanText)}`;
+    let response = await window.fetch(`${baseUrl}${query}`, {
       method: 'GET',
       headers: { Accept: 'audio/mpeg' },
       signal
     });
 
-    if (!response.ok) {
+    const contentType = String(response.headers?.get?.('content-type') || '').toLowerCase();
+    if (
+      (!response.ok || contentType.includes('text/html') || contentType.includes('application/json')) &&
+      baseUrl !== 'https://api.vunph.io.vn'
+    ) {
+      response = await window.fetch(`https://api.vunph.io.vn${query}`, {
+        method: 'GET',
+        headers: { Accept: 'audio/mpeg' },
+        signal
+      });
+    }
+
+    const finalContentType = String(response.headers?.get?.('content-type') || '').toLowerCase();
+    if (!response.ok || finalContentType.includes('text/html') || finalContentType.includes('application/json')) {
       throw new Error(`Neural TTS HTTP ${response.status}`);
     }
 

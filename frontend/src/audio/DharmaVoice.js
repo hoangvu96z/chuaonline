@@ -56,8 +56,12 @@ export const VOICE_PROFILES = [
   }
 ];
 
+const SILENT_WAV_DATA_URI =
+  'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+
 export class DharmaVoice {
-  constructor() {
+  constructor(sharedAudioEngine = null) {
+    this._sharedAudioEngine = sharedAudioEngine;
     this.synth =
       typeof window !== 'undefined' && 'speechSynthesis' in window
         ? window.speechSynthesis
@@ -92,6 +96,7 @@ export class DharmaVoice {
 
     // Reusable HTML5 <audio> fallback for Mobile Edge / iOS WebKit when AudioContext is suspended or hardware-muted
     this._htmlAudioEl = null;
+    this._htmlAudioUnlocked = false;
     this._currentObjectUrl = null;
     this._audioUnlocked = false;
 
@@ -129,6 +134,14 @@ export class DharmaVoice {
   unlockAudio() {
     if (typeof window === 'undefined') return;
     try {
+      if (typeof navigator !== 'undefined' && navigator.audioSession) {
+        navigator.audioSession.type = 'playback';
+      }
+    } catch {
+      // ignore audioSession error
+    }
+
+    try {
       const ctx = this._ensureAudioContext();
       if (ctx) {
         if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
@@ -158,9 +171,46 @@ export class DharmaVoice {
         el.setAttribute?.('webkit-playsinline', '');
         this._htmlAudioEl = el;
       }
+      if (this._htmlAudioEl && !this._htmlAudioUnlocked && !this.isSpeaking) {
+        this._htmlAudioUnlocked = true;
+        this._htmlAudioEl.src = SILENT_WAV_DATA_URI;
+        this._htmlAudioEl.volume = 0.01;
+        const p = this._htmlAudioEl.play();
+        if (p && typeof p.then === 'function') {
+          p.then(() => {
+            if (!this.isSpeaking && this._htmlAudioEl) {
+              this._htmlAudioEl.pause();
+              this._htmlAudioEl.volume = Math.max(0, Math.min(1, this.voiceVolume));
+            }
+          }).catch(() => {
+            this._htmlAudioUnlocked = false;
+          });
+        }
+      }
     } catch {
       // ignore HTML5 Audio init error
     }
+  }
+
+  _getBackendBaseUrl() {
+    try {
+      if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_URL) {
+        return String(import.meta.env.VITE_BACKEND_URL).replace(/\/+$/, '');
+      }
+    } catch {
+      // ignore import.meta lookup error
+    }
+    if (typeof window !== 'undefined' && window.location) {
+      const port = String(window.location.port || '');
+      const host = String(window.location.hostname || '');
+      if (port === '5173' || port === '4173') {
+        return `${window.location.protocol}//${host}:3001`;
+      }
+      if (host.endsWith('vunph.io.vn') && host !== 'api.vunph.io.vn') {
+        return 'https://api.vunph.io.vn';
+      }
+    }
+    return '';
   }
 
   _canUseNeuralTts() {
@@ -175,15 +225,29 @@ export class DharmaVoice {
 
   _ensureAudioContext() {
     if (typeof window === 'undefined') return null;
+    if (this._sharedAudioEngine) {
+      try {
+        if (typeof this._sharedAudioEngine._initContext === 'function') {
+          this._sharedAudioEngine._initContext();
+        }
+        if (this._sharedAudioEngine.ctx && this._audioCtx !== this._sharedAudioEngine.ctx) {
+          this._audioCtx = this._sharedAudioEngine.ctx;
+          this._masterVoiceGain = null;
+          this._reverbImpulse = null;
+        }
+      } catch {
+        // ignore shared context lookup error
+      }
+    }
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return null;
-    if (!this._audioCtx) {
+    if (!this._audioCtx && AudioCtx) {
       try {
         this._audioCtx = new AudioCtx();
       } catch {
         return null;
       }
     }
+    if (!this._audioCtx) return null;
     if (this._audioCtx.state === 'suspended' || this._audioCtx.state === 'interrupted') {
       this._audioCtx.resume().catch(() => {});
     }
@@ -416,20 +480,31 @@ export class DharmaVoice {
       if (prefetched) return prefetched;
     }
 
-    const baseUrl =
-      typeof window !== 'undefined' &&
-      (window.location.port === '5173' || window.location.port === '4173')
-        ? `${window.location.protocol}//${window.location.hostname}:3001`
-        : '';
-    const url = `${baseUrl}/api/tts?profile=${encodeURIComponent(profileId)}&text=${encodeURIComponent(cleanText)}`;
-    const response = await window.fetch(url, {
+    const baseUrl = this._getBackendBaseUrl();
+    const query = `/api/tts?profile=${encodeURIComponent(profileId)}&text=${encodeURIComponent(cleanText)}`;
+    const url = `${baseUrl}${query}`;
+    let response = await window.fetch(url, {
       method: 'GET',
       headers: { Accept: 'audio/mpeg' },
       signal
     });
 
-    if (!response.ok) {
-      throw new Error(`Neural TTS HTTP ${response.status}`);
+    const contentType = String(response.headers?.get?.('content-type') || '').toLowerCase();
+    // If a relative URL ever hits an SPA Nginx HTML fallback instead of the API server, retry via api.vunph.io.vn
+    if (
+      (!response.ok || contentType.includes('text/html') || contentType.includes('application/json')) &&
+      baseUrl !== 'https://api.vunph.io.vn'
+    ) {
+      response = await window.fetch(`https://api.vunph.io.vn${query}`, {
+        method: 'GET',
+        headers: { Accept: 'audio/mpeg' },
+        signal
+      });
+    }
+
+    const finalContentType = String(response.headers?.get?.('content-type') || '').toLowerCase();
+    if (!response.ok || finalContentType.includes('text/html') || finalContentType.includes('application/json')) {
+      throw new Error(`Neural TTS HTTP ${response.status} (${finalContentType})`);
     }
 
     const arrayBuffer = await response.arrayBuffer();
@@ -771,6 +846,7 @@ export class DharmaVoice {
 
   async _playWithHtmlAudioElement(
     mp3Blob,
+    directTtsUrl,
     effectiveRate,
     words,
     spokenText,
@@ -779,27 +855,40 @@ export class DharmaVoice {
     sessionId,
     estimatedDurationMs
   ) {
-    if (typeof window === 'undefined' || typeof URL === 'undefined' || !URL.createObjectURL) {
+    if (typeof window === 'undefined') {
       return false;
     }
     try {
       if (!this._htmlAudioEl && typeof window.Audio === 'function') {
-        this._htmlAudioEl = new window.Audio();
-        this._htmlAudioEl.playsInline = true;
+        const el = new window.Audio();
+        el.preload = 'auto';
+        el.playsInline = true;
+        el.setAttribute?.('playsinline', '');
+        el.setAttribute?.('webkit-playsinline', '');
+        this._htmlAudioEl = el;
       }
       const el = this._htmlAudioEl;
       if (!el) return false;
 
-      if (this._currentObjectUrl && URL.revokeObjectURL) {
+      if (this._currentObjectUrl && typeof URL !== 'undefined' && URL.revokeObjectURL) {
         try {
           URL.revokeObjectURL(this._currentObjectUrl);
         } catch {
           // ignore
         }
+        this._currentObjectUrl = null;
       }
-      const objUrl = URL.createObjectURL(mp3Blob);
-      this._currentObjectUrl = objUrl;
-      el.src = objUrl;
+
+      if (mp3Blob && typeof URL !== 'undefined' && URL.createObjectURL) {
+        const objUrl = URL.createObjectURL(mp3Blob);
+        this._currentObjectUrl = objUrl;
+        el.src = objUrl;
+      } else if (directTtsUrl) {
+        el.src = directTtsUrl;
+      } else {
+        return false;
+      }
+
       el.volume = Math.max(0, Math.min(1, this.voiceVolume));
       const clampedRate = Math.max(0.5, Math.min(1.85, effectiveRate || 0.9));
       el.playbackRate = clampedRate;
@@ -833,8 +922,17 @@ export class DharmaVoice {
       if (this.watchdogTimer) clearTimeout(this.watchdogTimer);
       this.watchdogTimer = setTimeout(finish, (estimatedDurationMs || 2500) + 1500);
 
-      await el.play();
-      return true;
+      try {
+        await el.play();
+        return true;
+      } catch {
+        if (directTtsUrl && el.src !== directTtsUrl) {
+          el.src = directTtsUrl;
+          await el.play();
+          return true;
+        }
+        return false;
+      }
     } catch {
       return false;
     }
@@ -874,6 +972,7 @@ export class DharmaVoice {
       const effectiveRate = pbRate * Math.pow(2, detune / 1200);
       const cacheKey = `${profile.id}::${remainingText}`;
       const cachedBlob = this._mp3BlobCache.get(cacheKey);
+      const directTtsUrl = `${this._getBackendBaseUrl()}/api/tts?profile=${encodeURIComponent(profile.id)}&text=${encodeURIComponent(remainingText)}`;
 
       const ctx = this._ensureAudioContext();
       if (ctx && (ctx.state === 'suspended' || ctx.state === 'interrupted')) {
@@ -888,9 +987,10 @@ export class DharmaVoice {
       }
 
       // If WebAudio decode failed OR AudioContext is still suspended on Mobile Edge, play the MP3 via HTML5 <audio>
-      if ((!ctx || !audioBuffer || ctx.state === 'suspended' || ctx.state === 'interrupted') && cachedBlob) {
+      if ((!ctx || !audioBuffer || ctx.state === 'suspended' || ctx.state === 'interrupted') && (cachedBlob || directTtsUrl)) {
         const playedHtml = await this._playWithHtmlAudioElement(
           cachedBlob,
+          directTtsUrl,
           effectiveRate,
           words,
           spokenText,

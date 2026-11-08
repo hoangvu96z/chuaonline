@@ -208,7 +208,7 @@ class ChuaOnlineApp {
     // Initialize Audio, Music & Voice Engines
     this.zenAudio = new ZenAudio();
     this.zenMusicPlayer = new ZenMusicPlayer(this.zenAudio);
-    this.dharmaVoice = new DharmaVoice();
+    this.dharmaVoice = new DharmaVoice(this.zenAudio);
     this.sutraChanter = new SutraChanter(
       this.zenAudio,
       this.dharmaVoice,
