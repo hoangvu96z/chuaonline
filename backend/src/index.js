@@ -320,6 +320,8 @@ export async function createTempleServer(options = {}) {
       const mp3Buffer = await synthesizeVietnameseNeuralTts(text, profile);
       res.setHeader('Content-Type', 'audio/mpeg');
       res.setHeader('Content-Length', String(mp3Buffer.length));
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Cache-Control', 'public, max-age=86400');
       res.setHeader('X-Neural-Voice-Profile', profile);
       return res.send(mp3Buffer);

@@ -1204,4 +1204,57 @@ describe('Suite 4: Full End-to-End Socket.io & REST API Integration', () => {
     assert.strictEqual(typeof coopGoal.progress, 'number');
     assert.strictEqual(coopGoal.target, 100);
   });
+
+  it('4.15 should ensure DharmaVoice Mobile Edge audio unlock, HTML5 <audio> fallback, and prevent rapid verse skipping on speechSynthesis error', async () => {
+    const prevWindow = globalThis.window;
+    try {
+      let synthSpeakCount = 0;
+      globalThis.window = {
+        location: { protocol: 'file:', port: '', hostname: 'localhost' },
+        addEventListener: () => {},
+        SpeechSynthesisUtterance: class {
+          constructor(text) {
+            this.text = text;
+          }
+        },
+        speechSynthesis: {
+          speaking: false,
+          pending: false,
+          paused: false,
+          getVoices: () => [],
+          cancel: () => {},
+          resume: () => {},
+          speak(utt) {
+            synthSpeakCount++;
+            // Simulate Mobile Edge firing onerror('not-allowed') immediately (after 5ms)
+            setTimeout(() => {
+              if (utt.onerror) utt.onerror({ error: 'not-allowed' });
+            }, 5);
+          }
+        }
+      };
+
+      const voice = new DharmaVoice();
+      voice.setSpeedMultiplier(1.8);
+      let finishedAt = 0;
+      const startedAt = Date.now();
+
+      await new Promise((resolve) => {
+        voice.speakVerse('Nam Mô A Di Đà Phật', () => {
+          finishedAt = Date.now();
+          resolve();
+        });
+      });
+
+      const elapsed = finishedAt - startedAt;
+      assert.strictEqual(synthSpeakCount, 1);
+      assert.ok(
+        elapsed >= 700,
+        `DharmaVoice must NOT skip verse immediately when Mobile Edge fires speechSynthesis onerror (elapsed=${elapsed}ms)`
+      );
+      voice.stop();
+    } finally {
+      globalThis.window = prevWindow;
+    }
+  });
 });

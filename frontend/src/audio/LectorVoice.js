@@ -88,7 +88,11 @@ export class LectorVoice {
     this._currentSourceNode = null;
     this._currentAbortController = null;
     this._audioBufferCache = new Map();
+    this._mp3BlobCache = new Map();
     this._inflightPrefetch = new Map();
+    this._htmlAudioEl = null;
+    this._currentObjectUrl = null;
+    this._audioUnlocked = false;
 
     // Trạng thái phục vụ Tạm dừng & Tiếp tục
     this._activeText = '';
@@ -97,6 +101,54 @@ export class LectorVoice {
     this._currentWordIdx = 0;
 
     this._initVoices();
+    this._bindMobileAudioUnlock();
+  }
+
+  _bindMobileAudioUnlock() {
+    if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') return;
+    const onGesture = () => {
+      this.unlockAudio();
+    };
+    window.addEventListener('pointerdown', onGesture, { passive: true });
+    window.addEventListener('touchstart', onGesture, { passive: true });
+    window.addEventListener('touchend', onGesture, { passive: true });
+    window.addEventListener('click', onGesture, { passive: true });
+  }
+
+  unlockAudio() {
+    if (typeof window === 'undefined') return;
+    try {
+      const ctx = this._ensureAudioContext();
+      if (ctx) {
+        if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
+          ctx.resume().catch(() => {});
+        }
+        if (!this._audioUnlocked) {
+          const silentBuf = ctx.createBuffer(1, 1, 22050);
+          const src = ctx.createBufferSource();
+          src.buffer = silentBuf;
+          src.connect(ctx.destination);
+          src.start(0);
+          if (ctx.state === 'running') {
+            this._audioUnlocked = true;
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+    try {
+      if (!this._htmlAudioEl && typeof window.Audio === 'function') {
+        const el = new window.Audio();
+        el.preload = 'auto';
+        el.playsInline = true;
+        el.setAttribute?.('playsinline', '');
+        el.setAttribute?.('webkit-playsinline', '');
+        this._htmlAudioEl = el;
+      }
+    } catch {
+      // ignore
+    }
   }
 
   _canUseNeuralTts() {
@@ -514,12 +566,21 @@ export class LectorVoice {
         utterance.voice = this.preferredVoice;
       }
 
+      const synthStartedAt = Date.now();
       utterance.onend = () => {
         if (sessionId === this._speakSessionId && !this.isPaused) finish();
       };
 
-      utterance.onerror = () => {
+      utterance.onerror = (evt) => {
+        const errType = String(evt?.error || '').toLowerCase();
+        if (errType === 'canceled' || errType === 'interrupted') return;
         if (sessionId === this._speakSessionId && !this.isPaused) {
+          const elapsedMs = Date.now() - synthStartedAt;
+          if (elapsedMs < estimatedDurationMs * 0.65) {
+            if (this.fallbackTimer) clearTimeout(this.fallbackTimer);
+            this.fallbackTimer = setTimeout(finish, Math.max(850, estimatedDurationMs - elapsedMs));
+            return;
+          }
           finish();
         }
       };

@@ -87,7 +87,13 @@ export class DharmaVoice {
     this._currentSourceNode = null;
     this._currentAbortController = null;
     this._audioBufferCache = new Map();
+    this._mp3BlobCache = new Map();
     this._inflightPrefetch = new Map();
+
+    // Reusable HTML5 <audio> fallback for Mobile Edge / iOS WebKit when AudioContext is suspended or hardware-muted
+    this._htmlAudioEl = null;
+    this._currentObjectUrl = null;
+    this._audioUnlocked = false;
 
     // State for resuming after pause or mid-verse voice change
     this._activeText = '';
@@ -96,23 +102,89 @@ export class DharmaVoice {
     this._currentWordIdx = 0;
 
     this._initVoices();
+    this._bindMobileAudioUnlock();
+  }
+
+  /**
+   * Binds global user-gesture listeners (`pointerdown`, `touchstart`, `touchend`, `click`)
+   * so Mobile Edge (iOS & Android) unlocks both Web Audio API (`AudioContext`) and HTML5 `<audio>`
+   * synchronously on the user's first tap anywhere in the temple.
+   */
+  _bindMobileAudioUnlock() {
+    if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') return;
+    const onGesture = () => {
+      this.unlockAudio();
+    };
+    window.addEventListener('pointerdown', onGesture, { passive: true });
+    window.addEventListener('touchstart', onGesture, { passive: true });
+    window.addEventListener('touchend', onGesture, { passive: true });
+    window.addEventListener('click', onGesture, { passive: true });
+  }
+
+  /**
+   * Synchronously unlocks `AudioContext` (by playing a 1-sample silent buffer) and a reusable
+   * HTML5 `<audio>` element inside a direct user gesture (`touchend` / `click`).
+   * Essential for Microsoft Edge on Mobile (iOS WKWebView & Android Chromium).
+   */
+  unlockAudio() {
+    if (typeof window === 'undefined') return;
+    try {
+      const ctx = this._ensureAudioContext();
+      if (ctx) {
+        if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
+          ctx.resume().catch(() => {});
+        }
+        if (!this._audioUnlocked) {
+          const silentBuf = ctx.createBuffer(1, 1, 22050);
+          const src = ctx.createBufferSource();
+          src.buffer = silentBuf;
+          src.connect(ctx.destination);
+          src.start(0);
+          if (ctx.state === 'running') {
+            this._audioUnlocked = true;
+          }
+        }
+      }
+    } catch {
+      // ignore WebAudio unlock error
+    }
+
+    try {
+      if (!this._htmlAudioEl && typeof window.Audio === 'function') {
+        const el = new window.Audio();
+        el.preload = 'auto';
+        el.playsInline = true;
+        el.setAttribute?.('playsinline', '');
+        el.setAttribute?.('webkit-playsinline', '');
+        this._htmlAudioEl = el;
+      }
+    } catch {
+      // ignore HTML5 Audio init error
+    }
   }
 
   _canUseNeuralTts() {
     if (typeof window === 'undefined') return false;
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx || typeof window.fetch !== 'function') return false;
+    const hasAudioSupport =
+      Boolean(window.AudioContext || window.webkitAudioContext) ||
+      typeof window.Audio === 'function';
+    if (!hasAudioSupport || typeof window.fetch !== 'function') return false;
     const proto = window.location?.protocol || '';
     return proto === 'http:' || proto === 'https:';
   }
 
   _ensureAudioContext() {
-    if (!this._canUseNeuralTts()) return null;
+    if (typeof window === 'undefined') return null;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
     if (!this._audioCtx) {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      this._audioCtx = new AudioCtx();
+      try {
+        this._audioCtx = new AudioCtx();
+      } catch {
+        return null;
+      }
     }
-    if (this._audioCtx.state === 'suspended') {
+    if (this._audioCtx.state === 'suspended' || this._audioCtx.state === 'interrupted') {
       this._audioCtx.resume().catch(() => {});
     }
     if (!this._reverbImpulse && this._audioCtx) {
@@ -190,10 +262,20 @@ export class DharmaVoice {
       if (this._currentSourceNode && this._currentSourceNode.playbackRate) {
         const profile = this.getCurrentProfile();
         const basePbRate = profile.playbackRate || 0.90;
+        const detune = profile.detuneCents || 0;
+        const supportsDetune = typeof this._currentSourceNode.detune?.value === 'number';
+        const pitchFactor = supportsDetune ? 1.0 : Math.pow(2, detune / 1200);
         this._currentSourceNode.playbackRate.value = Math.max(
           0.45,
-          Math.min(1.85, basePbRate * this.speedMultiplier)
+          Math.min(1.85, basePbRate * this.speedMultiplier * pitchFactor)
         );
+      }
+      if (this._htmlAudioEl && !this._htmlAudioEl.paused) {
+        const profile = this.getCurrentProfile();
+        const basePbRate = profile.playbackRate || 0.90;
+        const detune = profile.detuneCents || 0;
+        const effectiveRate = basePbRate * this.speedMultiplier * Math.pow(2, detune / 1200);
+        this._htmlAudioEl.playbackRate = Math.max(0.5, Math.min(1.85, effectiveRate));
       }
     }
     return this.speedMultiplier;
@@ -212,6 +294,9 @@ export class DharmaVoice {
       this.voiceVolume = Math.max(0, Math.min(1.5, Number(parsed.toFixed(2))));
       if (this._masterVoiceGain && this._audioCtx) {
         this._masterVoiceGain.gain.setValueAtTime(this.voiceVolume, this._audioCtx.currentTime);
+      }
+      if (this._htmlAudioEl) {
+        this._htmlAudioEl.volume = Math.max(0, Math.min(1, this.voiceVolume));
       }
       if (this.currentUtterance) {
         this.currentUtterance.volume = Math.max(0, Math.min(1, this.voiceVolume));
@@ -287,14 +372,49 @@ export class DharmaVoice {
     this._inflightPrefetch.set(cacheKey, promise);
   }
 
+  async _decodeAudioBufferCompat(ctx, arrayBuffer) {
+    if (!ctx || typeof ctx.decodeAudioData !== 'function') return null;
+    try {
+      const copyBuf = arrayBuffer.slice(0);
+      return await new Promise((resolve, reject) => {
+        let settled = false;
+        const onSuccess = (decoded) => {
+          if (!settled) {
+            settled = true;
+            resolve(decoded);
+          }
+        };
+        const onError = (err) => {
+          if (!settled) {
+            settled = true;
+            reject(err || new Error('decodeAudioData failed'));
+          }
+        };
+        try {
+          const maybePromise = ctx.decodeAudioData(copyBuf, onSuccess, onError);
+          if (maybePromise && typeof maybePromise.then === 'function') {
+            maybePromise.then(onSuccess, onError);
+          }
+        } catch (err) {
+          onError(err);
+        }
+      });
+    } catch {
+      return null;
+    }
+  }
+
   async _fetchAndDecodeNeuralAudio(cleanText, profileId, signal) {
     const cacheKey = `${profileId}::${cleanText}`;
     if (this._audioBufferCache.has(cacheKey)) {
       return this._audioBufferCache.get(cacheKey);
     }
 
-    const ctx = this._ensureAudioContext();
-    if (!ctx) throw new Error('AudioContext unavailable');
+    // Reuse any in-flight prefetch request for the same verse instead of firing a duplicate mobile HTTP request
+    if (this._inflightPrefetch.has(cacheKey)) {
+      const prefetched = await this._inflightPrefetch.get(cacheKey);
+      if (prefetched) return prefetched;
+    }
 
     const baseUrl =
       typeof window !== 'undefined' &&
@@ -317,12 +437,24 @@ export class DharmaVoice {
       throw new Error('Empty Neural TTS audio payload');
     }
 
-    const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
-    if (this._audioBufferCache.size >= 120) {
-      const oldestKey = this._audioBufferCache.keys().next().value;
-      if (oldestKey) this._audioBufferCache.delete(oldestKey);
+    // Cache raw MP3 Blob for HTML5 <audio> fallback on Mobile Edge / iOS WebKit
+    if (typeof Blob !== 'undefined') {
+      if (this._mp3BlobCache.size >= 120) {
+        const oldestBlobKey = this._mp3BlobCache.keys().next().value;
+        if (oldestBlobKey) this._mp3BlobCache.delete(oldestBlobKey);
+      }
+      this._mp3BlobCache.set(cacheKey, new Blob([arrayBuffer.slice(0)], { type: 'audio/mpeg' }));
     }
-    this._audioBufferCache.set(cacheKey, audioBuffer);
+
+    const ctx = this._ensureAudioContext();
+    const audioBuffer = ctx ? await this._decodeAudioBufferCompat(ctx, arrayBuffer) : null;
+    if (audioBuffer) {
+      if (this._audioBufferCache.size >= 120) {
+        const oldestKey = this._audioBufferCache.keys().next().value;
+        if (oldestKey) this._audioBufferCache.delete(oldestKey);
+      }
+      this._audioBufferCache.set(cacheKey, audioBuffer);
+    }
     return audioBuffer;
   }
 
@@ -344,6 +476,23 @@ export class DharmaVoice {
         // ignore
       }
       this._currentSourceNode = null;
+    }
+    if (this._htmlAudioEl) {
+      try {
+        this._htmlAudioEl.onended = null;
+        this._htmlAudioEl.onerror = null;
+        this._htmlAudioEl.pause();
+      } catch {
+        // ignore
+      }
+    }
+    if (this._currentObjectUrl && typeof URL !== 'undefined' && URL.revokeObjectURL) {
+      try {
+        URL.revokeObjectURL(this._currentObjectUrl);
+      } catch {
+        // ignore
+      }
+      this._currentObjectUrl = null;
     }
   }
 
@@ -419,6 +568,7 @@ export class DharmaVoice {
    * @param {number} [startWordIndex=0] - Word index to start from (used when resuming from pause or voice switch)
    */
   speakVerse(text, onEndCallback = () => {}, onWordBoundary = () => {}, startWordIndex = 0) {
+    this.unlockAudio();
     const wasSynthBusy = Boolean(this.synth && (this.synth.speaking || this.synth.pending));
     this._clearAllTimers();
     this._detachUtteranceAndCancel();
@@ -551,6 +701,7 @@ export class DharmaVoice {
           }
         };
 
+        const synthStartedAt = Date.now();
         utterance.onend = () => {
           if (sessionId === this._speakSessionId && !this.isPaused && this.isSpeaking) {
             finish();
@@ -563,6 +714,16 @@ export class DharmaVoice {
             return;
           }
           if (sessionId === this._speakSessionId && !completed && !this.isPaused && this.isSpeaking) {
+            // On Mobile Edge (iOS & Android), speechSynthesis.speak() outside a direct gesture or
+            // without a local vi-VN voice immediately fires onerror ('not-allowed' / 'synthesis-failed').
+            // Never call finish() immediately on early error, or SutraChanter will skip through all verses in seconds!
+            const elapsedMs = Date.now() - synthStartedAt;
+            const remainingMs = Math.max(850, estimatedDurationMs - elapsedMs);
+            if (elapsedMs < estimatedDurationMs * 0.65) {
+              if (this.fallbackTimer) clearTimeout(this.fallbackTimer);
+              this.fallbackTimer = setTimeout(finish, remainingMs);
+              return;
+            }
             finish();
           }
         };
@@ -594,7 +755,8 @@ export class DharmaVoice {
         onWordBoundary,
         finish,
         startBrowserUtterance,
-        sessionId
+        sessionId,
+        estimatedDurationMs
       );
       return;
     }
@@ -607,6 +769,77 @@ export class DharmaVoice {
     }
   }
 
+  async _playWithHtmlAudioElement(
+    mp3Blob,
+    effectiveRate,
+    words,
+    spokenText,
+    onWordBoundary,
+    finish,
+    sessionId,
+    estimatedDurationMs
+  ) {
+    if (typeof window === 'undefined' || typeof URL === 'undefined' || !URL.createObjectURL) {
+      return false;
+    }
+    try {
+      if (!this._htmlAudioEl && typeof window.Audio === 'function') {
+        this._htmlAudioEl = new window.Audio();
+        this._htmlAudioEl.playsInline = true;
+      }
+      const el = this._htmlAudioEl;
+      if (!el) return false;
+
+      if (this._currentObjectUrl && URL.revokeObjectURL) {
+        try {
+          URL.revokeObjectURL(this._currentObjectUrl);
+        } catch {
+          // ignore
+        }
+      }
+      const objUrl = URL.createObjectURL(mp3Blob);
+      this._currentObjectUrl = objUrl;
+      el.src = objUrl;
+      el.volume = Math.max(0, Math.min(1, this.voiceVolume));
+      const clampedRate = Math.max(0.5, Math.min(1.85, effectiveRate || 0.9));
+      el.playbackRate = clampedRate;
+      el.defaultPlaybackRate = clampedRate;
+
+      this._startKaraokeTicker(
+        words,
+        estimatedDurationMs || 2200,
+        spokenText,
+        onWordBoundary,
+        sessionId
+      );
+
+      el.onloadedmetadata = () => {
+        if (sessionId !== this._speakSessionId || this.isPaused || !this.isSpeaking) return;
+        if (Number.isFinite(el.duration) && el.duration > 0.4) {
+          const spokenSec = Math.max(0.6, el.duration - 0.18);
+          const actualMs = Math.max(700, Math.round((spokenSec / clampedRate) * 1000));
+          this._startKaraokeTicker(words, actualMs, spokenText, onWordBoundary, sessionId);
+          if (this.watchdogTimer) clearTimeout(this.watchdogTimer);
+          this.watchdogTimer = setTimeout(finish, actualMs + 1200);
+        }
+      };
+
+      el.onended = () => {
+        if (sessionId === this._speakSessionId && !this.isPaused && this.isSpeaking) {
+          finish();
+        }
+      };
+
+      if (this.watchdogTimer) clearTimeout(this.watchdogTimer);
+      this.watchdogTimer = setTimeout(finish, (estimatedDurationMs || 2500) + 1500);
+
+      await el.play();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async _speakWithNeuralTts(
     remainingText,
     profile,
@@ -615,7 +848,8 @@ export class DharmaVoice {
     onWordBoundary,
     finish,
     fallbackFn,
-    sessionId
+    sessionId,
+    estimatedDurationMs = 2200
   ) {
     try {
       const abortController =
@@ -632,17 +866,46 @@ export class DharmaVoice {
         return;
       }
 
-      const ctx = this._ensureAudioContext();
-      if (!ctx || !audioBuffer) {
-        throw new Error('AudioContext or AudioBuffer unavailable');
-      }
-
       const pbRate = Math.max(
         0.45,
         Math.min(1.85, (profile.playbackRate || 0.90) * (this.speedMultiplier || 1.0))
       );
       const detune = profile.detuneCents || 0;
       const effectiveRate = pbRate * Math.pow(2, detune / 1200);
+      const cacheKey = `${profile.id}::${remainingText}`;
+      const cachedBlob = this._mp3BlobCache.get(cacheKey);
+
+      const ctx = this._ensureAudioContext();
+      if (ctx && (ctx.state === 'suspended' || ctx.state === 'interrupted')) {
+        await Promise.race([
+          ctx.resume().catch(() => {}),
+          new Promise((r) => setTimeout(r, 220))
+        ]);
+      }
+
+      if (sessionId !== this._speakSessionId || this.isPaused || !this.isSpeaking) {
+        return;
+      }
+
+      // If WebAudio decode failed OR AudioContext is still suspended on Mobile Edge, play the MP3 via HTML5 <audio>
+      if ((!ctx || !audioBuffer || ctx.state === 'suspended' || ctx.state === 'interrupted') && cachedBlob) {
+        const playedHtml = await this._playWithHtmlAudioElement(
+          cachedBlob,
+          effectiveRate,
+          words,
+          spokenText,
+          onWordBoundary,
+          finish,
+          sessionId,
+          estimatedDurationMs
+        );
+        if (playedHtml) return;
+      }
+
+      if (!ctx || !audioBuffer) {
+        throw new Error('AudioContext or AudioBuffer unavailable');
+      }
+
       // Subtract ~180ms of trailing silence in MP3 so karaoke finishes last word right as voice finishes
       const spokenAudioSec = Math.max(0.6, audioBuffer.duration - 0.18);
       const actualDurationMs = Math.max(
@@ -653,8 +916,14 @@ export class DharmaVoice {
 
       const source = ctx.createBufferSource();
       source.buffer = audioBuffer;
-      if (source.playbackRate) source.playbackRate.value = pbRate;
-      if (source.detune) source.detune.value = detune;
+      const supportsDetune = typeof source.detune?.value === 'number';
+      if (supportsDetune) {
+        if (source.playbackRate) source.playbackRate.value = pbRate;
+        source.detune.value = detune;
+      } else if (source.playbackRate) {
+        // iOS Edge / WebKit lacks AudioBufferSourceNode.detune: fold pitch detune directly into playbackRate
+        source.playbackRate.value = Math.max(0.45, Math.min(1.85, effectiveRate));
+      }
 
       const warmthEq = ctx.createBiquadFilter();
       warmthEq.type = 'lowshelf';
@@ -681,13 +950,17 @@ export class DharmaVoice {
       dryGain.connect(this._masterVoiceGain);
 
       if (this._reverbImpulse) {
-        const convolver = ctx.createConvolver();
-        convolver.buffer = this._reverbImpulse;
-        const wetGain = ctx.createGain();
-        wetGain.gain.value = profile.reverbWet ?? 0.16;
-        silkHighEq.connect(convolver);
-        convolver.connect(wetGain);
-        wetGain.connect(this._masterVoiceGain);
+        try {
+          const convolver = ctx.createConvolver();
+          convolver.buffer = this._reverbImpulse;
+          const wetGain = ctx.createGain();
+          wetGain.gain.value = profile.reverbWet ?? 0.16;
+          silkHighEq.connect(convolver);
+          convolver.connect(wetGain);
+          wetGain.connect(this._masterVoiceGain);
+        } catch {
+          // Ignore convolver errors on mobile WebAudio implementations
+        }
       }
 
       this._currentSourceNode = source;

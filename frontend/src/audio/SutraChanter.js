@@ -25,6 +25,11 @@ export class SutraChanter {
     this.stop();
     if (!sutra || !Array.isArray(sutra.verses) || sutra.verses.length === 0) return;
 
+    // Mở khóa AudioContext & HTML5 <audio> ngay lập tức trong sự kiện chạm của người dùng trên Mobile Edge
+    if (this.voice && typeof this.voice.unlockAudio === 'function') {
+      this.voice.unlockAudio();
+    }
+
     this._chantSessionId++;
     this.isChanting = true;
     this.isPaused = false;
@@ -171,6 +176,9 @@ export class SutraChanter {
 
   resume() {
     if (!this.isChanting || !this.isPaused) return;
+    if (this.voice && typeof this.voice.unlockAudio === 'function') {
+      this.voice.unlockAudio();
+    }
     this.isPaused = false;
     this._chantSessionId++;
     if (this.isAuto) {
