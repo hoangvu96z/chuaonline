@@ -15,6 +15,7 @@
     "express": "^4.19.2",
     "msedge-tts": "^2.1.1",
     "mysql2": "^3.11.0",
+    "onnxruntime-node": "^1.31.1",
     "socket.io": "^4.7.5"
   },
   "devDependencies": {

@@ -12,47 +12,47 @@
 export const VOICE_PROFILES = [
   {
     id: 'SU_ONG_TRAM_AM',
-    name: '🧔‍♂️ Thầy Trụ Trì (Trầm Ấm Neural)',
+    name: '🧔‍♂️ Thầy Trụ Trì (Giọng Nam Miền Nam)',
     rate: 0.78,
     pitch: 0.62,
     preferGender: 'male',
-    playbackRate: 0.90,
-    detuneCents: -220,
-    warmthDb: 4.4,
-    reverbWet: 0.19
+    playbackRate: 0.96,
+    detuneCents: -35,
+    warmthDb: 3.2,
+    reverbWet: 0.18
   },
   {
     id: 'SU_CO_THANH_NHA',
-    name: '👩‍🦰 Sư Cô (Thanh Nhã Neural)',
+    name: '👩‍🦰 Sư Cô (Giọng Nữ Miền Nam)',
     rate: 0.86,
     pitch: 1.22,
     preferGender: 'female',
-    playbackRate: 0.95,
-    detuneCents: 25,
-    warmthDb: 2.0,
+    playbackRate: 0.98,
+    detuneCents: 0,
+    warmthDb: 1.8,
     reverbWet: 0.15
   },
   {
     id: 'CHU_TIEU_TRONG_TREO',
-    name: '👶 Chú Tiểu (Trong Trẻo)',
+    name: '👶 Chú Tiểu (Giọng Miền Nam Trong Trẻo)',
     rate: 0.95,
     pitch: 1.45,
     preferGender: 'female',
-    playbackRate: 1.03,
-    detuneCents: 190,
-    warmthDb: 1.2,
+    playbackRate: 1.04,
+    detuneCents: 110,
+    warmthDb: 1.0,
     reverbWet: 0.12
   },
   {
     id: 'DAI_CHUNG_TRANG_NGHIEM',
-    name: '☸️ Pháp Hội (Trang Nghiêm Neural)',
+    name: '☸️ Pháp Hội (Giọng Miền Nam Trang Nghiêm)',
     rate: 0.82,
     pitch: 0.88,
     preferGender: 'any',
-    playbackRate: 0.93,
-    detuneCents: -115,
-    warmthDb: 3.5,
-    reverbWet: 0.23
+    playbackRate: 0.95,
+    detuneCents: -55,
+    warmthDb: 3.4,
+    reverbWet: 0.22
   }
 ];
 
@@ -485,7 +485,7 @@ export class DharmaVoice {
     const url = `${baseUrl}${query}`;
     let response = await window.fetch(url, {
       method: 'GET',
-      headers: { Accept: 'audio/mpeg' },
+      headers: { Accept: 'audio/wav, audio/mpeg, audio/*' },
       signal
     });
 
@@ -497,7 +497,7 @@ export class DharmaVoice {
     ) {
       response = await window.fetch(`https://api.vunph.io.vn${query}`, {
         method: 'GET',
-        headers: { Accept: 'audio/mpeg' },
+        headers: { Accept: 'audio/wav, audio/mpeg, audio/*' },
         signal
       });
     }
@@ -512,13 +512,14 @@ export class DharmaVoice {
       throw new Error('Empty Neural TTS audio payload');
     }
 
-    // Cache raw MP3 Blob for HTML5 <audio> fallback on Mobile Edge / iOS WebKit
+    // Cache raw WAV/MP3 Blob for HTML5 <audio> fallback on Mobile Edge / iOS WebKit
     if (typeof Blob !== 'undefined') {
       if (this._mp3BlobCache.size >= 120) {
         const oldestBlobKey = this._mp3BlobCache.keys().next().value;
         if (oldestBlobKey) this._mp3BlobCache.delete(oldestBlobKey);
       }
-      this._mp3BlobCache.set(cacheKey, new Blob([arrayBuffer.slice(0)], { type: 'audio/mpeg' }));
+      const blobMime = finalContentType.includes('wav') ? 'audio/wav' : 'audio/mpeg';
+      this._mp3BlobCache.set(cacheKey, new Blob([arrayBuffer.slice(0)], { type: blobMime }));
     }
 
     const ctx = this._ensureAudioContext();

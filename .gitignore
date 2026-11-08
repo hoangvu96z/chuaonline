@@ -6,3 +6,4 @@ dist/
 coverage/
 backend/data/*.json
 backend/data/tts-cache/
+backend/data/vtts-onnx/

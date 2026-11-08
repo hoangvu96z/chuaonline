@@ -63,12 +63,16 @@ export async function preRecordAllSacredAudio() {
     'Chí tâm đảnh lễ Bảo Tháp Xá Lợi Thất Bảo Như Lai, nguyện ánh sáng trí tuệ từ bi soi đường cho muôn loài chúng sinh đồng thành Phật đạo.'
   );
 
-  const jobs = Array.from(uniqueTexts);
+  const jobs = [];
+  for (const text of uniqueTexts) {
+    jobs.push({ text, profileId: 'SU_ONG_TRAM_AM' }); // Giọng Nam Miền Nam (SM)
+    jobs.push({ text, profileId: 'SU_CO_THANH_NHA' }); // Giọng Nữ Miền Nam (SF)
+  }
   console.log(
-    `[PreRecordTTS] Pre-recording ${jobs.length} unique sacred sentences (Nhà Thờ 3D + Chùa Online 3D) to disk...`
+    `[PreRecordTTS] Pre-recording ${jobs.length} Southern Vietnamese (Giọng Miền Nam SM/SF) sacred audio files to disk...`
   );
 
-  const CONCURRENCY = 12;
+  const CONCURRENCY = 2;
   let completed = 0;
   let failed = 0;
   let cursor = 0;
@@ -76,19 +80,19 @@ export async function preRecordAllSacredAudio() {
   async function worker() {
     while (cursor < jobs.length) {
       const idx = cursor++;
-      const text = jobs[idx];
+      const { text, profileId } = jobs[idx];
       try {
-        await synthesizeVietnameseNeuralTts(text, 'CHA_CHU_TE_TRAM_AM', {
-          preferFastHttp: true
-        });
+        await synthesizeVietnameseNeuralTts(text, profileId);
         completed++;
         if (completed % 50 === 0 || completed === jobs.length) {
-          console.log(`[PreRecordTTS] Progress: ${completed}/${jobs.length} pre-recorded`);
+          console.log(`[PreRecordTTS] Progress: ${completed}/${jobs.length} pre-recorded (Giọng Miền Nam)`);
         }
       } catch (err) {
         failed++;
         console.warn(`[PreRecordTTS] Failed: ${text.slice(0, 40)}... -> ${err.message}`);
       }
+      // Yield briefly to event loop so realtime Socket.IO / HTTP requests stay <5ms
+      await new Promise((r) => setTimeout(r, 15));
     }
   }
 

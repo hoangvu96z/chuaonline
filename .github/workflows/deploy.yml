@@ -48,7 +48,7 @@ jobs:
 
       - name: 6. Package Deployment Archive
         run: |
-          tar --exclude='backend/node_modules' --exclude='backend/data/tts-cache' --exclude='frontend/node_modules' \
+          tar --exclude='backend/node_modules' --exclude='backend/data/tts-cache' --exclude='backend/data/vtts-onnx' --exclude='frontend/node_modules' \
               -czf /tmp/chuaonline_deploy.tar.gz \
               backend frontend/dist frontend/src/data/sutras.js frontend/src/data/prayers.js
 
@@ -84,7 +84,16 @@ jobs:
 
             cd /var/www/chuaonline/backend
             npm install --omit=dev
-            node src/preRecordTts.js
+
+            # Ensure Southern Vietnamese ONNX TTS models (SM/SF) are cached on VPS disk
+            mkdir -p /var/www/chuaonline/backend/data/vtts-onnx /var/www/chuaonline/backend/data/tts-cache
+            rm -f /var/www/chuaonline/backend/data/tts-cache/*.mp3
+            for f in tts_config.json text_encoder.onnx duration_predictor.onnx flow.onnx decoder.onnx; do
+              if [ ! -s "/var/www/chuaonline/backend/data/vtts-onnx/$f" ]; then
+                echo "Downloading Southern Vietnamese TTS ONNX model: $f..."
+                curl -sSL "https://huggingface.co/letrggghieu/v-tts-onnx/resolve/main/$f" -o "/var/www/chuaonline/backend/data/vtts-onnx/$f"
+              fi
+            done
 
             if pm2 describe chua-online-api >/dev/null 2>&1; then
               pm2 restart chua-online-api --update-env

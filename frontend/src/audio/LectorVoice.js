@@ -17,47 +17,47 @@
 export const LECTOR_VOICE_PROFILES = [
   {
     id: 'CHA_CHU_TE_TRAM_AM',
-    name: '✝️ Cha Chủ Tế (Trầm Ấm Neural)',
+    name: '✝️ Cha Chủ Tế (Giọng Nam Miền Nam)',
     rate: 0.78,
     pitch: 0.68,
     preferGender: 'male',
-    playbackRate: 0.92,
-    detuneCents: -210,
-    warmthDb: 4.2,
+    playbackRate: 0.96,
+    detuneCents: -35,
+    warmthDb: 3.2,
     reverbWet: 0.18
   },
   {
     id: 'SOEUR_CA_TRUONG_THANH_NHA',
-    name: '🙏 Soeur Ca Trưởng (Thanh Nhã Neural)',
+    name: '🙏 Soeur Ca Trưởng (Giọng Nữ Miền Nam)',
     rate: 0.85,
     pitch: 1.16,
     preferGender: 'female',
-    playbackRate: 0.96,
-    detuneCents: 20,
-    warmthDb: 2.0,
+    playbackRate: 0.98,
+    detuneCents: 0,
+    warmthDb: 1.8,
     reverbWet: 0.15
   },
   {
     id: 'THIEU_NHI_THANH_THE',
-    name: '⚜️ Thiếu Nhi Thánh Thể (Trong Trẻo)',
+    name: '⚜️ Thiếu Nhi Thánh Thể (Giọng Miền Nam)',
     rate: 0.94,
     pitch: 1.35,
     preferGender: 'female',
-    playbackRate: 1.02,
-    detuneCents: 180,
-    warmthDb: 1.2,
+    playbackRate: 1.04,
+    detuneCents: 110,
+    warmthDb: 1.0,
     reverbWet: 0.12
   },
   {
     id: 'CONG_DOAN_TRANG_NGHIEM',
-    name: '🕯️ Cộng Đoàn (Trang Nghiêm Neural)',
+    name: '🕯️ Cộng Đoàn (Giọng Miền Nam Trang Nghiêm)',
     rate: 0.82,
     pitch: 0.86,
     preferGender: 'any',
-    playbackRate: 0.94,
-    detuneCents: -110,
+    playbackRate: 0.95,
+    detuneCents: -55,
     warmthDb: 3.4,
-    reverbWet: 0.23
+    reverbWet: 0.22
   }
 ];
 
@@ -334,7 +334,7 @@ export class LectorVoice {
     const query = `/api/nhatho/tts?profile=${encodeURIComponent(profileId)}&text=${encodeURIComponent(cleanText)}`;
     let response = await window.fetch(`${baseUrl}${query}`, {
       method: 'GET',
-      headers: { Accept: 'audio/mpeg' },
+      headers: { Accept: 'audio/wav, audio/mpeg, audio/*' },
       signal
     });
 
@@ -345,7 +345,7 @@ export class LectorVoice {
     ) {
       response = await window.fetch(`https://api.vunph.io.vn${query}`, {
         method: 'GET',
-        headers: { Accept: 'audio/mpeg' },
+        headers: { Accept: 'audio/wav, audio/mpeg, audio/*' },
         signal
       });
     }

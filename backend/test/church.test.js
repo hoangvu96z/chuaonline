@@ -511,16 +511,21 @@ describe('Church Suite 4: Full End-to-End Socket.io & REST API Integration', () 
     }
   });
 
-  it('4.6 should synthesize warm Vietnamese Neural TTS via /api/nhatho/tts with LRU caching', async () => {
+  it('4.6 should synthesize warm Southern Vietnamese Neural TTS via /api/nhatho/tts with LRU caching', async () => {
     const ttsRes = await fetch(
       `${baseUrl}/api/nhatho/tts?profile=CHA_CHU_TE_TRAM_AM&text=${encodeURIComponent(
         'Nhân danh Cha và Con và Thánh Thần. Amen.'
       )}`
     );
     assert.strictEqual(ttsRes.status, 200);
-    assert.strictEqual(ttsRes.headers.get('content-type'), 'audio/mpeg');
+    const ct = ttsRes.headers.get('content-type');
+    assert.ok(
+      ct === 'audio/wav' || ct === 'audio/mpeg',
+      `Expected audio/wav or audio/mpeg, got ${ct}`
+    );
+    assert.strictEqual(ttsRes.headers.get('x-voice-accent'), 'vi-VN-South');
     const mp3Buf = Buffer.from(await ttsRes.arrayBuffer());
-    assert.ok(mp3Buf.length > 5000, `Expected MP3 bytes > 5KB, got ${mp3Buf.length}`);
+    assert.ok(mp3Buf.length > 5000, `Expected audio bytes > 5KB, got ${mp3Buf.length}`);
 
     // Second request should hit in-memory LRU cache instantaneously
     const t0 = Date.now();

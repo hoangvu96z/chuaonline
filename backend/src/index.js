@@ -16,7 +16,11 @@ import { GraceBatcher } from './graceBatcher.js';
 import { ChurchRoomManager } from './churchRoomManager.js';
 import { LiturgyScheduler } from './liturgyScheduler.js';
 import { registerChurchSocketHandlers } from './churchSocketHandlers.js';
-import { synthesizeVietnameseNeuralTts, getNeuralTtsCacheStats } from './neuralTtsService.js';
+import {
+  synthesizeVietnameseNeuralTts,
+  getNeuralTtsCacheStats,
+  detectAudioMimeType
+} from './neuralTtsService.js';
 import { preRecordAllSacredAudio } from './preRecordTts.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -317,14 +321,16 @@ export async function createTempleServer(options = {}) {
         return res.status(400).json({ ok: false, error: 'Missing text parameter' });
       }
 
-      const mp3Buffer = await synthesizeVietnameseNeuralTts(text, profile);
-      res.setHeader('Content-Type', 'audio/mpeg');
-      res.setHeader('Content-Length', String(mp3Buffer.length));
+      const audioBuffer = await synthesizeVietnameseNeuralTts(text, profile);
+      const mimeType = detectAudioMimeType(audioBuffer);
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Content-Length', String(audioBuffer.length));
       res.setHeader('Accept-Ranges', 'bytes');
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Cache-Control', 'public, max-age=86400');
       res.setHeader('X-Neural-Voice-Profile', profile);
-      return res.send(mp3Buffer);
+      res.setHeader('X-Voice-Accent', 'vi-VN-South');
+      return res.send(audioBuffer);
     } catch (err) {
       return res.status(502).json({
         ok: false,
