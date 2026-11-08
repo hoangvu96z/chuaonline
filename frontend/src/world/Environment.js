@@ -9026,6 +9026,80 @@ export class Environment {
     }
   }
 
+  triggerMandalaFlowerRain(durationSec = 42) {
+    this.mandalaRainTimer = durationSec;
+    if (!this.mandalaRainInstanced) {
+      const count = 80;
+      const petalGeo = new THREE.ConeGeometry(0.18, 0.34, 5);
+      petalGeo.scale(1.0, 0.35, 0.55);
+      const petalMat = new THREE.MeshBasicMaterial({
+        color: 0xffdf6b,
+        transparent: true,
+        opacity: 0.9,
+        side: THREE.DoubleSide
+      });
+      this.mandalaRainInstanced = new THREE.InstancedMesh(petalGeo, petalMat, count);
+      this.mandalaRainData = [];
+      this._mandalaDummy = new THREE.Object3D();
+      for (let i = 0; i < count; i++) {
+        this.mandalaRainData.push({
+          x: (Math.random() - 0.5) * 44,
+          y: 4 + Math.random() * 18,
+          z: -12 + Math.random() * 48,
+          speedY: 1.4 + Math.random() * 1.4,
+          phase: Math.random() * Math.PI * 2,
+          rotSpeed: 1.2 + Math.random() * 2.0
+        });
+      }
+      this.group.add(this.mandalaRainInstanced);
+    }
+    this.mandalaRainInstanced.visible = true;
+    this.ringGreatBellAnimation();
+  }
+
+  triggerReleaseLifeAnimation(animalType = 'SPARROW') {
+    if (animalType === 'TURTLE' || animalType === 'KOI') {
+      this.triggerFeedKoiAnimation();
+      return;
+    }
+    this.releaseBirdsTimer = 6.5;
+    if (!this.releasedBirdsList) {
+      this.releasedBirdsList = [];
+      this.releasedBirdsGroup = new THREE.Group();
+      const birdMat = new THREE.MeshStandardMaterial({
+        color: 0xfff8e7,
+        emissive: 0x5c4308,
+        emissiveIntensity: 0.35,
+        roughness: 0.35,
+        side: THREE.DoubleSide
+      });
+      const bodyGeo = new THREE.ConeGeometry(0.12, 0.38, 6);
+      bodyGeo.rotateX(Math.PI / 2);
+      const wingGeo = new THREE.BoxGeometry(0.36, 0.02, 0.16);
+
+      for (let i = 0; i < 6; i++) {
+        const bGroup = new THREE.Group();
+        const body = new THREE.Mesh(bodyGeo, birdMat);
+        const leftWing = new THREE.Mesh(wingGeo, birdMat);
+        leftWing.position.x = -0.18;
+        const rightWing = new THREE.Mesh(wingGeo, birdMat);
+        rightWing.position.x = 0.18;
+        bGroup.add(body, leftWing, rightWing);
+        this.releasedBirdsGroup.add(bGroup);
+        this.releasedBirdsList.push({
+          group: bGroup,
+          leftWing,
+          rightWing,
+          angleOffset: (i / 6) * Math.PI * 2,
+          radius: 1.2 + (i % 3) * 0.65,
+          speed: 1.8 + (i % 2) * 0.35
+        });
+      }
+      this.group.add(this.releasedBirdsGroup);
+    }
+    this.releasedBirdsGroup.visible = true;
+  }
+
   addIncenseStickVisual() {
     if (!this.incenseBurnerGroup) return;
     const stickMat = new THREE.MeshBasicMaterial({ color: 0xb83333 });
@@ -9157,6 +9231,52 @@ export class Environment {
       if (item.currentScale < item.targetScale) {
         item.currentScale = Math.min(item.targetScale, item.currentScale + dt * 0.9);
         item.group.scale.setScalar(item.currentScale);
+      }
+    }
+
+    // 7. Animate Mandala Golden Lotus Flower Rain (1 InstancedMesh = 1 Draw Call)
+    if (this.mandalaRainTimer > 0 && this.mandalaRainInstanced) {
+      this.mandalaRainTimer = Math.max(0, this.mandalaRainTimer - dt);
+      const dummy = this._mandalaDummy;
+      for (let i = 0; i < this.mandalaRainData.length; i++) {
+        const p = this.mandalaRainData[i];
+        p.y -= p.speedY * dt;
+        if (p.y < 0.2) p.y = 18 + Math.random() * 4;
+        const swayX = Math.sin(elapsed * 1.6 + p.phase) * 0.85;
+        const swayZ = Math.cos(elapsed * 1.3 + p.phase) * 0.85;
+        dummy.position.set(p.x + swayX, p.y, p.z + swayZ);
+        dummy.rotation.set(
+          elapsed * p.rotSpeed + p.phase,
+          elapsed * 0.8 + p.phase,
+          Math.sin(elapsed * 2 + p.phase) * 0.5
+        );
+        dummy.updateMatrix();
+        this.mandalaRainInstanced.setMatrixAt(i, dummy.matrix);
+      }
+      this.mandalaRainInstanced.instanceMatrix.needsUpdate = true;
+      if (this.mandalaRainTimer === 0) {
+        this.mandalaRainInstanced.visible = false;
+      }
+    }
+
+    // 8. Animate Released Peace Sparrows soaring up into the Temple Sky
+    if (this.releaseBirdsTimer > 0 && this.releasedBirdsGroup) {
+      this.releaseBirdsTimer = Math.max(0, this.releaseBirdsTimer - dt);
+      const progress = 1 - this.releaseBirdsTimer / 6.5;
+      for (const b of this.releasedBirdsList) {
+        const a = b.angleOffset + progress * Math.PI * 3.2;
+        const r = b.radius + progress * 7.5;
+        const bx = Math.cos(a) * r;
+        const bz = 26 + Math.sin(a) * r;
+        const by = 1.3 + progress * 16.5;
+        b.group.position.set(bx, by, bz);
+        b.group.rotation.y = a + Math.PI / 2;
+        const flap = Math.sin(elapsed * 24 + b.angleOffset) * 0.65;
+        b.leftWing.rotation.z = flap;
+        b.rightWing.rotation.z = -flap;
+      }
+      if (this.releaseBirdsTimer === 0) {
+        this.releasedBirdsGroup.visible = false;
       }
     }
   }

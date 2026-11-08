@@ -123,12 +123,49 @@ export class AvatarManager {
         map: this.chibiAuraTexture,
         transparent: true,
         depthWrite: false
+      }),
+      conicalHat: new THREE.MeshStandardMaterial({
+        color: 0xe6cf9c,
+        roughness: 0.72,
+        metalness: 0.05,
+        side: THREE.DoubleSide
+      }),
+      companionWhite: new THREE.MeshStandardMaterial({
+        color: 0xfffaf0,
+        roughness: 0.45
+      }),
+      companionOrange: new THREE.MeshStandardMaterial({
+        color: 0xf4a259,
+        roughness: 0.5
+      }),
+      companionJade: new THREE.MeshStandardMaterial({
+        color: 0x4ea87f,
+        roughness: 0.4,
+        metalness: 0.15
+      }),
+      companionGold: new THREE.MeshStandardMaterial({
+        color: 0xf2c94c,
+        roughness: 0.32,
+        metalness: 0.45,
+        emissive: 0x423005,
+        emissiveIntensity: 0.2
+      }),
+      companionRed: new THREE.MeshStandardMaterial({
+        color: 0xd94e34,
+        roughness: 0.4
+      }),
+      footstepLotus: new THREE.MeshBasicMaterial({
+        color: 0xffdf70,
+        transparent: true,
+        opacity: 0.85,
+        side: THREE.DoubleSide
       })
     };
 
     this.robeMatCache = new Map();
     this._tempProjVec = new THREE.Vector3();
     this._initMergedAvatarGeometries();
+    this._initFootstepPool();
   }
 
   _getSharedRobeMat(robeColor) {
@@ -290,6 +327,112 @@ export class AvatarManager {
       { geo: hatBaseGeo, pos: [0, 0.42, -0.06] },
       { geo: hatTopGeo, pos: [0, 0.52, -0.06] }
     ]);
+
+    // 13. Nón Lá Truyền Thống Việt Nam (2 meshes -> 1 mesh)
+    const conicalConeGeo = new THREE.ConeGeometry(0.56, 0.26, 16);
+    const conicalRimGeo = new THREE.TorusGeometry(0.55, 0.014, 6, 16);
+    this.sharedGeos.mergedConicalHat = this._mergePartGeos([
+      { geo: conicalConeGeo, pos: [0, 0.43, 0] },
+      { geo: conicalRimGeo, pos: [0, 0.3, 0], rot: [Math.PI / 2, 0, 0] }
+    ]);
+
+    // 14. Đóa Sen Vàng "Bộ Bộ Sinh Liên" dưới bước chân (9 meshes -> 1 mesh)
+    const petalGeo = new THREE.ConeGeometry(0.09, 0.22, 5);
+    const footstepParts = [
+      { geo: new THREE.RingGeometry(0.12, 0.34, 16), rot: [-Math.PI / 2, 0, 0], pos: [0, 0.01, 0] }
+    ];
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      footstepParts.push({
+        geo: petalGeo,
+        pos: [Math.cos(a) * 0.22, 0.03, Math.sin(a) * 0.22],
+        rot: [Math.PI * 0.38, a, 0],
+        scale: [1, 0.65, 0.45]
+      });
+    }
+    this.sharedGeos.mergedLotusFootstep = this._mergePartGeos(footstepParts);
+
+    // 15. 5 Linh Thú Chùa Đáng Yêu (Mỗi linh thú gộp thành 1-2 Meshes siêu nhẹ)
+    const sGeo = new THREE.SphereGeometry(0.16, 12, 10);
+    const earCone = new THREE.ConeGeometry(0.055, 0.12, 8);
+    const tailCyl = new THREE.CapsuleGeometry(0.025, 0.18, 4, 8);
+
+    // 15a. Mèo Chùa Tam Thể (MEO_CHUA)
+    this.sharedGeos.companionCat = this._mergePartGeos([
+      { geo: sGeo, pos: [0, 0.16, 0], scale: [0.95, 0.88, 1.18] },
+      { geo: sGeo, pos: [0, 0.31, 0.12], scale: [0.85, 0.82, 0.85] },
+      { geo: earCone, pos: [-0.08, 0.44, 0.12], rot: [0.15, 0, 0.22] },
+      { geo: earCone, pos: [0.08, 0.44, 0.12], rot: [0.15, 0, -0.22] },
+      { geo: tailCyl, pos: [0, 0.24, -0.2], rot: [-0.65, 0, 0] }
+    ]);
+
+    // 15b. Thỏ Ngọc Tuyết Trắng (THO_NGOC)
+    const bunnyEar = new THREE.CapsuleGeometry(0.032, 0.18, 4, 8);
+    this.sharedGeos.companionRabbit = this._mergePartGeos([
+      { geo: sGeo, pos: [0, 0.16, 0], scale: [1.0, 0.92, 1.15] },
+      { geo: sGeo, pos: [0, 0.3, 0.11], scale: [0.82, 0.78, 0.82] },
+      { geo: bunnyEar, pos: [-0.06, 0.49, 0.08], rot: [-0.15, 0, 0.12] },
+      { geo: bunnyEar, pos: [0.06, 0.49, 0.08], rot: [-0.15, 0, -0.12] },
+      { geo: sGeo, pos: [0, 0.16, -0.19], scale: [0.35, 0.35, 0.35] }
+    ]);
+
+    // 15c. Kim Quy Rùa Vàng (RUA_VANG)
+    this.sharedGeos.companionTurtle = this._mergePartGeos([
+      { geo: sGeo, pos: [0, 0.14, 0], scale: [1.28, 0.68, 1.45] },
+      { geo: sGeo, pos: [0, 0.17, 0.24], scale: [0.52, 0.48, 0.58] },
+      { geo: sGeo, pos: [-0.18, 0.06, 0.12], scale: [0.38, 0.22, 0.38] },
+      { geo: sGeo, pos: [0.18, 0.06, 0.12], scale: [0.38, 0.22, 0.38] },
+      { geo: sGeo, pos: [-0.18, 0.06, -0.12], scale: [0.38, 0.22, 0.38] },
+      { geo: sGeo, pos: [0.18, 0.06, -0.12], scale: [0.38, 0.22, 0.38] }
+    ]);
+
+    // 15d. Bạch Hạc Tiên (HAC_TRANG)
+    const neckCyl = new THREE.CapsuleGeometry(0.028, 0.26, 4, 8);
+    this.sharedGeos.companionCrane = this._mergePartGeos([
+      { geo: sGeo, pos: [0, 0.28, 0], scale: [0.82, 0.72, 1.35] },
+      { geo: neckCyl, pos: [0, 0.46, 0.16], rot: [0.22, 0, 0] },
+      { geo: sGeo, pos: [0, 0.6, 0.2], scale: [0.42, 0.4, 0.48] },
+      { geo: earCone, pos: [0, 0.6, 0.31], rot: [Math.PI / 2, 0, 0], scale: [0.5, 1.1, 0.5] },
+      { geo: tailCyl, pos: [-0.06, 0.12, 0], scale: [0.6, 1.0, 0.6] },
+      { geo: tailCyl, pos: [0.06, 0.12, 0], scale: [0.6, 1.0, 0.6] }
+    ]);
+
+    // 15e. Hươu Sao Lộc Uyển (HUOU_LOC)
+    this.sharedGeos.companionDeer = this._mergePartGeos([
+      { geo: sGeo, pos: [0, 0.26, 0], scale: [0.85, 0.78, 1.32] },
+      { geo: neckCyl, pos: [0, 0.42, 0.16], rot: [0.25, 0, 0] },
+      { geo: sGeo, pos: [0, 0.54, 0.22], scale: [0.55, 0.5, 0.65] },
+      { geo: earCone, pos: [-0.07, 0.67, 0.18], rot: [-0.2, 0, 0.35], scale: [0.65, 1.2, 0.65] },
+      { geo: earCone, pos: [0.07, 0.67, 0.18], rot: [-0.2, 0, -0.35], scale: [0.65, 1.2, 0.65] },
+      { geo: tailCyl, pos: [-0.09, 0.11, 0.12], scale: [0.75, 1.0, 0.75] },
+      { geo: tailCyl, pos: [0.09, 0.11, 0.12], scale: [0.75, 1.0, 0.75] },
+      { geo: tailCyl, pos: [-0.09, 0.11, -0.12], scale: [0.75, 1.0, 0.75] },
+      { geo: tailCyl, pos: [0.09, 0.11, -0.12], scale: [0.75, 1.0, 0.75] }
+    ]);
+  }
+
+  _initFootstepPool() {
+    this.footstepPool = [];
+    this.footstepCursor = 0;
+    for (let i = 0; i < 20; i++) {
+      const mat = this.sharedMats.footstepLotus.clone();
+      const mesh = new THREE.Mesh(this.sharedGeos.mergedLotusFootstep, mat);
+      mesh.visible = false;
+      this.scene.add(mesh);
+      this.footstepPool.push({ mesh, mat, life: 0, maxLife: 1.6 });
+    }
+  }
+
+  _spawnLotusFootstep(x, y, z) {
+    if (!this.footstepPool || this.footstepPool.length === 0) return;
+    const item = this.footstepPool[this.footstepCursor];
+    this.footstepCursor = (this.footstepCursor + 1) % this.footstepPool.length;
+    item.mesh.position.set(x, y + 0.025, z);
+    item.mesh.rotation.y = Math.random() * Math.PI * 2;
+    item.mesh.scale.set(0.35, 1, 0.35);
+    item.mat.opacity = 0.88;
+    item.life = item.maxLife;
+    item.mesh.visible = true;
   }
 
   _createChibiAuraTexture() {
@@ -358,6 +501,16 @@ export class AvatarManager {
     if (playerData.avatarStyle && playerData.avatarStyle !== entry.avatarStyle) {
       this._applyAvatarStyle(entry, playerData.avatarStyle);
     }
+    if (playerData.headwearType !== undefined && playerData.headwearType !== entry.headwearType) {
+      entry.headwearType = playerData.headwearType;
+      this._applyAvatarStyle(entry, entry.avatarStyle);
+    }
+    if (playerData.companionType !== undefined && playerData.companionType !== entry.companionType) {
+      this._applyCompanionType(entry, playerData.companionType);
+    }
+    if (playerData.lotusFootsteps !== undefined) {
+      entry.lotusFootsteps = Boolean(playerData.lotusFootsteps);
+    }
     if (playerData.robeColor && playerData.robeColor !== entry.robeColor) {
       entry.robeColor = this._normalizeChibiRobeColor(playerData.robeColor);
       entry.robeMat = this._getSharedRobeMat(entry.robeColor);
@@ -369,12 +522,16 @@ export class AvatarManager {
       (playerData.dharmaName && playerData.dharmaName !== entry.dharmaName) ||
       (playerData.realmLevel && playerData.realmLevel !== entry.realmLevel) ||
       (playerData.provinceCode && playerData.provinceCode !== entry.provinceCode) ||
-      (typeof playerData.meritPoints === 'number' && playerData.meritPoints !== entry.meritPoints)
+      (typeof playerData.meritPoints === 'number' && playerData.meritPoints !== entry.meritPoints) ||
+      (playerData.bowProgressText !== undefined && playerData.bowProgressText !== entry.bowProgressText)
     ) {
       entry.dharmaName = playerData.dharmaName || entry.dharmaName;
       entry.realmLevel = playerData.realmLevel || entry.realmLevel || 1;
       entry.provinceCode = playerData.provinceCode || entry.provinceCode || 'SG';
       entry.meritPoints = playerData.meritPoints ?? entry.meritPoints ?? 0;
+      if (playerData.bowProgressText !== undefined) {
+        entry.bowProgressText = String(playerData.bowProgressText || '');
+      }
       this._updateNameplateSprite(entry);
     }
 
@@ -574,6 +731,14 @@ export class AvatarManager {
     lotusHatGroup.visible = false;
     headGroup.add(lotusHatGroup);
 
+    // Nón Lá Truyền Thống Việt Nam (Đã gộp thành 1 Mesh dùng chung Geometry)
+    const conicalHatGroup = new THREE.Mesh(
+      this.sharedGeos.mergedConicalHat,
+      this.sharedMats.conicalHat
+    );
+    conicalHatGroup.visible = false;
+    headGroup.add(conicalHatGroup);
+
     bodyGroup.add(headGroup);
 
     // 4. Đôi Tay Áo Phồng Mũm Mĩm & Bàn Tay Chibi (Đã gộp 12 meshes thành 3 meshes)
@@ -653,6 +818,15 @@ export class AvatarManager {
     nameplateSprite.scale.set(2.15, 0.56, 1);
     root.add(nameplateSprite);
 
+    // 9. Linh Thú Chùa Đi Theo Sau Nhân Vật (1 Mesh siêu nhẹ dùng chung Geometry)
+    const companionMesh = new THREE.Mesh(
+      this.sharedGeos.companionCat,
+      this.sharedMats.companionOrange
+    );
+    companionMesh.position.set(0.68, 0, -0.52);
+    companionMesh.visible = false;
+    root.add(companionMesh);
+
     const entry = {
       socketId: data.socketId,
       userId: data.userId,
@@ -661,6 +835,10 @@ export class AvatarManager {
       provinceCode: data.provinceCode || 'SG',
       robeColor,
       avatarStyle: data.avatarStyle || 'CU_SI_AO_LAM',
+      companionType: data.companionType !== undefined ? data.companionType : 'MEO_CHUA',
+      lotusFootsteps: data.lotusFootsteps !== undefined ? Boolean(data.lotusFootsteps) : true,
+      headwearType: data.headwearType || 'AUTO',
+      bowProgressText: data.bowProgressText || '',
       meritPoints: data.meritPoints || 0,
       realmLevel: data.realmLevel || 1,
       state: 'IDLE',
@@ -680,6 +858,9 @@ export class AvatarManager {
       twinBunsGroup,
       preceptDotsGroup,
       lotusHatGroup,
+      conicalHatGroup,
+      companionMesh,
+      lastFootstepPos: root.position.clone(),
       handsGroup,
       broomGroup,
       chantPropsGroup,
@@ -700,9 +881,43 @@ export class AvatarManager {
     };
 
     this._applyAvatarStyle(entry, entry.avatarStyle);
+    this._applyCompanionType(entry, entry.companionType);
     this._applyAvatarState(entry, data.state || 'IDLE');
     this._updateNameplateSprite(entry);
     return entry;
+  }
+
+  _applyCompanionType(entry, companionType = 'MEO_CHUA') {
+    entry.companionType = companionType || 'NONE';
+    if (!entry.companionMesh) return;
+    if (!entry.companionType || entry.companionType === 'NONE') {
+      entry.companionMesh.visible = false;
+      return;
+    }
+    entry.companionMesh.visible = true;
+    switch (entry.companionType) {
+      case 'THO_NGOC':
+        entry.companionMesh.geometry = this.sharedGeos.companionRabbit;
+        entry.companionMesh.material = this.sharedMats.companionWhite;
+        break;
+      case 'RUA_VANG':
+        entry.companionMesh.geometry = this.sharedGeos.companionTurtle;
+        entry.companionMesh.material = this.sharedMats.companionGold;
+        break;
+      case 'HAC_TRANG':
+        entry.companionMesh.geometry = this.sharedGeos.companionCrane;
+        entry.companionMesh.material = this.sharedMats.companionWhite;
+        break;
+      case 'HUOU_LOC':
+        entry.companionMesh.geometry = this.sharedGeos.companionDeer;
+        entry.companionMesh.material = this.sharedMats.companionOrange;
+        break;
+      case 'MEO_CHUA':
+      default:
+        entry.companionMesh.geometry = this.sharedGeos.companionCat;
+        entry.companionMesh.material = this.sharedMats.companionOrange;
+        break;
+    }
   }
 
   _applyAvatarStyle(entry, styleCode = 'CU_SI_AO_LAM') {
@@ -711,6 +926,7 @@ export class AvatarManager {
     if (entry.mainBunGroup) entry.mainBunGroup.visible = true;
     if (entry.twinBunsGroup) entry.twinBunsGroup.visible = false;
     if (entry.lotusHatGroup) entry.lotusHatGroup.visible = false;
+    if (entry.conicalHatGroup) entry.conicalHatGroup.visible = false;
     if (entry.preceptDotsGroup) entry.preceptDotsGroup.visible = false;
     entry.bodyGroup.scale.set(1, 1, 1);
 
@@ -735,6 +951,18 @@ export class AvatarManager {
       case 'DEVOTEE_CLASSIC':
       default:
         break;
+    }
+
+    // Override đồ đội đầu nếu đạo hữu chọn Nón Lá hoặc Mão Sen
+    if (entry.headwearType === 'NON_LA') {
+      if (entry.lotusHatGroup) entry.lotusHatGroup.visible = false;
+      if (entry.conicalHatGroup) entry.conicalHatGroup.visible = true;
+    } else if (entry.headwearType === 'MAO_SEN') {
+      if (entry.conicalHatGroup) entry.conicalHatGroup.visible = false;
+      if (entry.lotusHatGroup) entry.lotusHatGroup.visible = true;
+    } else if (entry.headwearType === 'NONE') {
+      if (entry.conicalHatGroup) entry.conicalHatGroup.visible = false;
+      if (entry.lotusHatGroup) entry.lotusHatGroup.visible = false;
     }
   }
 
@@ -771,7 +999,8 @@ export class AvatarManager {
     const realmInfo = getRealmInfo(entry.meritPoints || 0);
     const levelNum = entry.realmLevel || realmInfo.level || 1;
     const displayName = String(entry.dharmaName || 'Đạo Hữu').slice(0, 22);
-    const cacheKey = `${displayName}|${levelNum}|${isSelf ? 1 : 0}`;
+    const bowBadge = String(entry.bowProgressText || '').slice(0, 22);
+    const cacheKey = `${displayName}|${levelNum}|${isSelf ? 1 : 0}|${bowBadge}`;
     if (entry._lastNameplateKey === cacheKey && entry.nameplateTexture) {
       return;
     }
@@ -780,7 +1009,7 @@ export class AvatarManager {
     if (!entry.nameplateCanvas) {
       entry.nameplateCanvas = document.createElement('canvas');
       entry.nameplateCanvas.width = 384;
-      entry.nameplateCanvas.height = 104;
+      entry.nameplateCanvas.height = 112;
       entry.nameplateCtx = entry.nameplateCanvas.getContext('2d');
     }
     const canvas = entry.nameplateCanvas;
@@ -794,24 +1023,24 @@ export class AvatarManager {
     ctx.miterLimit = 2;
 
     // Dòng 1: Pháp Danh trắng sáng viền tối mềm mại
-    ctx.font = 'bold 30px "Noto Serif", "Be Vietnam Pro", system-ui, sans-serif';
+    ctx.font = 'bold 29px "Noto Serif", "Be Vietnam Pro", system-ui, sans-serif';
     ctx.shadowColor = 'rgba(0, 0, 0, 0.92)';
     ctx.shadowBlur = 6;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 2;
     ctx.strokeStyle = 'rgba(15, 10, 6, 0.92)';
     ctx.lineWidth = 6;
-    ctx.strokeText(displayName, 192, 42);
+    ctx.strokeText(displayName, 192, 38);
     ctx.fillStyle = isSelf ? '#fff3b0' : '#ffffff';
-    ctx.fillText(displayName, 192, 42);
+    ctx.fillText(displayName, 192, 38);
 
-    // Dòng 2: "Cấp X" nhỏ gọn phía dưới
+    // Dòng 2: "Cấp X" hoặc huy hiệu tiến độ "🙏 Lễ: 18/108 lạy"
     ctx.font = 'bold 21px system-ui, -apple-system, sans-serif';
     ctx.lineWidth = 5;
-    const levelLabel = `Cấp ${levelNum}`;
-    ctx.strokeText(levelLabel, 192, 74);
-    ctx.fillStyle = isSelf ? '#ffd966' : '#f4e3c1';
-    ctx.fillText(levelLabel, 192, 74);
+    const levelLabel = bowBadge ? `🙏 Lễ: ${bowBadge}` : `Cấp ${levelNum}`;
+    ctx.strokeText(levelLabel, 192, 72);
+    ctx.fillStyle = bowBadge ? '#ffdf6b' : isSelf ? '#ffd966' : '#f4e3c1';
+    ctx.fillText(levelLabel, 192, 72);
 
     if (!entry.nameplateTexture) {
       const tex = new THREE.CanvasTexture(canvas);
@@ -938,6 +1167,18 @@ export class AvatarManager {
         if (entry.state === 'WALK' || (entry.state === 'IDLE' && dist > 0.15)) {
           entry.bodyGroup.position.y = Math.abs(Math.sin(elapsed * 12)) * 0.085;
           entry.bodyGroup.rotation.z = Math.sin(elapsed * 12) * 0.045;
+          if (
+            entry.lotusFootsteps &&
+            entry.lastFootstepPos &&
+            entry.root.position.distanceTo(entry.lastFootstepPos) > 0.72
+          ) {
+            entry.lastFootstepPos.copy(entry.root.position);
+            this._spawnLotusFootstep(
+              entry.root.position.x,
+              entry.root.position.y,
+              entry.root.position.z
+            );
+          }
         }
       } else {
         entry.bodyGroup.position.y = 0;
@@ -945,6 +1186,14 @@ export class AvatarManager {
         if (entry.state === 'WALK' && entry.socketId === this.localSocketId) {
           this._applyAvatarState(entry, 'IDLE');
         }
+      }
+
+      // Chuyển động nhún nhảy đáng yêu của Linh Thú đi theo sau
+      if (entry.companionMesh && entry.companionMesh.visible) {
+        const hopSpeed = dist > 0.03 ? 11.5 : 3.2;
+        const hopAmp = dist > 0.03 ? 0.09 : 0.025;
+        entry.companionMesh.position.y = Math.abs(Math.sin(elapsed * hopSpeed)) * hopAmp;
+        entry.companionMesh.rotation.y = entry.bodyGroup.rotation.y;
       }
 
       // Nhịp thở thiền định & gật nhẹ an tịnh cho các Đạo Hữu Chibi đang ngồi thiền
@@ -1016,6 +1265,22 @@ export class AvatarManager {
         }
         if (entry.personalMalletPivot) {
           entry.personalMalletPivot.rotation.x = -0.28;
+        }
+      }
+    }
+
+    // 5. Cập nhật hiệu ứng đóa sen "Bộ Bộ Sinh Liên" nở dưới bước chân
+    if (this.footstepPool) {
+      for (const item of this.footstepPool) {
+        if (!item.mesh.visible) continue;
+        item.life -= dt;
+        if (item.life <= 0) {
+          item.mesh.visible = false;
+        } else {
+          const t = 1 - item.life / item.maxLife;
+          const s = 0.45 + Math.sin(Math.min(1, t * 2.2) * (Math.PI / 2)) * 0.65;
+          item.mesh.scale.set(s, 1, s);
+          item.mat.opacity = Math.max(0, (1 - t) * 0.85);
         }
       }
     }

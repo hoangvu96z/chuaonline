@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
   <title>Chùa Online 3D — Không Gian Tịnh Độ &amp; Tụng Kinh Đại Chúng</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪷</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet" />
@@ -61,6 +62,11 @@
           <span class="ccu-badge">(<span id="hud-room-count">1</span>/60)</span>
         </div>
 
+        <button type="button" class="channel-pill coop-goal-pill" id="coop-goal-pill" title="Đại Nguyện Cộng Đồng Toàn Chùa: Đủ 100 thiện niệm sẽ giáng Mưa Hoa Sen Vàng Mạn Đà La (+20 Công Đức toàn phòng)">
+          <span>🪷 Đại Nguyện: <strong id="hud-coop-text">15/100</strong></span>
+          <span class="coop-mini-track"><span id="hud-coop-fill" class="coop-mini-fill" style="width: 15%"></span></span>
+        </button>
+
         <div class="zone-shortcuts" id="zone-shortcuts-group" role="group" aria-label="Di chuyển nhanh">
           <button type="button" class="zone-btn active" data-zone="CHANH_DIEN">🏯 Chánh Điện</button>
           <button type="button" class="zone-btn" data-zone="DAI_QUAN_AM">🙏 Quán Âm</button>
@@ -77,7 +83,13 @@
         </div>
 
         <div class="hud-icon-group" role="group" aria-label="Công cụ nhanh">
-          <button type="button" class="hud-icon-btn" id="btn-open-auth-top" aria-label="Đổi Nhân Vật &amp; Tài Khoản" title="Đổi Nhân Vật / Đăng Nhập Tài Khoản">
+          <button type="button" class="hud-icon-btn" id="btn-open-daily-quests" aria-label="Điểm Danh 7 Ngày &amp; Nhiệm Vụ Tu Tập" title="Điểm Danh Tinh Tấn 7 Ngày &amp; Nhiệm Vụ Hằng Ngày">
+            📜<span id="quest-notify-dot" class="quest-notify-dot"></span>
+          </button>
+          <button type="button" class="hud-icon-btn" id="btn-open-share-card" aria-label="Chụp Ảnh Lộc &amp; Tạo Thẻ Khoe Mạng Xã Hội" title="Máy Ảnh Tâm Linh — Tạo Thẻ Công Đức / Cầu Duyên / Quẻ Xăm Khoe Threads &amp; TikTok">
+            📸
+          </button>
+          <button type="button" class="hud-icon-btn" id="btn-open-auth-top" aria-label="Đổi Nhân Vật &amp; Tài Khoản" title="Đổi Nhân Vật / Linh Thú / Đăng Nhập Tài Khoản">
             🧘
           </button>
           <button type="button" class="hud-icon-btn" id="btn-toggle-music" aria-label="Đài Nhạc Thiền &amp; YouTube (Phím P)" title="Mở Đài Nhạc Thiền &amp; Phát Nhạc YouTube Tịnh Tâm (Phím P)">
@@ -373,6 +385,20 @@
         <span class="dock-sub" id="dock-sub-prostrate">+5 Công Đức</span>
       </button>
 
+      <button type="button" class="dock-btn highlight" id="dock-bow-108" data-shortcut="G" title="Thử Thách Thành Tâm 108 Lạy Sám Hối — Hiện Bộ Đếm Trên Đầu Nhân Vật (Phím tắt: G)">
+        <kbd class="dock-kbd">G</kbd>
+        <span class="dock-icon">🙇</span>
+        <span class="dock-label" id="dock-label-bow108">108 Lạy</span>
+        <span class="dock-sub" id="dock-sub-bow108">Thử Thách Sám Hối</span>
+      </button>
+
+      <button type="button" class="dock-btn highlight" id="dock-beads-108" data-shortcut="V" title="Lần Tràng Hạt 108 Hạt Niệm Phật Tịnh Tâm (Phím tắt: V)">
+        <kbd class="dock-kbd">V</kbd>
+        <span class="dock-icon">📿</span>
+        <span class="dock-label">Tràng Hạt</span>
+        <span class="dock-sub" id="dock-sub-beads">Vòng 108 Hạt</span>
+      </button>
+
       <button type="button" class="dock-btn highlight" id="dock-wooden-fish" data-shortcut="M" title="Ngồi trong Chánh Điện gõ Mõ tụng kinh (Phím tắt: M hoặc Space)">
         <kbd class="dock-kbd">M</kbd>
         <span class="dock-icon">🪵</span>
@@ -406,6 +432,13 @@
         <span class="dock-icon">🐟</span>
         <span class="dock-label">Nuôi Cá</span>
         <span class="dock-sub">+6 Công Đức</span>
+      </button>
+
+      <button type="button" class="dock-btn highlight" id="dock-release-life" data-shortcut="F" title="Phóng Sinh Tích Phước — Chim Sẻ Hòa Bình, Rùa Vàng, Cá Chép (Phím tắt: F)">
+        <kbd class="dock-kbd">F</kbd>
+        <span class="dock-icon">🕊️</span>
+        <span class="dock-label">Phóng Sinh</span>
+        <span class="dock-sub">+10 Công Đức</span>
       </button>
 
       <button type="button" class="dock-btn" id="dock-sweep-leaves" data-shortcut="Q" title="Quét Lá Đa sân chùa (Phím tắt: Q)">
@@ -788,6 +821,27 @@
       <label class="field-label">Màu Áo Tu Tập:</label>
       <div id="robe-color-picker" class="robe-color-picker"></div>
 
+      <label class="field-label">🦌 Linh Thú Hộ Pháp Đi Theo Sau Nhân Vật (Mở khóa theo Cảnh Giới):</label>
+      <div id="companion-picker" class="avatar-style-picker" role="radiogroup" aria-label="Chọn Linh Thú Hộ Pháp"></div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 10px 0;">
+        <div>
+          <label for="select-headwear" class="field-label">👒 Đồ Đội Đầu (Nón Lá / Mão Sen):</label>
+          <select id="select-headwear" name="headwearType" class="music-track-select">
+            <option value="AUTO">✨ Theo Hình Tướng Mặc Định</option>
+            <option value="NON_LA">👒 Đội Nón Lá Truyền Thống</option>
+            <option value="MAO_SEN">👑 Đội Mão Sen Vàng</option>
+            <option value="NONE">🌿 Không Đội Mũ</option>
+          </select>
+        </div>
+        <div style="display: flex; align-items: center; padding-top: 20px;">
+          <label class="zen-switch-mini" style="font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="chk-lotus-footsteps" checked />
+            <span>🪷 Bật "Bộ Bộ Sinh Liên" (Nở hoa sen vàng dưới bước chân)</span>
+          </label>
+        </div>
+      </div>
+
       <div class="recovery-code-box">
         <div>
           <span>Mã Pháp Danh Khôi Phục (Recovery Code):</span>
@@ -835,6 +889,173 @@
         <button type="submit" class="gold-cta-btn" id="btn-submit-login">🔑 Đăng Nhập &amp; Đồng Bộ Công Đức</button>
       </div>
     </form>
+  </dialog>
+
+  <!-- 6. Floating Interactive 108 Prayer Beads Widget (Vòng Lần Tràng Hạt 108 Hạt Tịnh Độ) -->
+  <aside id="beads-108-panel" class="beads-108-panel" aria-label="Pháp Khí Lần Tràng Hạt 108 Hạt" hidden>
+    <div class="beads-panel-header">
+      <div>
+        <span class="dialog-eyebrow">TỊNH NIỆM TRÀNG HẠT • 108 HẠT</span>
+        <h3>📿 Lần Chuỗi Niệm Phật</h3>
+      </div>
+      <button type="button" class="chat-hide-btn" id="btn-close-beads-108" aria-label="Đóng vòng tràng hạt">✕</button>
+    </div>
+
+    <div class="beads-controls-row">
+      <select id="select-bead-material" class="scroll-voice-select" aria-label="Chọn chất liệu tràng hạt">
+        <option value="BO_DE">🌰 Hạt Gỗ Bồ Đề Cổ Thụ</option>
+        <option value="TRAM_HUONG">🪵 Trầm Hương Kỳ Nam</option>
+        <option value="NGOC_BICH">🟢 Ngọc Bích Phỉ Thúy</option>
+        <option value="HO_PHACH">🟠 Hổ Phách Hoàng Kim</option>
+        <option value="BACH_NGOC">⚪ Liên Hoa Bạch Ngọc</option>
+      </select>
+      <select id="select-bead-chant" class="scroll-voice-select" aria-label="Chọn hồng danh niệm Phật">
+        <option value="Nam Mô A Di Đà Phật">🙏 Nam Mô A Di Đà Phật</option>
+        <option value="Nam Mô Quán Thế Âm Bồ Tát">🪷 Nam Mô Quán Thế Âm Bồ Tát</option>
+        <option value="Nam Mô Dược Sư Lưu Ly Quang Vương Phật">🔵 Nam Mô Dược Sư Phật</option>
+        <option value="Nam Mô Địa Tạng Vương Bồ Tát">🔱 Nam Mô Địa Tạng Bồ Tát</option>
+        <option value="Án Ma Ni Bát Di Hồng">☸️ Án Ma Ni Bát Di Hồng</option>
+      </select>
+    </div>
+
+    <div class="beads-canvas-wrap" id="beads-tap-surface" title="Chạm vào vòng hạt hoặc bấm phím Space để lần từng hạt (+1 Công Đức)">
+      <canvas id="canvas-beads-108" width="280" height="280"></canvas>
+      <div class="beads-center-overlay">
+        <strong id="beads-count-number" class="beads-count-number">0 / 108</strong>
+        <span id="beads-chant-floating" class="beads-chant-floating">Chạm hoặc nhấn Space</span>
+        <small id="beads-rounds-badge" class="beads-rounds-badge">Đã viên mãn: 0 chuỗi</small>
+      </div>
+    </div>
+
+    <div class="beads-footer-actions">
+      <button type="button" class="gold-cta-btn" id="btn-step-bead-108" style="width: 100%; justify-content: center;">
+        📿 Lần 1 Hạt Niệm Phật (Space / Chạm • +1 Công Đức)
+      </button>
+    </div>
+  </aside>
+
+  <!-- 7. Daily Check-in Streak & Dharma Quests Modal (Điểm Danh 7 Ngày & Nhiệm Vụ Tu Tập Hằng Ngày) -->
+  <dialog id="dialog-daily-quests" class="zen-dialog" closedby="any" aria-labelledby="title-daily-quests">
+    <div class="dialog-header">
+      <div>
+        <span class="dialog-eyebrow">TINH TẤN MỖI NGÀY • TÍCH LŨY CÔNG ĐỨC</span>
+        <h2 id="title-daily-quests">📜 Chuỗi Điểm Danh 7 Ngày &amp; Nhiệm Vụ Tu Tập</h2>
+      </div>
+      <form method="dialog">
+        <button type="submit" class="dialog-close-btn" aria-label="Đóng">✕</button>
+      </form>
+    </div>
+
+    <div class="daily-streak-box">
+      <div class="streak-header-row">
+        <div>
+          <strong>🔥 Chuỗi Điểm Danh Liên Tiếp: <span id="streak-days-count">1</span> ngày</strong>
+          <p class="dialog-desc" style="margin: 4px 0 0 0;">Về chùa mỗi ngày để giữ tâm thanh tịnh và nhận Lộc Công Đức tăng dần!</p>
+        </div>
+        <button type="button" class="gold-cta-btn" id="btn-claim-daily-checkin">
+          ✨ Điểm Danh Hôm Nay (+15 Công Đức)
+        </button>
+      </div>
+      <div id="streak-days-grid" class="streak-days-grid"></div>
+    </div>
+
+    <div class="daily-quests-section">
+      <h3 style="margin: 14px 0 8px 0; color: #ffe08a; font-size: 16px;">🪷 5 Nhiệm Vụ Tu Tập Hằng Ngày</h3>
+      <div id="daily-quests-list" class="daily-quests-list"></div>
+    </div>
+
+    <div class="dialog-footer">
+      <form method="dialog">
+        <button type="submit" class="primary-zen-btn">Đóng</button>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- 8. Release Life Ritual Modal (Phóng Sinh Tích Phước: Chim Sẻ, Rùa Vàng, Cá Chép) -->
+  <dialog id="dialog-release-life" class="zen-dialog" closedby="any" aria-labelledby="title-release-life">
+    <div class="dialog-header">
+      <div>
+        <span class="dialog-eyebrow">TỪ BI HỶ XẢ • GIẢI TRỪ OÁN KẾT</span>
+        <h2 id="title-release-life">🕊️ Nghi Thức Phóng Sinh Tích Phước</h2>
+      </div>
+      <form method="dialog">
+        <button type="submit" class="dialog-close-btn" aria-label="Đóng">✕</button>
+      </form>
+    </div>
+
+    <p class="dialog-desc">
+      Phóng sinh là hạnh từ bi cao cả, trao trả tự do cho muôn loài về với bầu trời và mặt hồ thanh lương, nguyện cầu sức khỏe, trường thọ và hóa giải chướng duyên.
+    </p>
+
+    <form id="form-release-life" class="wish-form">
+      <div class="wish-type-tabs" role="radiogroup" aria-label="Chọn loài phóng sinh">
+        <label class="wish-tab active" id="tab-release-sparrow">
+          <input type="radio" name="animalType" value="SPARROW" checked />
+          <span>🕊️ Đàn Chim Sẻ Hòa Bình (Bay Lên Trời)</span>
+        </label>
+        <label class="wish-tab" id="tab-release-turtle">
+          <input type="radio" name="animalType" value="TURTLE" />
+          <span>🐢 Rùa Vàng Kim Quy (Hồ Sen)</span>
+        </label>
+        <label class="wish-tab" id="tab-release-koi">
+          <input type="radio" name="animalType" value="KOI" />
+          <span>🐟 Cá Chép Vàng (Hồ Phóng Sinh)</span>
+        </label>
+      </div>
+
+      <label for="input-release-wish" class="field-label">Lời chú nguyện phóng sinh (tối đa 120 ký tự):</label>
+      <input
+        type="text"
+        id="input-release-wish"
+        name="wishText"
+        maxlength="120"
+        required
+        value="Nguyện muôn loài tự tại an vui, gia đạo bình an, tật bệnh tiêu trừ."
+        style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255, 209, 102, 0.45); background: rgba(18, 12, 8, 0.78); color: #fff8e7; font-size: 15px;"
+      />
+
+      <div class="quick-wish-chips">
+        <button type="button" class="wish-chip release-chip" data-release="Nguyện muôn loài tự tại an vui, gia đạo bình an, tật bệnh tiêu trừ.">🕊️ Cầu sức khỏe &amp; bình an</button>
+        <button type="button" class="wish-chip release-chip" data-release="Nguyện hóa giải oán kết, tâm trí sáng suốt, vạn sự cát tường.">🐢 Hóa giải chướng duyên</button>
+        <button type="button" class="wish-chip release-chip" data-release="Nguyện hồi hướng công đức phóng sinh cho cha mẹ trường thọ, cửu huyền siêu thoát.">🐟 Báo hiếu cha mẹ</button>
+      </div>
+
+      <div class="dialog-footer">
+        <button type="button" class="secondary-zen-btn" id="btn-cancel-release-life">Hủy</button>
+        <button type="submit" class="gold-cta-btn">🕊️ Phát Tâm Phóng Sinh (+10 Công Đức)</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 9. Viral Share Card Generator Modal (Máy Ảnh Tâm Linh & Tạo Thẻ Lộc Khoe Threads / TikTok / FB) -->
+  <dialog id="dialog-share-card" class="zen-dialog" closedby="any" aria-labelledby="title-share-card">
+    <div class="dialog-header">
+      <div>
+        <span class="dialog-eyebrow">CHỤP ẢNH LỘC • CHIA SẺ THREADS / TIKTOK / FACEBOOK</span>
+        <h2 id="title-share-card">📸 Tạo Thẻ Chứng Nhận Công Đức &amp; Sớ Cầu Duyên</h2>
+      </div>
+      <form method="dialog">
+        <button type="submit" class="dialog-close-btn" aria-label="Đóng">✕</button>
+      </form>
+    </div>
+
+    <div class="leaderboard-tabs" id="share-card-tabs" role="tablist">
+      <button type="button" class="lb-tab active" data-card-type="MERIT">🏆 Thẻ Công Đức &amp; Cảnh Giới</button>
+      <button type="button" class="lb-tab" data-card-type="CAU_DUYEN">🧶 Thẻ Sớ Hồng Tơ Cầu Duyên</button>
+      <button type="button" class="lb-tab" data-card-type="FORTUNE">🎋 Thẻ Quẻ Xăm Đầu Ngày</button>
+    </div>
+
+    <div class="share-card-preview-box">
+      <canvas id="share-card-canvas" width="720" height="900"></canvas>
+    </div>
+
+    <div class="dialog-footer" style="justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+      <button type="button" class="secondary-zen-btn" id="btn-refresh-share-card">🔄 Chụp Lại Góc Máy Hiện Tại</button>
+      <div style="display: flex; gap: 10px;">
+        <button type="button" class="secondary-zen-btn" id="btn-native-share-card">📤 Chia Sẻ Ngay</button>
+        <button type="button" class="gold-cta-btn" id="btn-download-share-card">📥 Tải Ảnh Lộc Về Máy (PNG)</button>
+      </div>
+    </div>
   </dialog>
 
   <script type="module" src="/src/main.js"></script>

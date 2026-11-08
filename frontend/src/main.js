@@ -107,7 +107,12 @@ function loadLocalProfile() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && parsed.recoveryCode) return parsed;
+      if (parsed && parsed.recoveryCode) {
+        if (!parsed.companionType) parsed.companionType = 'MEO_CHUA';
+        if (parsed.lotusFootsteps === undefined) parsed.lotusFootsteps = true;
+        if (!parsed.headwearType) parsed.headwearType = 'AUTO';
+        return parsed;
+      }
     }
   } catch (_) {
     // ignore storage errors
@@ -124,6 +129,9 @@ function loadLocalProfile() {
     provinceCode: 'SG',
     robeColor: '#5c6b73',
     avatarStyle: 'CU_SI_AO_LAM',
+    companionType: 'MEO_CHUA',
+    lotusFootsteps: true,
+    headwearType: 'AUTO',
     meritPoints: 0,
     realmLevel: 1
   };
@@ -175,9 +183,27 @@ class ChuaOnlineApp {
     this.currentRoomId = 'chanh-dien-1';
     this.globalSession = null;
     this.lastFortune = null;
+    this.lastCauDuyen = null;
     this.prostrationCount = 0;
     this._renderedChatKeys = new Set();
     this._chatMessagesCache = [];
+    this.coopGoal = { progress: 18, target: 100, miracleCount: 0 };
+    this.beadsState = {
+      count: 0,
+      total: 108,
+      rounds: 0,
+      angleOffset: 0,
+      targetAngleOffset: 0,
+      material: 'GO_BO_DE',
+      chant: 'NAM MÔ A DI ĐÀ PHẬT'
+    };
+    this.bow108State = {
+      active: false,
+      current: 0,
+      target: 108,
+      timer: null
+    };
+    this.shareCardMode = 'MERIT';
 
     // Initialize Audio, Music & Voice Engines
     this.zenAudio = new ZenAudio();
@@ -208,6 +234,9 @@ class ChuaOnlineApp {
       provinceCode: this.profile.provinceCode,
       robeColor: this.profile.robeColor,
       avatarStyle: this.profile.avatarStyle || 'CU_SI_AO_LAM',
+      companionType: this.profile.companionType || 'MEO_CHUA',
+      lotusFootsteps: this.profile.lotusFootsteps !== false,
+      headwearType: this.profile.headwearType || 'AUTO',
       meritPoints: this.profile.meritPoints,
       realmLevel: this.profile.realmLevel,
       x: 0,
@@ -264,6 +293,9 @@ class ChuaOnlineApp {
           provinceCode: this.profile.provinceCode,
           robeColor: this.profile.robeColor,
           avatarStyle: this.profile.avatarStyle || 'CU_SI_AO_LAM',
+          companionType: this.profile.companionType || 'MEO_CHUA',
+          lotusFootsteps: this.profile.lotusFootsteps !== false,
+          headwearType: this.profile.headwearType || 'AUTO',
           meritPoints: this.profile.meritPoints,
           realmLevel: this.profile.realmLevel,
           x: prevX,
@@ -297,6 +329,10 @@ class ChuaOnlineApp {
         if (data.roomId) {
           this.currentRoomId = data.roomId;
           this._updateRoomChannelUI(data.roomId, data.players ? data.players.length : 1);
+        }
+
+        if (data.coopGoal) {
+          this._updateCoopGoalUI(data.coopGoal);
         }
 
         if (Array.isArray(data.players)) {
@@ -467,6 +503,22 @@ class ChuaOnlineApp {
         if (data) {
           this._renderLeaderboards(data);
         }
+      },
+
+      onCoopGoalUpdated: (data) => {
+        if (data) {
+          this._updateCoopGoalUI(data);
+        }
+      },
+
+      onMandalaFlowerRain: (data) => {
+        this._handleMandalaFlowerRain(data);
+      },
+
+      onLifeReleased: (data) => {
+        if (data && data.socketId !== this.localSocketId) {
+          this.environment.triggerReleaseLifeAnimation(data.animalType || 'BIRDS');
+        }
       }
     });
 
@@ -475,7 +527,10 @@ class ChuaOnlineApp {
       dharmaName: this.profile.dharmaName,
       provinceCode: this.profile.provinceCode,
       robeColor: this.profile.robeColor,
-      avatarStyle: this.profile.avatarStyle || 'CU_SI_AO_LAM'
+      avatarStyle: this.profile.avatarStyle || 'CU_SI_AO_LAM',
+      companionType: this.profile.companionType || 'MEO_CHUA',
+      lotusFootsteps: this.profile.lotusFootsteps !== false,
+      headwearType: this.profile.headwearType || 'AUTO'
     });
   }
 
@@ -487,6 +542,12 @@ class ChuaOnlineApp {
     this._renderSutraLibraryCards();
     this._populateProfileModal();
     this._initPersistentChatHistory();
+    this._initCoopGoalUI();
+    this._initBeads108Widget();
+    this._initBow108Challenge();
+    this._initReleaseLifeModal();
+    this._initDailyQuestsModal();
+    this._initShareCardModal();
 
     // 3D Raycast click handler
     this.templeScene.onInteractCallback = (raycaster) => {
@@ -1292,6 +1353,8 @@ class ChuaOnlineApp {
             ? 'Thả Hoa Đăng'
             : 'Dâng Hương';
       this._addLocalOptimisticMerit(10, meritLabel);
+      this._recordQuestProgress('WISH', 1);
+      this._bumpLocalCoopProgress(4);
 
       formWish.reset();
       document.getElementById('dialog-make-wish')?.close();
@@ -1412,6 +1475,11 @@ class ChuaOnlineApp {
 
       if (e.code === 'Space') {
         e.preventDefault();
+        const beadsPanel = document.getElementById('beads-108-panel');
+        if (beadsPanel && !beadsPanel.hasAttribute('hidden')) {
+          this._stepPrayerBead();
+          return;
+        }
         if (this.sutraChanter.isChanting && !this.sutraChanter.isAuto) {
           this.sutraChanter.manualKnockVerse();
           this.avatarManager.triggerBowAndPulse(this.localSocketId);
@@ -1428,11 +1496,14 @@ class ChuaOnlineApp {
       const key = String(e.key || '').toUpperCase();
       const shortcutMap = {
         L: 'dock-prostrate',
+        G: 'dock-bow-108',
+        V: 'dock-beads-108',
         M: 'dock-wooden-fish',
         K: 'dock-chant-sutra',
         C: 'dock-ring-bell',
         T: 'dock-plant-tree',
         N: 'dock-feed-fish',
+        F: 'dock-release-life',
         Q: 'dock-sweep-leaves',
         H: 'dock-offer-incense',
         D: 'dock-release-lantern',
@@ -2005,6 +2076,9 @@ class ChuaOnlineApp {
 
     this._prependWishToWall(wishObj);
     this._addLocalOptimisticMerit(10, 'Cầu Duyên Ông Tơ Bà Nguyệt');
+    this.lastCauDuyen = { coupleLabel, name1, name2, wishText, timestamp: Date.now() };
+    this._recordQuestProgress('COMPASSION', 1);
+    this._bumpLocalCoopProgress(4);
 
     this._setZenTickerText(
       `🧶 Tín chủ "${coupleLabel}" vừa thành tâm dâng sớ Cầu Duyên lên Ông Tơ Bà Nguyệt: "${wishText}" (+10 Công Đức).`
@@ -2095,6 +2169,8 @@ class ChuaOnlineApp {
     });
     this.socketClient.plantBodhiTree('Ươm mầm Bồ Đề, gieo duyên giác ngộ');
     this._addLocalOptimisticMerit(8, 'Trồng Cây Bồ Đề');
+    this._recordQuestProgress('TEMPLE_CARE', 1);
+    this._bumpLocalCoopProgress(3);
     this._setZenTickerText(
       `🌱 Đạo hữu "${this.profile.dharmaName}" vừa trồng & tưới nước một cây Bồ Đề mới tại Vườn Lâm Tỳ Ni (+8 Công Đức).`
     );
@@ -2114,6 +2190,8 @@ class ChuaOnlineApp {
     this.environment.triggerFeedKoiAnimation();
     this.socketClient.feedKoiFish();
     this._addLocalOptimisticMerit(6, 'Nuôi Cá Koi Phóng Sinh');
+    this._recordQuestProgress('TEMPLE_CARE', 1);
+    this._bumpLocalCoopProgress(3);
     this._setZenTickerText(
       `🐟 Đạo hữu "${this.profile.dharmaName}" vừa rải thức ăn nuôi đàn Cá Chép Koi tại Hồ Phóng Sinh (+6 Công Đức).`
     );
@@ -2151,6 +2229,8 @@ class ChuaOnlineApp {
     const isDoubled = this._isSittingInGlobalSession();
     const earned = isDoubled ? 2 : 1;
     this._addLocalOptimisticMerit(earned, isDoubled ? 'Gõ Mõ Chánh Điện x2' : 'Gõ Mõ Chánh Điện');
+    this._recordQuestProgress('BEADS_MO', 1);
+    this._bumpLocalCoopProgress(1);
   }
 
   _handleProstrateBuddha() {
@@ -2650,13 +2730,30 @@ class ChuaOnlineApp {
 
     let selectedStyle = this.profile.avatarStyle || 'CU_SI_AO_LAM';
     let selectedColor = this.profile.robeColor || '#5c6b73';
+    let selectedCompanion = this.profile.companionType || 'MEO_CHUA';
+    let selectedHeadwear = this.profile.headwearType || 'AUTO';
+    let selectedLotusFootsteps = this.profile.lotusFootsteps !== false;
+
     const stylePicker = document.getElementById('avatar-style-picker');
+    const companionPicker = document.getElementById('companion-picker');
+    const selectHeadwearEl = document.getElementById('select-headwear');
+    const chkLotusFootstepsEl = document.getElementById('chk-lotus-footsteps');
+
     const AVATAR_STYLES = [
       { code: 'CU_SI_AO_LAM', icon: '🧘', name: 'Cư Sĩ Áo Lam', defaultColor: '#5c6b73' },
       { code: 'CHU_TANG_CA_SA', icon: '🙏', name: 'Tu Sĩ Đắp Y Cà Sa', defaultColor: '#b35c1e' },
       { code: 'PHAT_TU_AO_TRANG', icon: '🪷', name: 'Phật Tử Mão Sen', defaultColor: '#8d5b4c' },
       { code: 'CHU_TIEU', icon: '👶', name: 'Chú Tiểu Trái Đào', defaultColor: '#4a6b5d' },
       { code: 'BACH_Y_HIEN_GIA', icon: '✨', name: 'Bạch Y Hiền Giả', defaultColor: '#c9a227' }
+    ];
+
+    const COMPANION_TYPES = [
+      { code: 'MEO_CHUA', icon: '🐱', name: 'Mèo Chùa Vàng' },
+      { code: 'THO_NGOC', icon: '🐰', name: 'Thỏ Ngọc Trắng' },
+      { code: 'RUA_VANG', icon: '🐢', name: 'Rùa Vàng Kim Quy' },
+      { code: 'HAC_TRANG', icon: '🦢', name: 'Hạc Trắng Tiên' },
+      { code: 'HUOU_LOC', icon: '🦌', name: 'Hươu Sao Cát Tường' },
+      { code: 'NONE', icon: '🚫', name: 'Không Mang' }
     ];
 
     if (stylePicker) {
@@ -2676,11 +2773,90 @@ class ChuaOnlineApp {
           this.avatarManager.upsertPlayer({
             socketId: this.localSocketId,
             avatarStyle: selectedStyle,
-            robeColor: selectedColor
+            robeColor: selectedColor,
+            companionType: selectedCompanion,
+            headwearType: selectedHeadwear,
+            lotusFootsteps: selectedLotusFootsteps
           });
         });
         stylePicker.appendChild(btn);
       }
+    }
+
+    if (companionPicker) {
+      companionPicker.innerHTML = '';
+      for (const cp of COMPANION_TYPES) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `avatar-style-card ${cp.code === selectedCompanion ? 'selected' : ''}`;
+        btn.setAttribute('data-companion', cp.code);
+        btn.innerHTML = `<span class="avatar-style-icon">${cp.icon}</span><span>${cp.name}</span>`;
+        btn.addEventListener('click', () => {
+          selectedCompanion = cp.code;
+          companionPicker.querySelectorAll('.avatar-style-card').forEach((c) => c.classList.remove('selected'));
+          btn.classList.add('selected');
+          this.profile.companionType = selectedCompanion;
+          saveLocalProfile(this.profile);
+          this.avatarManager.upsertPlayer({
+            socketId: this.localSocketId,
+            companionType: selectedCompanion
+          });
+          this.socketClient?.updateProfile({
+            dharmaName: this.profile.dharmaName,
+            provinceCode: this.profile.provinceCode,
+            robeColor: this.profile.robeColor,
+            avatarStyle: this.profile.avatarStyle,
+            companionType: selectedCompanion,
+            headwearType: selectedHeadwear,
+            lotusFootsteps: selectedLotusFootsteps
+          });
+        });
+        companionPicker.appendChild(btn);
+      }
+    }
+
+    if (selectHeadwearEl) {
+      selectHeadwearEl.value = selectedHeadwear;
+      selectHeadwearEl.addEventListener('change', (e) => {
+        selectedHeadwear = e.target.value || 'AUTO';
+        this.profile.headwearType = selectedHeadwear;
+        saveLocalProfile(this.profile);
+        this.avatarManager.upsertPlayer({
+          socketId: this.localSocketId,
+          headwearType: selectedHeadwear
+        });
+        this.socketClient?.updateProfile({
+          dharmaName: this.profile.dharmaName,
+          provinceCode: this.profile.provinceCode,
+          robeColor: this.profile.robeColor,
+          avatarStyle: this.profile.avatarStyle,
+          companionType: selectedCompanion,
+          headwearType: selectedHeadwear,
+          lotusFootsteps: selectedLotusFootsteps
+        });
+      });
+    }
+
+    if (chkLotusFootstepsEl) {
+      chkLotusFootstepsEl.checked = selectedLotusFootsteps;
+      chkLotusFootstepsEl.addEventListener('change', (e) => {
+        selectedLotusFootsteps = Boolean(e.target.checked);
+        this.profile.lotusFootsteps = selectedLotusFootsteps;
+        saveLocalProfile(this.profile);
+        this.avatarManager.upsertPlayer({
+          socketId: this.localSocketId,
+          lotusFootsteps: selectedLotusFootsteps
+        });
+        this.socketClient?.updateProfile({
+          dharmaName: this.profile.dharmaName,
+          provinceCode: this.profile.provinceCode,
+          robeColor: this.profile.robeColor,
+          avatarStyle: this.profile.avatarStyle,
+          companionType: selectedCompanion,
+          headwearType: selectedHeadwear,
+          lotusFootsteps: selectedLotusFootsteps
+        });
+      });
     }
 
     if (picker) {
@@ -2717,6 +2893,9 @@ class ChuaOnlineApp {
 
       this.profile.avatarStyle = selectedStyle;
       this.profile.robeColor = selectedColor;
+      this.profile.companionType = selectedCompanion;
+      this.profile.headwearType = selectedHeadwear;
+      this.profile.lotusFootsteps = selectedLotusFootsteps;
 
       if (rawPassword) {
         try {
@@ -2750,6 +2929,9 @@ class ChuaOnlineApp {
       this.profile.provinceCode = newProv;
       this.profile.robeColor = selectedColor;
       this.profile.avatarStyle = selectedStyle;
+      this.profile.companionType = selectedCompanion;
+      this.profile.headwearType = selectedHeadwear;
+      this.profile.lotusFootsteps = selectedLotusFootsteps;
       saveLocalProfile(this.profile);
 
       this._updateUserCardUI();
@@ -2759,6 +2941,9 @@ class ChuaOnlineApp {
         provinceCode: this.profile.provinceCode,
         robeColor: this.profile.robeColor,
         avatarStyle: this.profile.avatarStyle,
+        companionType: this.profile.companionType,
+        headwearType: this.profile.headwearType,
+        lotusFootsteps: this.profile.lotusFootsteps,
         meritPoints: this.profile.meritPoints,
         realmLevel: this.profile.realmLevel
       });
@@ -2766,11 +2951,15 @@ class ChuaOnlineApp {
       this.socketClient.updateProfile({
         dharmaName: this.profile.dharmaName,
         provinceCode: this.profile.provinceCode,
-        robeColor: this.profile.robeColor
+        robeColor: this.profile.robeColor,
+        avatarStyle: this.profile.avatarStyle,
+        companionType: this.profile.companionType,
+        headwearType: this.profile.headwearType,
+        lotusFootsteps: this.profile.lotusFootsteps
       });
 
       document.getElementById('dialog-profile')?.close();
-      this.showToast(`🙏 Đã cập nhật Nhân Vật & Pháp Danh: ${this.profile.dharmaName} [${this.profile.provinceCode}]`);
+      this.showToast(`🙏 Đã cập nhật Nhân Vật, Linh Thú & Pháp Danh: ${this.profile.dharmaName} [${this.profile.provinceCode}]`);
     });
 
     formLogin?.addEventListener('submit', async (e) => {
@@ -2855,6 +3044,19 @@ class ChuaOnlineApp {
 
     this._updateUserCardUI();
     this._spawnFloatingMerit(`+${amount} Công Đức (${label})`);
+
+    if (
+      label.includes('Lạy') ||
+      label.includes('Đảnh Lễ') ||
+      label.includes('Kính Lễ') ||
+      label.includes('Chiêm Bái')
+    ) {
+      this._recordQuestProgress('BOW', 1);
+      this._bumpLocalCoopProgress(2);
+    } else if (label.includes('Quét Lá Đa')) {
+      this._recordQuestProgress('TEMPLE_CARE', 1);
+      this._bumpLocalCoopProgress(2);
+    }
 
     if (nextRealmInfo.level > prevRealm) {
       this.zenAudio.playMeditationBell(0.85);
@@ -2991,12 +3193,919 @@ class ChuaOnlineApp {
     }, durationMs);
   }
 
+  // ==========================================================================
+  // VIRAL FEATURES SUITE (108 BEADS, 108 BOWS, CO-OP MIRACLE, RELEASE LIFE,
+  // DAILY QUESTS & STREAK, AND SOCIAL SHARE CARD GENERATOR)
+  // ==========================================================================
+
+  // --- 5. CO-OP GOAL: MƯA HOA SEN VÀNG MẠN ĐÀ LA ---
+  _initCoopGoalUI() {
+    this._updateCoopGoalUI(this.coopGoal);
+    const pill = document.getElementById('coop-goal-pill');
+    pill?.addEventListener('click', () => {
+      const pct = Math.min(100, Math.round((this.coopGoal.progress / (this.coopGoal.target || 100)) * 100));
+      this.showToast(
+        `🪷 Đại Nguyện Cộng Đồng đạt ${this.coopGoal.progress}/${this.coopGoal.target} (${pct}%) — Khi đầy 100/100 sẽ triệu hồi Mưa Hoa Sen Vàng Mạn Đà La (+20 Công Đức toàn chùa)!`
+      );
+    });
+  }
+
+  _updateCoopGoalUI(data) {
+    if (!data) return;
+    if (typeof data.progress === 'number') this.coopGoal.progress = data.progress;
+    if (typeof data.target === 'number') this.coopGoal.target = data.target;
+    if (typeof data.miracleCount === 'number') this.coopGoal.miracleCount = data.miracleCount;
+
+    const textEl = document.getElementById('hud-coop-text');
+    const fillEl = document.getElementById('hud-coop-fill');
+    const target = Math.max(1, this.coopGoal.target || 100);
+    const pct = Math.min(100, Math.max(4, Math.round((this.coopGoal.progress / target) * 100)));
+
+    if (textEl) textEl.textContent = `${this.coopGoal.progress}/${target}`;
+    if (fillEl) fillEl.style.width = `${pct}%`;
+  }
+
+  _bumpLocalCoopProgress(points = 1) {
+    if (this.socketClient?.connected) return; // Server broadcasts authoritative progress when connected
+    this.coopGoal.progress += points;
+    if (this.coopGoal.progress >= (this.coopGoal.target || 100)) {
+      this.coopGoal.progress = this.coopGoal.progress % (this.coopGoal.target || 100);
+      this.coopGoal.miracleCount = (this.coopGoal.miracleCount || 0) + 1;
+      this._updateCoopGoalUI(this.coopGoal);
+      this._handleMandalaFlowerRain({ bonusMerit: 20, durationSec: 42, localOffline: true });
+    } else {
+      this._updateCoopGoalUI(this.coopGoal);
+    }
+  }
+
+  _handleMandalaFlowerRain(data = {}) {
+    const durationSec = data.durationSec || 42;
+    const bonusMerit = data.bonusMerit || 20;
+    this.environment.triggerMandalaFlowerRain(durationSec);
+    this.zenAudio.playGreatBell(0.95);
+    setTimeout(() => this.zenAudio.playIncenseChime(0.85), 500);
+
+    if (data.localOffline) {
+      this._addLocalOptimisticMerit(bonusMerit, 'Đại Nguyện Mưa Hoa Mạn Đà La');
+    } else {
+      this._spawnFloatingMerit(`+${bonusMerit} Công Đức (Mưa Hoa Sen Mạn Đà La)`);
+    }
+
+    const msg =
+      data.message ||
+      `🌸 Đại Nguyện Cộng Đồng viên mãn (100/100)! Mưa Hoa Sen Vàng Mạn Đà La đang rơi khắp Đạo Tràng (+${bonusMerit} Công Đức toàn thể đạo hữu)!`;
+    this._setZenTickerText(msg);
+    this.showToast(msg, 4500);
+  }
+
+  // --- 1A. PHÁP KHÍ LẦN CHUỖI 108 HẠT ---
+  _initBeads108Widget() {
+    const panel = document.getElementById('beads-108-panel');
+    const dockBtn = document.getElementById('dock-beads-108');
+    const closeBtn = document.getElementById('btn-close-beads-108') || document.getElementById('btn-close-beads');
+    const stepBtn = document.getElementById('btn-step-bead-108') || document.getElementById('btn-step-bead');
+    const tapSurface = document.getElementById('beads-tap-surface') || document.getElementById('canvas-beads-108');
+    const matSelect = document.getElementById('select-bead-material');
+    const chantSelect = document.getElementById('select-bead-chant');
+    const chantDisplay = document.getElementById('beads-chant-floating') || document.getElementById('beads-chant-display');
+
+    const togglePanel = () => {
+      if (!panel) return;
+      const isHidden = panel.hasAttribute('hidden');
+      if (isHidden) {
+        panel.removeAttribute('hidden');
+        this._drawBeads108Canvas();
+        this.showToast('📿 Đã mở Tràng Hạt 108 Hạt — Bấm vào vòng chuỗi hoặc nhấn phím [Space] để lần từng hạt!');
+      } else {
+        panel.setAttribute('hidden', '');
+      }
+    };
+
+    dockBtn?.addEventListener('click', togglePanel);
+    closeBtn?.addEventListener('click', () => panel?.setAttribute('hidden', ''));
+    stepBtn?.addEventListener('click', () => this._stepPrayerBead());
+    tapSurface?.addEventListener('click', () => this._stepPrayerBead());
+
+    matSelect?.addEventListener('change', (e) => {
+      this.beadsState.material = e.target.value || 'BO_DE';
+      this._drawBeads108Canvas();
+    });
+
+    chantSelect?.addEventListener('change', (e) => {
+      this.beadsState.chant = e.target.value || 'Nam Mô A Di Đà Phật';
+      if (chantDisplay) chantDisplay.textContent = this.beadsState.chant;
+    });
+
+    this._drawBeads108Canvas();
+  }
+
+  _stepPrayerBead() {
+    this.beadsState.count = (this.beadsState.count || 0) + 1;
+    this.beadsState.targetAngleOffset += (Math.PI * 2) / 36;
+
+    this.zenAudio.playWoodenFish(0.68);
+    this.avatarManager.triggerBowAndPulse(this.localSocketId);
+
+    const cur = this.beadsState.count;
+    const counterEl = document.getElementById('beads-count-number') || document.getElementById('beads-counter-text');
+    const roundEl = document.getElementById('beads-rounds-badge') || document.getElementById('beads-round-badge');
+    const chantDisplay = document.getElementById('beads-chant-floating') || document.getElementById('beads-chant-display');
+    if (chantDisplay) chantDisplay.textContent = this.beadsState.chant;
+
+    // Speak the sacred chant softly on the 1st bead and every 9 beads
+    if (cur === 1 || cur % 9 === 0) {
+      this.dharmaVoice.speakVerse(this.beadsState.chant);
+    }
+
+    this.socketClient?.prayBeadsStep(cur >= 108, this.beadsState.chant);
+    this._recordQuestProgress('BEADS_MO', 1);
+    this._bumpLocalCoopProgress(1);
+
+    if (cur >= 108) {
+      this.beadsState.rounds = (this.beadsState.rounds || 0) + 1;
+      this.beadsState.count = 0;
+      if (counterEl) counterEl.textContent = `108 / 108`;
+      if (roundEl) roundEl.textContent = `Đã viên mãn: ${this.beadsState.rounds} chuỗi`;
+      this.zenAudio.playGreatBell(0.92);
+      this._addLocalOptimisticMerit(25, 'Viên Mãn 1 vòng 108 Hạt');
+      this.showToast(
+        `📿 Công đức vô lượng! Bạn vừa lần viên mãn 1 vòng Tràng Hạt 108 Hạt (${this.beadsState.chant}) (+25 Công Đức)!`,
+        3800
+      );
+      setTimeout(() => {
+        if (counterEl && this.beadsState.count === 0) {
+          counterEl.textContent = `0 / 108`;
+        }
+      }, 1200);
+    } else {
+      if (counterEl) counterEl.textContent = `${cur} / 108`;
+      this._addLocalOptimisticMerit(1, `Niệm Hạt ${cur}/108`);
+    }
+
+    this._drawBeads108Canvas();
+  }
+
+  _drawBeads108Canvas() {
+    const canvas = document.getElementById('canvas-beads-108');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const w = canvas.width;
+    const h = canvas.height;
+    const cx = w / 2;
+    const cy = h / 2;
+    const radius = Math.min(w, h) * 0.37;
+
+    ctx.clearRect(0, 0, w, h);
+
+    const palettes = {
+      BO_DE: { base: '#8b5a2b', hi: '#d9a066', rim: '#4a2c11', tassel: '#c83e37' },
+      GO_BO_DE: { base: '#8b5a2b', hi: '#d9a066', rim: '#4a2c11', tassel: '#c83e37' },
+      TRAM_HUONG: { base: '#4a3525', hi: '#9c7a5b', rim: '#24170e', tassel: '#d4a843' },
+      NGOC_BICH: { base: '#1f7a5c', hi: '#6de0b4', rim: '#0d3d2c', tassel: '#e05347' },
+      HO_PHACH: { base: '#c97a16', hi: '#ffd466', rim: '#6e3d05', tassel: '#b82929' },
+      BACH_NGOC: { base: '#d8cfc2', hi: '#ffffff', rim: '#8c8274', tassel: '#d4a843' }
+    };
+    const pal = palettes[this.beadsState.material] || palettes.BO_DE;
+
+    // Outer subtle golden aura ring
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(232, 194, 102, 0.35)';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.restore();
+
+    // Draw 36 tactile mala beads around the circle (3 rotations = 108 beads)
+    const numVisualBeads = 36;
+    const offset = this.beadsState.angleOffset || 0;
+
+    for (let i = 0; i < numVisualBeads; i++) {
+      const angle = Math.PI / 2 + (i / numVisualBeads) * Math.PI * 2 + offset;
+      const bx = cx + Math.cos(angle) * radius;
+      const by = cy + Math.sin(angle) * radius;
+
+      // Check if this bead is near the bottom "active thumb position" (Math.PI / 2)
+      const normDiff = Math.abs(Math.atan2(Math.sin(angle - Math.PI / 2), Math.cos(angle - Math.PI / 2)));
+      const isThumbBead = normDiff < Math.PI / numVisualBeads;
+      const isGuruBead = i === 0;
+      const beadR = isGuruBead ? 10.5 : isThumbBead ? 9.5 : 7.2;
+
+      const grad = ctx.createRadialGradient(bx - beadR * 0.3, by - beadR * 0.3, 1, bx, by, beadR);
+      if (isThumbBead) {
+        grad.addColorStop(0, '#fff7cc');
+        grad.addColorStop(0.55, '#f2c94c');
+        grad.addColorStop(1, '#8c5808');
+      } else {
+        grad.addColorStop(0, pal.hi);
+        grad.addColorStop(0.65, pal.base);
+        grad.addColorStop(1, pal.rim);
+      }
+
+      ctx.beginPath();
+      ctx.arc(bx, by, beadR, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.lineWidth = isThumbBead ? 1.8 : 1;
+      ctx.strokeStyle = isThumbBead ? '#ffffff' : 'rgba(255, 225, 150, 0.35)';
+      ctx.stroke();
+    }
+
+    // Bottom active pointer indicator
+    ctx.save();
+    ctx.fillStyle = '#f5d061';
+    ctx.font = 'bold 12px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('▲ Hạt Đang Lần', cx, h - 4);
+    ctx.restore();
+  }
+
+  // --- 1B. THỬ THÁCH LỄ 108 LẠY SÁM HỐI TỰ ĐỘNG ---
+  _initBow108Challenge() {
+    const dockBtn = document.getElementById('dock-bow-108');
+    dockBtn?.addEventListener('click', () => {
+      this._toggleBow108Challenge();
+    });
+  }
+
+  _toggleBow108Challenge() {
+    if (this.bow108State.active) {
+      this._stopBow108Challenge(true);
+      return;
+    }
+
+    this.bow108State.active = true;
+    this.bow108State.current = 0;
+    this.bow108State.target = 108;
+
+    const dockBtn = document.getElementById('dock-bow-108');
+    const lbl = document.getElementById('dock-label-bow108');
+    const sub = document.getElementById('dock-sub-bow108');
+    dockBtn?.classList.add('highlight');
+
+    // Seat player on cushion inside Chánh Điện if not near a specific outdoor shrine
+    const nearTarget = this._getNearestSacredTarget();
+    if (!nearTarget) {
+      const coord = CUSHION_COORDS[3];
+      this.templeScene.focusZone('CHANH_DIEN');
+      this.avatarManager.setLocalTargetPosition(coord.x, coord.z, 'PROSTRATE', 3);
+      this.templeScene.setFollowTarget(coord.x, coord.y, coord.z);
+      this.socketClient?.sitCushion(3, coord.x, coord.z);
+    }
+
+    const repentantChants = [
+      'Chí tâm đảnh lễ: Nam Mô Bổn Sư Thích Ca Mâu Ni Phật',
+      'Chí tâm đảnh lễ: Nam Mô Tây Phương Cực Lạc Thế Giới Đại Từ Đại Bi A Di Đà Phật',
+      'Chí tâm đảnh lễ: Nam Mô Cầu Sám Hối Bồ Tát Ma Ha Tát',
+      'Chí tâm đảnh lễ: Nam Mô Đại Bi Quán Thế Âm Bồ Tát',
+      'Chí tâm đảnh lễ: Nam Mô Đại Nguyện Địa Tạng Vương Bồ Tát'
+    ];
+
+    const performSingleBowStep = () => {
+      if (!this.bow108State.active) return;
+      this.bow108State.current++;
+      const cur = this.bow108State.current;
+      const total = this.bow108State.target;
+      const progressText = `${cur}/${total}`;
+
+      if (lbl) lbl.textContent = `Dừng Lễ (${progressText})`;
+      if (sub) sub.textContent = `Đang lạy #${cur}...`;
+
+      // Update 3D Nameplate above avatar head & broadcast to room
+      this.avatarManager.upsertPlayer({
+        socketId: this.localSocketId,
+        bowProgressText: progressText
+      });
+      this.socketClient?.updateBowProgress(progressText);
+
+      // Trigger 3D prostration & audio
+      this.avatarManager.triggerProstration(this.localSocketId);
+      this.zenAudio.playMeditationBell(0.72);
+      setTimeout(() => this.zenAudio.playWoodenFish(0.55), 340);
+
+      if (cur === 1 || cur % 3 === 0) {
+        const verse = repentantChants[(cur - 1) % repentantChants.length];
+        this.dharmaVoice.speakVerse(`${verse}. Lạy thứ ${cur}.`);
+      }
+
+      this.socketClient?.prostrateBuddha(cur);
+      this._addLocalOptimisticMerit(5, `Lễ Sám Hối ${progressText}`);
+
+      if (cur >= total) {
+        this._stopBow108Challenge(false);
+        this.zenAudio.playGreatBell(0.95);
+        this._addLocalOptimisticMerit(50, 'Viên Mãn 108 Lạy Sám Hối');
+        const msg = `🙏 Công đức vô lượng! Đạo hữu "${this.profile.dharmaName}" đã thành tâm viên mãn Thử Thách 108 Lạy Sám Hối (+50 Công Đức)!`;
+        this._setZenTickerText(msg);
+        this.showToast(msg, 4500);
+      }
+    };
+
+    this.showToast('🙏 Bắt đầu Thử Thách 108 Lạy Sám Hối — Tiến độ đang hiển thị trực tiếp trên đỉnh đầu nhân vật!');
+    performSingleBowStep();
+    this.bow108State.timer = setInterval(performSingleBowStep, 3400);
+  }
+
+  _stopBow108Challenge(manualStop = true) {
+    this.bow108State.active = false;
+    if (this.bow108State.timer) {
+      clearInterval(this.bow108State.timer);
+      this.bow108State.timer = null;
+    }
+
+    const dockBtn = document.getElementById('dock-bow-108');
+    const lbl = document.getElementById('dock-label-bow108');
+    const sub = document.getElementById('dock-sub-bow108');
+    dockBtn?.classList.remove('highlight');
+    if (lbl) lbl.textContent = 'Lễ 108 Lạy';
+    if (sub) sub.textContent = 'Sám Hối Tự Động';
+
+    if (manualStop) {
+      this.avatarManager.upsertPlayer({
+        socketId: this.localSocketId,
+        bowProgressText: ''
+      });
+      this.socketClient?.updateBowProgress('');
+      this.showToast(`🙏 Đã tạm dừng Lễ 108 Lạy tại lạy thứ ${this.bow108State.current}/108.`);
+    } else {
+      setTimeout(() => {
+        this.avatarManager.upsertPlayer({
+          socketId: this.localSocketId,
+          bowProgressText: ''
+        });
+        this.socketClient?.updateBowProgress('');
+      }, 6000);
+    }
+  }
+
+  // --- 6. NGHI THỨC PHÓNG SINH TÍCH PHƯỚC ---
+  _initReleaseLifeModal() {
+    const dockBtn = document.getElementById('dock-release-life');
+    const dlg = document.getElementById('dialog-release-life');
+    const cancelBtn = document.getElementById('btn-cancel-release-life');
+    const form = document.getElementById('form-release-life');
+
+    dockBtn?.addEventListener('click', () => {
+      if (dlg && !dlg.open) dlg.showModal();
+    });
+
+    cancelBtn?.addEventListener('click', () => dlg?.close());
+
+    form?.querySelectorAll('input[name="animalType"]').forEach((radio) => {
+      radio.addEventListener('change', () => {
+        document.getElementById('tab-release-sparrow')?.classList.toggle('active', radio.value === 'SPARROW' || radio.value === 'BIRDS');
+        document.getElementById('tab-release-birds')?.classList.toggle('active', radio.value === 'SPARROW' || radio.value === 'BIRDS');
+        document.getElementById('tab-release-turtle')?.classList.toggle('active', radio.value === 'TURTLE');
+        document.getElementById('tab-release-koi')?.classList.toggle('active', radio.value === 'KOI' || radio.value === 'KOI_FISH');
+      });
+    });
+
+    document.querySelectorAll('.release-chip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const input = document.getElementById('input-release-wish');
+        if (input) input.value = chip.getAttribute('data-release') || '';
+      });
+    });
+
+    form?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const animalType = String(fd.get('animalType') || 'SPARROW');
+      const wishText =
+        String(fd.get('wishText') || fd.get('releaseWish') || '').trim() ||
+        'Nguyện muôn loài thoát vòng khổ ách, gia đạo bình an, tật bệnh tiêu trừ.';
+      dlg?.close();
+      this._submitReleaseLife(animalType, wishText);
+    });
+  }
+
+  _submitReleaseLife(animalType = 'SPARROW', wishText = '') {
+    const isBird = animalType === 'SPARROW' || animalType === 'BIRDS';
+    const targetX = isBird ? 0.0 : 1.8;
+    const targetZ = isBird ? 23.5 : 31.8;
+    this._handleMoveToGroundPoint(targetX, targetZ, false);
+    this.templeScene.focusZone(isBird ? 'SAN_CHUA' : 'HO_HOA_DANG');
+
+    this.zenAudio.playIncenseChime(0.85);
+    setTimeout(() => this.zenAudio.playMeditationBell(0.75), 350);
+    this.avatarManager.triggerBowAndPulse(this.localSocketId);
+
+    // Trigger 3D animation (flock of 6 birds spiraling into sky or Koi/Turtle splash)
+    this.environment.triggerReleaseLifeAnimation(animalType);
+    this.socketClient?.releaseLife(animalType, wishText);
+
+    const animalLabel =
+      animalType === 'TURTLE'
+        ? 'Rùa Vàng Kim Quy'
+        : animalType === 'KOI' || animalType === 'KOI_FISH'
+          ? 'Đàn Cá Chép Vàng'
+          : 'Đàn Chim Sẻ Hòa Bình';
+
+    this.dharmaVoice.speakVerse(
+      `Nam Mô A Di Đà Phật. Đạo hữu ${this.profile.dharmaName} thành tâm phóng sinh ${animalLabel}, hồi hướng công đức: ${wishText}`
+    );
+
+    this._addLocalOptimisticMerit(10, `Phóng Sinh ${animalLabel}`);
+    this._recordQuestProgress('COMPASSION', 1);
+    this._bumpLocalCoopProgress(4);
+
+    this._setZenTickerText(
+      `🕊️ Đạo hữu "${this.profile.dharmaName}" vừa thành tâm phóng sinh ${animalLabel}: "${wishText}" (+10 Công Đức).`
+    );
+    this.showToast(`🕊️ Đã phóng sinh ${animalLabel} — Nguyện muôn loài an vui tự tại (+10 Công Đức)!`, 3600);
+  }
+
+  // --- 4. CHUỖI ĐIỂM DANH 7 NGÀY & NHIỆM VỤ TU TẬP HẰNG NGÀY ---
+  _loadDailyState() {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const STORAGE_DAILY = 'chua_online_daily_v1';
+    let state = null;
+    try {
+      const raw = localStorage.getItem(STORAGE_DAILY);
+      if (raw) state = JSON.parse(raw);
+    } catch (_) {
+      // ignore
+    }
+
+    const defaultQuests = {
+      WISH: { progress: 0, target: 1, reward: 15, claimed: false, title: '🪔 Dâng Hương hoặc Thả Đèn Cầu Nguyện (1 lần)' },
+      BOW: { progress: 0, target: 3, reward: 15, claimed: false, title: '🙏 Thành Tâm Đảnh Lễ Chư Phật / Bồ Tát (3 lạy)' },
+      BEADS_MO: { progress: 0, target: 10, reward: 20, claimed: false, title: '📿 Lần Chuỗi 108 Hạt hoặc Gõ Mõ (10 nhịp)' },
+      TEMPLE_CARE: { progress: 0, target: 2, reward: 15, claimed: false, title: '🌱 Quét Lá Đa, Trồng Cây Bồ Đề hoặc Nuôi Cá (2 lần)' },
+      COMPASSION: { progress: 0, target: 1, reward: 20, claimed: false, title: '🕊️ Phóng Sinh Tích Phước hoặc Cầu Duyên (1 lần)' }
+    };
+
+    if (!state || typeof state !== 'object') {
+      state = {
+        lastDate: todayStr,
+        streakDay: 1,
+        checkedInToday: false,
+        quests: defaultQuests
+      };
+    } else if (state.lastDate !== todayStr) {
+      // Check if yesterday was checked in to advance streak, else reset to 1
+      const prevDate = new Date(state.lastDate + 'T00:00:00Z');
+      const curDate = new Date(todayStr + 'T00:00:00Z');
+      const diffDays = Math.round((curDate - prevDate) / (1000 * 60 * 60 * 24));
+      const nextStreak = diffDays === 1 && state.checkedInToday ? ((state.streakDay % 7) + 1) : 1;
+      state = {
+        lastDate: todayStr,
+        streakDay: nextStreak,
+        checkedInToday: false,
+        quests: defaultQuests
+      };
+    } else {
+      // Ensure all quest keys exist
+      state.quests = { ...defaultQuests, ...(state.quests || {}) };
+    }
+
+    this._saveDailyState(state);
+    return state;
+  }
+
+  _saveDailyState(state = this.dailyState) {
+    try {
+      localStorage.setItem('chua_online_daily_v1', JSON.stringify(state));
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  _initDailyQuestsModal() {
+    this.dailyState = this._loadDailyState();
+    const openBtn = document.getElementById('btn-open-daily-quests');
+    const dlg = document.getElementById('dialog-daily-quests');
+    const claimTopBtn = document.getElementById('btn-claim-daily-checkin');
+
+    openBtn?.addEventListener('click', () => {
+      this._renderDailyModal();
+      if (dlg && !dlg.open) dlg.showModal();
+    });
+
+    claimTopBtn?.addEventListener('click', () => {
+      this._claimTodayCheckIn();
+    });
+
+    this._renderDailyModal();
+  }
+
+  _claimTodayCheckIn() {
+    if (!this.dailyState || this.dailyState.checkedInToday) return;
+    const streakRewards = [15, 20, 25, 30, 35, 40, 50];
+    const d = Math.max(1, Math.min(7, this.dailyState.streakDay || 1));
+    const reward = streakRewards[d - 1];
+    this.dailyState.checkedInToday = true;
+    this._saveDailyState();
+    this.zenAudio.playIncenseChime(0.8);
+    this._addLocalOptimisticMerit(reward, `Điểm Danh Ngày ${d}`);
+    this.socketClient?.claimDailyReward('CHECKIN', reward, { label: `Điểm Danh Chuỗi Ngày ${d}` });
+    this._renderDailyModal();
+    this.showToast(`🪷 Điểm danh Ngày ${d} thành công! Nhận +${reward} Công Đức hộ trì Tam Bảo.`);
+  }
+
+  _recordQuestProgress(questKey, delta = 1) {
+    if (!this.dailyState) this.dailyState = this._loadDailyState();
+    const q = this.dailyState.quests?.[questKey];
+    if (!q || q.claimed) return;
+
+    const prev = q.progress || 0;
+    q.progress = Math.min(q.target, prev + delta);
+    this._saveDailyState();
+
+    if (prev < q.target && q.progress >= q.target) {
+      this.showToast(`📜 Hoàn thành Nhiệm Vụ Ngày: "${q.title}" — Mở bảng [📜 Nhiệm Vụ] để nhận +${q.reward} Công Đức!`);
+    }
+    this._renderDailyModal();
+  }
+
+  _renderDailyModal() {
+    if (!this.dailyState) return;
+    const streakGrid = document.getElementById('streak-days-grid');
+    const questsList = document.getElementById('daily-quests-list');
+    const streakCountEl = document.getElementById('streak-days-count');
+    const claimTopBtn = document.getElementById('btn-claim-daily-checkin');
+    const notifyDot = document.getElementById('quest-notify-dot');
+    const streakRewards = [15, 20, 25, 30, 35, 40, 50];
+
+    if (streakCountEl) {
+      streakCountEl.textContent = String(this.dailyState.streakDay || 1);
+    }
+
+    const curDay = Math.max(1, Math.min(7, this.dailyState.streakDay || 1));
+    const todayReward = streakRewards[curDay - 1];
+    if (claimTopBtn) {
+      claimTopBtn.disabled = Boolean(this.dailyState.checkedInToday);
+      claimTopBtn.textContent = this.dailyState.checkedInToday
+        ? `✅ Đã Điểm Danh Ngày ${curDay}`
+        : `✨ Điểm Danh Hôm Nay (+${todayReward} Công Đức)`;
+    }
+
+    const hasUnclaimedQuest = Object.values(this.dailyState.quests || {}).some(
+      (q) => q.progress >= q.target && !q.claimed
+    );
+    if (notifyDot) {
+      notifyDot.style.display = !this.dailyState.checkedInToday || hasUnclaimedQuest ? 'block' : 'none';
+    }
+
+    if (streakGrid) {
+      streakGrid.innerHTML = '';
+      for (let d = 1; d <= 7; d++) {
+        const reward = streakRewards[d - 1];
+        const isPastClaimed = d < this.dailyState.streakDay || (d === this.dailyState.streakDay && this.dailyState.checkedInToday);
+        const isTodayClaimable = d === this.dailyState.streakDay && !this.dailyState.checkedInToday;
+
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = `streak-day-card ${isPastClaimed ? 'claimed' : ''} ${isTodayClaimable ? 'active-today' : ''}`;
+        cell.innerHTML = `
+          <span class="streak-day-num">Ngày ${d}</span>
+          <span style="font-size: 1.15rem">${isPastClaimed ? '✅' : isTodayClaimable ? '🪷' : '🎁'}</span>
+          <span class="streak-day-reward">+${reward}</span>
+        `;
+        if (isTodayClaimable) {
+          cell.title = 'Nhấn để Điểm Danh nhận Công Đức hôm nay';
+          cell.addEventListener('click', () => this._claimTodayCheckIn());
+        }
+        streakGrid.appendChild(cell);
+      }
+    }
+
+    if (questsList) {
+      questsList.innerHTML = '';
+      for (const [key, q] of Object.entries(this.dailyState.quests || {})) {
+        const pct = Math.min(100, Math.round(((q.progress || 0) / q.target) * 100));
+        const isReady = q.progress >= q.target && !q.claimed;
+
+        const row = document.createElement('div');
+        row.className = 'daily-quest-item';
+        row.innerHTML = `
+          <div class="daily-quest-info">
+            <span class="daily-quest-title">${q.title} (${q.progress}/${q.target})</span>
+            <div class="daily-quest-prog-track">
+              <div class="daily-quest-prog-fill" style="width: ${pct}%"></div>
+            </div>
+          </div>
+          <button type="button" class="gold-cta-btn small-cta" data-quest-claim="${key}" ${!isReady ? 'disabled' : ''}>
+            ${q.claimed ? 'Đã Nhận ✓' : isReady ? `Nhận +${q.reward} 🪷` : `+${q.reward} Công Đức`}
+          </button>
+        `;
+
+        const claimBtn = row.querySelector('button');
+        if (isReady && claimBtn) {
+          claimBtn.addEventListener('click', () => {
+            if (q.claimed) return;
+            q.claimed = true;
+            this._saveDailyState();
+            this.zenAudio.playMeditationBell(0.8);
+            this._addLocalOptimisticMerit(q.reward, `Nhiệm Vụ Ngày`);
+            this.socketClient?.claimDailyReward('QUEST', q.reward, { label: q.title });
+            this._renderDailyModal();
+          });
+        }
+        questsList.appendChild(row);
+      }
+    }
+  }
+
+  // --- 2. MÁY ẢNH TÂM LINH & TẠO THẺ LỘC KHOE MXH (720x900 CANVAS) ---
+  _initShareCardModal() {
+    const openBtn = document.getElementById('btn-open-share-card');
+    const dlg = document.getElementById('dialog-share-card');
+    const tabButtons = document.querySelectorAll('#share-card-tabs button[data-card-type]');
+    const refreshBtn = document.getElementById('btn-refresh-share-card');
+    const downloadBtn = document.getElementById('btn-download-share-card');
+    const copyBtn = document.getElementById('btn-native-share-card') || document.getElementById('btn-copy-share-card');
+
+    const switchMode = (mode) => {
+      this.shareCardMode = mode;
+      tabButtons.forEach((btn) => {
+        btn.classList.toggle('active', btn.getAttribute('data-card-type') === mode);
+      });
+      this._renderShareCardCanvas(mode);
+    };
+
+    openBtn?.addEventListener('click', () => {
+      this._renderShareCardCanvas(this.shareCardMode || 'MERIT');
+      if (dlg && !dlg.open) dlg.showModal();
+    });
+
+    tabButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const mode = btn.getAttribute('data-card-type') || 'MERIT';
+        switchMode(mode);
+      });
+    });
+
+    refreshBtn?.addEventListener('click', () => {
+      this._renderShareCardCanvas(this.shareCardMode || 'MERIT');
+      this.showToast('📸 Đã cập nhật ảnh chụp góc máy 3D mới nhất vào Thẻ Lộc!');
+    });
+
+    downloadBtn?.addEventListener('click', () => {
+      const canvas = document.getElementById('share-card-canvas');
+      if (!canvas) return;
+      this._renderShareCardCanvas(this.shareCardMode);
+      const url = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `the-loc-chua-online-${this.shareCardMode.toLowerCase()}-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      this.showToast('📥 Đã tải Thẻ Lộc Tâm Linh (PNG chuẩn HD) về máy để đăng Threads / TikTok / Facebook!');
+    });
+
+    copyBtn?.addEventListener('click', () => {
+      const canvas = document.getElementById('share-card-canvas');
+      if (!canvas) return;
+      this._renderShareCardCanvas(this.shareCardMode);
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+        const file = new File([blob], 'the-loc-chua-online.png', { type: 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              title: 'Đạo Tràng Tịnh Độ — Chùa Online 3D',
+              text: `🪷 Pháp danh ${this.profile.dharmaName} (${this.profile.meritPoints} Công Đức) tại Chùa Online 3D!`,
+              files: [file]
+            });
+            return;
+          } catch (_) {
+            // fallback to clipboard
+          }
+        }
+        if (navigator.clipboard && window.ClipboardItem) {
+          try {
+            await navigator.clipboard.write([new window.ClipboardItem({ 'image/png': blob })]);
+            this.showToast('📋 Đã sao chép ảnh Thẻ Lộc vào bộ nhớ tạm — Bạn có thể Ctrl+V dán ngay lên MXH!');
+            return;
+          } catch (_) {
+            // fallback
+          }
+        }
+        downloadBtn?.click();
+      }, 'image/png');
+    });
+  }
+
+  _renderShareCardCanvas(mode = 'MERIT') {
+    const canvas = document.getElementById('share-card-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const W = canvas.width; // 720
+    const H = canvas.height; // 900
+
+    // 1. Background rich crimson-gold brocade gradient
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+    if (mode === 'CAU_DUYEN') {
+      bgGrad.addColorStop(0, '#3d0c18');
+      bgGrad.addColorStop(0.5, '#591224');
+      bgGrad.addColorStop(1, '#260710');
+    } else {
+      bgGrad.addColorStop(0, '#1f130c');
+      bgGrad.addColorStop(0.5, '#331d12');
+      bgGrad.addColorStop(1, '#140b07');
+    }
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    // 2. Ornate double golden border
+    ctx.strokeStyle = '#e8c266';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(18, 18, W - 36, H - 36);
+    ctx.strokeStyle = 'rgba(232, 194, 102, 0.45)';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(26, 26, W - 52, H - 52);
+
+    // 3. Top Header
+    ctx.fillStyle = '#f6d87e';
+    ctx.font = 'bold 22px "Playfair Display", Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('☸ ĐẠO TRÀNG TỊNH ĐỘ — CHÙA ONLINE 3D ☸', W / 2, 62);
+
+    ctx.fillStyle = 'rgba(255, 232, 185, 0.78)';
+    ctx.font = '14px Inter, sans-serif';
+    ctx.fillText('Không Gian Chiêm Bái, Tụng Kinh & Gieo Duyên Lành • chua.vunph.io.vn', W / 2, 86);
+
+    // 4. Live 3D WebGL Temple Snapshot Frame (42, 104, 636, 360)
+    const snapX = 42;
+    const snapY = 104;
+    const snapW = W - 84;
+    const snapH = 360;
+
+    try {
+      this.templeScene.renderer.render(this.templeScene.scene, this.templeScene.camera);
+      const glCanvas = this.templeScene.renderer.domElement;
+      const srcAspect = glCanvas.width / Math.max(1, glCanvas.height);
+      const dstAspect = snapW / snapH;
+      let sx = 0;
+      let sy = 0;
+      let sw = glCanvas.width;
+      let sh = glCanvas.height;
+      if (srcAspect > dstAspect) {
+        sw = glCanvas.height * dstAspect;
+        sx = (glCanvas.width - sw) * 0.5;
+      } else {
+        sh = glCanvas.width / dstAspect;
+        sy = (glCanvas.height - sh) * 0.5;
+      }
+      ctx.drawImage(glCanvas, sx, sy, sw, sh, snapX, snapY, snapW, snapH);
+    } catch (_) {
+      ctx.fillStyle = '#2a1810';
+      ctx.fillRect(snapX, snapY, snapW, snapH);
+    }
+
+    ctx.strokeStyle = '#e8c266';
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(snapX, snapY, snapW, snapH);
+
+    // 5. Lower Scroll Content Area (y = 490..845)
+    const realmInfo = getRealmInfo(this.profile.meritPoints || 0);
+    const companionNames = {
+      MEO_CHUA: '🐱 Mèo Chùa Vàng',
+      THO_NGOC: '🐰 Thỏ Ngọc Trắng',
+      RUA_VANG: '🐢 Rùa Vàng Kim Quy',
+      HAC_TRANG: '🦢 Hạc Trắng Tiên',
+      HUOU_LOC: '🦌 Hươu Sao Cát Tường',
+      NONE: 'Tịnh Tâm Độc Hành'
+    };
+
+    if (mode === 'MERIT') {
+      ctx.fillStyle = '#f8dc81';
+      ctx.font = 'bold 28px "Playfair Display", Georgia, serif';
+      ctx.fillText('📜 CHỨNG ĐẠO CÔNG ĐỨC THƯ', W / 2, 518);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 26px Inter, sans-serif';
+      ctx.fillText(`🪷 Pháp Danh: ${this.profile.dharmaName} [${this.profile.provinceCode}]`, W / 2, 568);
+
+      ctx.fillStyle = '#ffd978';
+      ctx.font = 'bold 21px Inter, sans-serif';
+      ctx.fillText(`Cảnh Giới: Tầng ${realmInfo.level} — ${realmInfo.title}`, W / 2, 610);
+
+      // Golden Merit Box
+      ctx.fillStyle = 'rgba(232, 194, 102, 0.14)';
+      ctx.fillRect(110, 634, W - 220, 96);
+      ctx.strokeStyle = 'rgba(232, 194, 102, 0.65)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(110, 634, W - 220, 96);
+
+      ctx.fillStyle = '#ffe58f';
+      ctx.font = 'bold 34px Inter, sans-serif';
+      ctx.fillText(`✨ ${Number(this.profile.meritPoints || 0).toLocaleString('vi-VN')} CÔNG ĐỨC ✨`, W / 2, 682);
+
+      ctx.fillStyle = '#e8d7b9';
+      ctx.font = '16px Inter, sans-serif';
+      ctx.fillText(
+        `Linh Thú Hộ Pháp: ${companionNames[this.profile.companionType] || '🐱 Mèo Chùa Vàng'} • Chuỗi 108 Hạt: ${this.beadsState.rounds} vòng`,
+        W / 2,
+        714
+      );
+
+      ctx.fillStyle = '#f5d996';
+      ctx.font = 'italic 18px Georgia, serif';
+      ctx.fillText('"Tâm bình thế giới bình — Phước huệ song tu, vạn sự cát tường."', W / 2, 775);
+    } else if (mode === 'CAU_DUYEN') {
+      const couple = this.lastCauDuyen?.coupleLabel || `${this.profile.dharmaName} ❤ Ý Trung Nhân`;
+      const wish =
+        this.lastCauDuyen?.wishText ||
+        'Nguyện Ông Tơ se chỉ thắm, Bà Nguyệt nối duyên lành, cho đôi lứa trăm năm tình nghĩa viên mãn.';
+
+      ctx.fillStyle = '#ffb3c6';
+      ctx.font = 'bold 27px "Playfair Display", Georgia, serif';
+      ctx.fillText('🧶 SỚ HỒNG TƠ CẦU DUYÊN ÔNG TƠ BÀ NGUYỆT', W / 2, 518);
+
+      ctx.fillStyle = '#fff0f3';
+      ctx.font = 'bold 28px Inter, sans-serif';
+      ctx.fillText(`💞 ${couple} 💞`, W / 2, 574);
+
+      ctx.fillStyle = 'rgba(255, 182, 193, 0.12)';
+      ctx.fillRect(72, 602, W - 144, 136);
+      ctx.strokeStyle = 'rgba(255, 194, 209, 0.6)';
+      ctx.strokeRect(72, 602, W - 144, 136);
+
+      ctx.fillStyle = '#ffe5ec';
+      ctx.font = 'italic 20px Georgia, serif';
+      this._wrapCanvasText(ctx, `"${wish}"`, W / 2, 648, W - 180, 30);
+
+      ctx.fillStyle = '#ffd166';
+      ctx.font = 'bold 17px Inter, sans-serif';
+      ctx.fillText('💮 ẤN CHỨNG: NGUYỆT HẠ LÃO NHÂN & HỒNG LOAN TINH QUÂN 💮', W / 2, 780);
+    } else {
+      const f = this.lastFortune || {
+        rank_title: 'Thượng Thượng Cát — Hoa Khai Kiến Phật',
+        poem: 'Trăng sáng soi tỏ mặt hồ thu\nMây tạnh trời quang vạn dặm mù\nTâm thành một nén hương dâng Phật\nPhước lộc trùng lai chẳng lo âu.',
+        interpretation: 'Mọi sự mong cầu đều thuận theo chánh pháp, gia đạo an vui, công việc hanh thông.'
+      };
+
+      ctx.fillStyle = '#f8dc81';
+      ctx.font = 'bold 26px "Playfair Display", Georgia, serif';
+      ctx.fillText(`🎋 ${f.rank_title || f.rankTitle || 'Quẻ Xăm Linh Ứng Đầu Ngày'}`, W / 2, 516);
+
+      ctx.fillStyle = 'rgba(232, 194, 102, 0.12)';
+      ctx.fillRect(80, 540, W - 160, 165);
+      ctx.strokeStyle = 'rgba(232, 194, 102, 0.55)';
+      ctx.strokeRect(80, 540, W - 160, 165);
+
+      ctx.fillStyle = '#fff3c4';
+      ctx.font = 'italic 20px Georgia, serif';
+      const lines = String(f.poem || '').split('\n').slice(0, 4);
+      lines.forEach((line, idx) => {
+        ctx.fillText(line.trim(), W / 2, 576 + idx * 31);
+      });
+
+      ctx.fillStyle = '#e8d5b5';
+      ctx.font = '16px Inter, sans-serif';
+      this._wrapCanvasText(ctx, `Lời bàn: ${f.interpretation || ''}`, W / 2, 742, W - 140, 24);
+    }
+
+    // 6. Footer Date & Stamp
+    const dateStr = new Date().toLocaleDateString('vi-VN');
+    ctx.fillStyle = 'rgba(245, 215, 150, 0.72)';
+    ctx.font = '14px Inter, sans-serif';
+    ctx.fillText(`Ngày ấn chứng: ${dateStr} • Đạo Tràng Chùa Online 3D (chua.vunph.io.vn)`, W / 2, H - 38);
+  }
+
+  _wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
+    const words = String(text || '').split(' ');
+    let line = '';
+    let curY = y;
+    for (let n = 0; n < words.length; n++) {
+      const testLine = line + words[n] + ' ';
+      const metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidth && n > 0) {
+        ctx.fillText(line.trim(), x, curY);
+        line = words[n] + ' ';
+        curY += lineHeight;
+      } else {
+        line = testLine;
+      }
+    }
+    if (line.trim()) {
+      ctx.fillText(line.trim(), x, curY);
+    }
+  }
+
   _startRenderLoop() {
     const clock = new THREE.Clock();
     const animate = () => {
       requestAnimationFrame(animate);
       const dt = Math.min(0.1, clock.getDelta());
       const elapsed = clock.getElapsedTime();
+
+      // Smoothly animate 108 Prayer Beads rotation when panel is open
+      if (Math.abs(this.beadsState.targetAngleOffset - this.beadsState.angleOffset) > 0.001) {
+        this.beadsState.angleOffset +=
+          (this.beadsState.targetAngleOffset - this.beadsState.angleOffset) * Math.min(1, dt * 12);
+        const beadsPanel = document.getElementById('beads-108-panel');
+        if (beadsPanel && !beadsPanel.hasAttribute('hidden')) {
+          this._drawBeads108Canvas();
+        }
+      }
 
       this.environment.update(dt, elapsed);
       this.avatarManager.update(dt, elapsed);

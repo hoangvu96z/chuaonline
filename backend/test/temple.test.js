@@ -1141,4 +1141,67 @@ describe('Suite 4: Full End-to-End Socket.io & REST API Integration', () => {
 
     client3.disconnect();
   });
+
+  it('4.14 should support Viral Features: 108 Beads, 108 Bows progress, Release Life, Daily Quests, Companions & Mandala Flower Rain', async () => {
+    // 1. Update profile with companionType, headwearType, lotusFootsteps
+    const tickPromise1 = waitForEvent(client2, 'room_state_tick');
+    client1.emit('update_profile', {
+      dharmaName: 'Thích Trí Thiền',
+      provinceCode: 'HN',
+      robeColor: '#d4a843',
+      companionType: 'HUOU_LOC',
+      headwearType: 'NON_LA',
+      lotusFootsteps: true
+    });
+    const tickPayload1 = await tickPromise1;
+    const players1 = Array.isArray(tickPayload1) ? tickPayload1 : tickPayload1.players;
+    const p1 = players1.find((p) => p.socketId === client1.id);
+    assert.ok(p1, 'Dirty player delta must be broadcast on update_profile');
+    assert.strictEqual(p1.companionType, 'HUOU_LOC');
+    assert.strictEqual(p1.headwearType, 'NON_LA');
+    assert.strictEqual(p1.lotusFootsteps, true);
+
+    // 2. Update 108-Bow Challenge live progress on nameplate
+    const tickPromise2 = waitForEvent(client2, 'room_state_tick');
+    client1.emit('update_bow_progress', { bowProgressText: '27/108' });
+    const tickPayload2 = await tickPromise2;
+    const players2 = Array.isArray(tickPayload2) ? tickPayload2 : tickPayload2.players;
+    const p2 = players2.find((p) => p.socketId === client1.id);
+    assert.strictEqual(p2.bowProgressText, '27/108');
+
+    // 3. Step 108 Prayer Beads (normal step +1 merit, 108th step +25 merit)
+    const beadMerit1Promise = waitForEvent(client1, 'merit_updated');
+    client1.emit('pray_beads_step', { beadIndex: 1, chantText: 'NAM MÔ A DI ĐÀ PHẬT' });
+    const beadMerit1 = await beadMerit1Promise;
+    assert.strictEqual(beadMerit1.delta, 1);
+    assert.strictEqual(beadMerit1.reason, 'PRAY_BEADS_STEP');
+
+    const beadMerit108Promise = waitForEvent(client1, 'merit_updated');
+    client1.emit('pray_beads_step', { completedRound: true, beadIndex: 108, chantText: 'NAM MÔ A DI ĐÀ PHẬT' });
+    const beadMerit108 = await beadMerit108Promise;
+    assert.strictEqual(beadMerit108.delta, 25);
+    assert.strictEqual(beadMerit108.reason, 'PRAY_BEADS_108_COMPLETE');
+
+    // 4. Release Life (Phóng Sinh Tích Phước) (+10 merit + life_released broadcast)
+    const releaseMeritPromise = waitForEvent(client1, 'merit_updated');
+    const lifeReleasedPromise = waitForEvent(client2, 'life_released');
+    client1.emit('release_life', { animalType: 'BIRDS', wish: 'Nguyện muôn loài an vui' });
+    const [releaseMerit, lifeReleased] = await Promise.all([
+      releaseMeritPromise,
+      lifeReleasedPromise
+    ]);
+    assert.strictEqual(releaseMerit.delta, 10);
+    assert.strictEqual(releaseMerit.reason, 'RELEASE_LIFE');
+    assert.strictEqual(lifeReleased.animalType, 'BIRDS');
+
+    // 5. Claim Daily Quest / Streak Reward
+    const dailyMeritPromise = waitForEvent(client1, 'merit_updated');
+    const coopGoalPromise = waitForEvent(client1, 'coop_goal_updated');
+    client1.emit('claim_daily_reward', { rewardType: 'CHECKIN', bonusMerit: 20, label: 'Điểm Danh Ngày 2' });
+    const [dailyMerit, coopGoal] = await Promise.all([dailyMeritPromise, coopGoalPromise]);
+    assert.strictEqual(dailyMerit.delta, 20);
+    assert.strictEqual(dailyMerit.reason, 'DAILY_CHECKIN');
+    assert.strictEqual(typeof coopGoal.progress, 'number');
+    assert.strictEqual(coopGoal.target, 100);
+  });
 });

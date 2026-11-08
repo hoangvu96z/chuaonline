@@ -296,7 +296,12 @@ export class DharmaVoice {
     const ctx = this._ensureAudioContext();
     if (!ctx) throw new Error('AudioContext unavailable');
 
-    const url = `/api/tts?profile=${encodeURIComponent(profileId)}&text=${encodeURIComponent(cleanText)}`;
+    const baseUrl =
+      typeof window !== 'undefined' &&
+      (window.location.port === '5173' || window.location.port === '4173')
+        ? `${window.location.protocol}//${window.location.hostname}:3001`
+        : '';
+    const url = `${baseUrl}/api/tts?profile=${encodeURIComponent(profileId)}&text=${encodeURIComponent(cleanText)}`;
     const response = await window.fetch(url, {
       method: 'GET',
       headers: { Accept: 'audio/mpeg' },

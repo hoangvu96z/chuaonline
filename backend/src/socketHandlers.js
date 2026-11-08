@@ -59,6 +59,15 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
         if (payload.avatarStyle) {
           currentUser.avatarStyle = String(payload.avatarStyle).slice(0, 32);
         }
+        if (payload.companionType !== undefined) {
+          currentUser.companionType = String(payload.companionType || 'MEO_CHUA').slice(0, 24);
+        }
+        if (payload.lotusFootsteps !== undefined) {
+          currentUser.lotusFootsteps = Boolean(payload.lotusFootsteps);
+        }
+        if (payload.headwearType !== undefined) {
+          currentUser.headwearType = String(payload.headwearType || 'AUTO').slice(0, 24);
+        }
 
         const joinResult = roomManager.joinRoom(socket, currentUser, payload.preferredRoomId);
         const wishes = await db.getActiveWishes(25);
@@ -72,6 +81,7 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
           leaves: joinResult.leaves,
           plantedTrees: joinResult.plantedTrees || [],
           chatHistory: joinResult.chatHistory || [],
+          coopGoal: joinResult.coopGoal,
           wishes,
           globalSutra
         });
@@ -118,6 +128,7 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
       const delta = isGlobal ? 2 : 1;
       meritBatcher.addMerit(currentUser, delta);
       roomManager.syncUserStatsToPlayer(socket.id, currentUser);
+      roomManager.addCoopProgress(socket.id, 1, currentUser.dharmaName);
 
       socket.emit('merit_updated', {
         meritPoints: currentUser.meritPoints,
@@ -151,7 +162,11 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
       const delta = isGlobal ? 10 : 5;
       meritBatcher.addMerit(currentUser, delta);
       roomManager.updatePlayerState(socket.id, 'PROSTRATE', isShrine ? null : (pState?.cushionIndex ?? 2));
+      if (payload.bowProgressText !== undefined) {
+        roomManager.updatePlayerBowProgress(socket.id, payload.bowProgressText);
+      }
       roomManager.syncUserStatsToPlayer(socket.id, currentUser);
+      roomManager.addCoopProgress(socket.id, 2, currentUser.dharmaName);
 
       socket.emit('merit_updated', {
         meritPoints: currentUser.meritPoints,
@@ -264,6 +279,7 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
 
       meritBatcher.addMerit(currentUser, delta, { sutrasDelta: 1 });
       roomManager.syncUserStatsToPlayer(socket.id, currentUser);
+      roomManager.addCoopProgress(socket.id, 10, currentUser.dharmaName);
 
       socket.emit('merit_updated', {
         meritPoints: currentUser.meritPoints,
@@ -287,6 +303,7 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
       if (!currentUser || !payload.leafId) return;
       const res = roomManager.sweepLeaf(socket.id, payload.leafId);
       if (res) {
+        roomManager.addCoopProgress(socket.id, 3, currentUser.dharmaName);
         socket.emit('merit_updated', {
           meritPoints: currentUser.meritPoints,
           realmLevel: currentUser.realmLevel,
@@ -315,6 +332,7 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
 
       meritBatcher.addMerit(currentUser, 10);
       roomManager.syncUserStatsToPlayer(socket.id, currentUser);
+      roomManager.addCoopProgress(socket.id, 5, currentUser.dharmaName);
 
       socket.emit('merit_updated', {
         meritPoints: currentUser.meritPoints,
@@ -350,6 +368,7 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
       const now = Date.now();
       meritBatcher.addMerit(currentUser, 2);
       roomManager.syncUserStatsToPlayer(socket.id, currentUser);
+      roomManager.addCoopProgress(socket.id, 3, currentUser.dharmaName);
 
       socket.emit('merit_updated', {
         meritPoints: currentUser.meritPoints,
@@ -383,12 +402,21 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
       }
     });
 
-    // 12. Update Profile (Pháp Danh, Tỉnh Thành, Màu Áo Lam, Kiểu Nhân Vật)
+    // 12. Update Profile (Pháp Danh, Tỉnh Thành, Màu Áo Lam, Kiểu Nhân Vật, Linh Thú, Bộ Bộ Sinh Liên)
     socket.on('update_profile', async (payload = {}) => {
       if (!currentUser) return;
       if (payload.dharmaName) currentUser.dharmaName = String(payload.dharmaName).slice(0, 50);
       if (payload.robeColor) currentUser.robeColor = String(payload.robeColor).slice(0, 16);
       if (payload.avatarStyle) currentUser.avatarStyle = String(payload.avatarStyle).slice(0, 32);
+      if (payload.companionType !== undefined) {
+        currentUser.companionType = String(payload.companionType || 'NONE').slice(0, 24);
+      }
+      if (payload.lotusFootsteps !== undefined) {
+        currentUser.lotusFootsteps = Boolean(payload.lotusFootsteps);
+      }
+      if (payload.headwearType !== undefined) {
+        currentUser.headwearType = String(payload.headwearType || 'AUTO').slice(0, 24);
+      }
       if (payload.provinceCode) currentUser.provinceCode = String(payload.provinceCode).slice(0, 10);
 
       await db.updateUserProfile(currentUser.id, {
@@ -546,6 +574,119 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
         type: 'KOI_FISH',
         dharmaName: currentUser.dharmaName,
         message: `🐟 Đạo hữu "${currentUser.dharmaName}" vừa rải thức ăn nuôi đàn Cá Chép Koi tại Hồ Phóng Sinh (+${delta} Công Đức).`
+      });
+    });
+
+    // 19. Lần Tràng Hạt 108 Hạt (Prayer Beads: +1 Công Đức mỗi hạt, +25 Công Đức khi hoàn thành đủ 108 hạt)
+    socket.on('pray_beads_step', (payload = {}) => {
+      if (!currentUser) return;
+      const completedRound = Boolean(payload.completedRound) || Number(payload.beadIndex) === 108;
+      const delta = completedRound ? 25 : 1;
+      meritBatcher.addMerit(currentUser, delta);
+      roomManager.syncUserStatsToPlayer(socket.id, currentUser);
+      roomManager.addCoopProgress(socket.id, completedRound ? 12 : 1, currentUser.dharmaName);
+
+      socket.emit('merit_updated', {
+        meritPoints: currentUser.meritPoints,
+        realmLevel: currentUser.realmLevel,
+        delta,
+        reason: completedRound ? 'PRAY_BEADS_108_COMPLETE' : 'PRAY_BEADS_STEP'
+      });
+
+      if (completedRound) {
+        const beadLabel = String(payload.beadLabel || payload.chantText || 'Tràng Hạt Bồ Đề 108 Hạt').slice(0, 50);
+        emitThrottledGlobalTicker('PRAY_BEADS_108', 1500, {
+          type: 'PRAY_BEADS_108',
+          dharmaName: currentUser.dharmaName,
+          message: `📿 Đạo hữu "${currentUser.dharmaName}" vừa tĩnh tâm lần viên mãn 1 vòng 108 hạt (${beadLabel}) (+${delta} Công Đức)!`
+        });
+      }
+    });
+
+    // 20. Cập nhật tiến độ Thử Thách 108 Lạy / 27 Lạy hiển thị trên đỉnh đầu nhân vật
+    socket.on('update_bow_progress', (payload = {}) => {
+      if (!currentUser) return;
+      roomManager.updatePlayerBowProgress(socket.id, payload.bowProgressText || '');
+      if (payload.completedChallenge) {
+        const totalBows = Number(payload.totalBows || 108);
+        const bonus = totalBows >= 108 ? 50 : 20;
+        meritBatcher.addMerit(currentUser, bonus);
+        roomManager.syncUserStatsToPlayer(socket.id, currentUser);
+        roomManager.addCoopProgress(socket.id, 15, currentUser.dharmaName);
+        socket.emit('merit_updated', {
+          meritPoints: currentUser.meritPoints,
+          realmLevel: currentUser.realmLevel,
+          delta: bonus,
+          reason: 'BOW_CHALLENGE_COMPLETE'
+        });
+        io.emit('zen_ticker', {
+          type: 'BOW_CHALLENGE_COMPLETE',
+          dharmaName: currentUser.dharmaName,
+          message: `🙏 Đạo hữu "${currentUser.dharmaName}" vừa chí thành lễ viên mãn Thử Thách ${totalBows} Lạy Sám Hối (+${bonus} Công Đức)!`
+        });
+      }
+    });
+
+    // 21. Phóng Sinh Tích Phước (Chim Sẻ Hòa Bình, Rùa Vàng Kim Quy, Cá Chép Vàng: +10 Công Đức)
+    socket.on('release_life', (payload = {}) => {
+      if (!currentUser) return;
+      const rawAnimal = String(payload.animalType || 'BIRDS').toUpperCase();
+      const animalType = ['BIRDS', 'SPARROW', 'TURTLE', 'KOI_FISH', 'KOI'].includes(rawAnimal)
+        ? rawAnimal
+        : 'BIRDS';
+      const wishText = String(payload.wishText || payload.wish || 'Nguyện chúng sanh bình an, giải trừ oán kết').slice(0, 120);
+      const delta = 10;
+
+      meritBatcher.addMerit(currentUser, delta);
+      roomManager.syncUserStatsToPlayer(socket.id, currentUser);
+      roomManager.addCoopProgress(socket.id, 8, currentUser.dharmaName);
+
+      socket.emit('merit_updated', {
+        meritPoints: currentUser.meritPoints,
+        realmLevel: currentUser.realmLevel,
+        delta,
+        reason: 'RELEASE_LIFE'
+      });
+
+      const releaseData = {
+        socketId: socket.id,
+        dharmaName: currentUser.dharmaName,
+        animalType,
+        wishText
+      };
+      const room = roomManager.getPlayerRoom(socket.id);
+      if (room) {
+        io.to(room.id).emit('life_released', releaseData);
+      } else {
+        socket.emit('life_released', releaseData);
+      }
+
+      const animalLabel =
+        animalType === 'TURTLE'
+          ? 'Rùa Vàng Kim Quy'
+          : animalType === 'KOI' || animalType === 'KOI_FISH'
+          ? 'Cá Chép Vàng'
+          : 'Đàn Chim Sẻ Hòa Bình';
+      emitThrottledGlobalTicker('RELEASE_LIFE', 1500, {
+        type: 'RELEASE_LIFE',
+        dharmaName: currentUser.dharmaName,
+        message: `🕊️ Đạo hữu "${currentUser.dharmaName}" vừa phát tâm phóng sinh ${animalLabel}: "${wishText}" (+${delta} Công Đức).`
+      });
+    });
+
+    // 22. Nhận Thưởng Điểm Danh Chuỗi Ngày & Nhiệm Vụ Tu Tập Hằng Ngày
+    socket.on('claim_daily_reward', (payload = {}) => {
+      if (!currentUser) return;
+      const bonus = Math.min(50, Math.max(5, Number(payload.bonusMerit || payload.reward || 15)));
+      meritBatcher.addMerit(currentUser, bonus);
+      roomManager.syncUserStatsToPlayer(socket.id, currentUser);
+      roomManager.addCoopProgress(socket.id, 5, currentUser.dharmaName);
+
+      socket.emit('merit_updated', {
+        meritPoints: currentUser.meritPoints,
+        realmLevel: currentUser.realmLevel,
+        delta: bonus,
+        reason: payload.rewardType === 'CHECKIN' ? 'DAILY_CHECKIN' : 'DAILY_QUEST'
       });
     });
 

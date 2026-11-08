@@ -36,6 +36,9 @@ export class RoomManager {
         leaves: new Map(),
         plantedTrees: [], // Bounded up to 24 trees per room
         chatHistory: [],  // Bounded up to 50 recent messages per room
+        coopGoalProgress: 15,
+        coopGoalTarget: 100,
+        coopMiracleCount: 0,
         dirty: false
       };
       this._spawnLeavesInRoom(room, INITIAL_LEAVES_COUNT);
@@ -117,6 +120,10 @@ export class RoomManager {
       dharmaName: user.dharmaName,
       robeColor: user.robeColor || '#5c6b73',
       avatarStyle: user.avatarStyle || 'CU_SI_AO_LAM',
+      companionType: user.companionType || 'MEO_CHUA',
+      lotusFootsteps: user.lotusFootsteps !== undefined ? Boolean(user.lotusFootsteps) : true,
+      headwearType: user.headwearType || 'AUTO',
+      bowProgressText: '',
       provinceCode: user.provinceCode || 'SG',
       meritPoints: user.meritPoints || 0,
       realmLevel: user.realmLevel || 1,
@@ -149,7 +156,12 @@ export class RoomManager {
       players: Array.from(room.players.values()).map((p) => this._serializePlayer(p)),
       leaves: Array.from(room.leaves.values()),
       plantedTrees: room.plantedTrees || [],
-      chatHistory: room.chatHistory || []
+      chatHistory: room.chatHistory || [],
+      coopGoal: {
+        progress: room.coopGoalProgress,
+        target: room.coopGoalTarget,
+        miracleCount: room.coopMiracleCount
+      }
     };
   }
 
@@ -225,11 +237,77 @@ export class RoomManager {
     player.dharmaName = user.dharmaName;
     player.robeColor = user.robeColor;
     if (user.avatarStyle) player.avatarStyle = user.avatarStyle;
+    if (user.companionType !== undefined) player.companionType = user.companionType;
+    if (user.lotusFootsteps !== undefined) player.lotusFootsteps = Boolean(user.lotusFootsteps);
+    if (user.headwearType !== undefined) player.headwearType = user.headwearType;
     player.provinceCode = user.provinceCode;
     player.meritPoints = user.meritPoints;
     player.realmLevel = user.realmLevel;
     player._dirty = true;
     room.dirty = true;
+  }
+
+  updatePlayerBowProgress(socketId, bowProgressText = '') {
+    const room = this.getPlayerRoom(socketId);
+    if (!room) return;
+    const player = room.players.get(socketId);
+    if (!player) return;
+    player.bowProgressText = String(bowProgressText || '').slice(0, 24);
+    player._dirty = true;
+    room.dirty = true;
+  }
+
+  addCoopProgress(socketId, deltaPoints = 2, actorName = 'Đạo Hữu') {
+    const room = this.getPlayerRoom(socketId) || this.rooms.get('chanh-dien-1');
+    if (!room) return null;
+
+    const add = Math.max(1, Number(deltaPoints || 1));
+    room.coopGoalProgress = Math.min(room.coopGoalTarget, (room.coopGoalProgress || 0) + add);
+
+    if (room.coopGoalProgress >= room.coopGoalTarget) {
+      room.coopGoalProgress = 0;
+      room.coopMiracleCount = (room.coopMiracleCount || 0) + 1;
+
+      const bonusMerit = 20;
+      for (const p of room.players.values()) {
+        if (p.userRef) {
+          this.meritBatcher.addMerit(p.userRef, bonusMerit);
+          p.meritPoints = p.userRef.meritPoints;
+          p.realmLevel = p.userRef.realmLevel;
+          p._dirty = true;
+        }
+      }
+      room.dirty = true;
+      room.fullSyncNeeded = true;
+
+      if (this.io) {
+        this.io.to(room.id).emit('mandala_flower_rain', {
+          roomId: room.id,
+          miracleCount: room.coopMiracleCount,
+          bonusMerit,
+          triggeredBy: actorName,
+          progress: room.coopGoalProgress,
+          target: room.coopGoalTarget
+        });
+        this.io.emit('zen_ticker', {
+          type: 'MANDALA_MIRACLE',
+          dharmaName: actorName,
+          message: `🪷 ĐẠI NGUYỆN VIÊN MÃN! Đạo tràng vừa tích đủ 100 thiện niệm — Mưa Hoa Sen Vàng Mạn Đà La giáng lâm, ban tặng +${bonusMerit} Công Đức cho toàn thể đại chúng!`
+        });
+      }
+      return { triggeredMiracle: true, progress: 0, target: room.coopGoalTarget };
+    }
+
+    if (this.io) {
+      this.io.to(room.id).emit('coop_goal_updated', {
+        roomId: room.id,
+        progress: room.coopGoalProgress,
+        target: room.coopGoalTarget,
+        miracleCount: room.coopMiracleCount,
+        actorName
+      });
+    }
+    return { triggeredMiracle: false, progress: room.coopGoalProgress, target: room.coopGoalTarget };
   }
 
   seedRoomChatHistory(roomId = 'chanh-dien-1', messages = []) {
@@ -390,6 +468,10 @@ export class RoomManager {
       dharmaName: p.dharmaName,
       robeColor: p.robeColor,
       avatarStyle: p.avatarStyle || 'CU_SI_AO_LAM',
+      companionType: p.companionType || 'MEO_CHUA',
+      lotusFootsteps: p.lotusFootsteps !== undefined ? Boolean(p.lotusFootsteps) : true,
+      headwearType: p.headwearType || 'AUTO',
+      bowProgressText: p.bowProgressText || '',
       provinceCode: p.provinceCode,
       meritPoints: p.meritPoints,
       realmLevel: p.realmLevel,

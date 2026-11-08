@@ -129,6 +129,18 @@ export class SocketClient {
     this.socket.on('koi_fish_fed', (data) => {
       if (this.handlers.onKoiFishFed) this.handlers.onKoiFishFed(data);
     });
+
+    this.socket.on('coop_goal_updated', (data) => {
+      if (this.handlers.onCoopGoalUpdated) this.handlers.onCoopGoalUpdated(data);
+    });
+
+    this.socket.on('mandala_flower_rain', (data) => {
+      if (this.handlers.onMandalaFlowerRain) this.handlers.onMandalaFlowerRain(data);
+    });
+
+    this.socket.on('life_released', (data) => {
+      if (this.handlers.onLifeReleased) this.handlers.onLifeReleased(data);
+    });
   }
 
   /**
@@ -174,9 +186,29 @@ export class SocketClient {
     this.socket.emit('knock_wooden_fish', { timestamp: Date.now() });
   }
 
-  prostrateBuddha(bowNumber = 1, target = 'BUDDHA', rotY = Math.PI) {
+  prostrateBuddha(bowNumber = 1, target = 'BUDDHA', rotY = Math.PI, bowProgressText = '') {
     if (!this.socket || !this.connected) return;
-    this.socket.emit('prostrate_buddha', { bowNumber, target, rotY, timestamp: Date.now() });
+    this.socket.emit('prostrate_buddha', { bowNumber, target, rotY, bowProgressText, timestamp: Date.now() });
+  }
+
+  prayBeadsStep(completedRound = false, beadLabel = 'Tràng Hạt Bồ Đề 108 Hạt') {
+    if (!this.socket || !this.connected) return;
+    this.socket.emit('pray_beads_step', { completedRound, beadLabel });
+  }
+
+  updateBowProgress(bowProgressText = '', completedChallenge = false, totalBows = 108) {
+    if (!this.socket || !this.connected) return;
+    this.socket.emit('update_bow_progress', { bowProgressText, completedChallenge, totalBows });
+  }
+
+  releaseLife(animalType = 'SPARROW', wishText = 'Nguyện chúng sanh bình an, giải trừ oán kết') {
+    if (!this.socket || !this.connected) return;
+    this.socket.emit('release_life', { animalType, wishText });
+  }
+
+  claimDailyReward(rewardType = 'QUEST', bonusMerit = 15, meta = {}) {
+    if (!this.socket || !this.connected) return;
+    this.socket.emit('claim_daily_reward', { rewardType, bonusMerit, ...meta });
   }
 
   sendChat(text, meta = {}) {

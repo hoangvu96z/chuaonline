@@ -2541,4 +2541,269 @@ body.nhatho-theme .rite-spoken-preview {
   }
 }
 
+/* ============================================================================
+   VIRAL FEATURES SUITE: CO-OP MANDALA GOAL, 108 BEADS, DAILY QUESTS & SHARE CARD
+   ============================================================================ */
+.coop-goal-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  background: linear-gradient(135deg, rgba(62, 22, 12, 0.92), rgba(28, 14, 8, 0.94));
+  border: 1px solid rgba(255, 215, 0, 0.55);
+  color: #fff3c4;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+.coop-mini-track {
+  width: 52px;
+  height: 7px;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 99px;
+  overflow: hidden;
+  display: inline-block;
+}
+
+.coop-mini-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b, #fde047);
+  border-radius: 99px;
+  transition: width 0.35s ease;
+}
+
+.hud-icon-btn {
+  position: relative;
+}
+
+.quest-notify-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 6px #ef4444;
+}
+
+.quest-notify-dot[hidden] {
+  display: none !important;
+}
+
+/* Floating 108 Prayer Beads Panel */
+.beads-108-panel {
+  position: fixed;
+  right: 18px;
+  bottom: 112px;
+  z-index: 45;
+  width: min(336px, calc(100vw - 24px));
+  background: linear-gradient(165deg, rgba(34, 16, 10, 0.95), rgba(18, 9, 6, 0.97));
+  border: 1.5px solid rgba(245, 194, 66, 0.65);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.68), 0 0 24px rgba(212, 175, 55, 0.18);
+  color: #fff8e7;
+  backdrop-filter: blur(12px);
+}
+
+.beads-108-panel[hidden] {
+  display: none !important;
+}
+
+.beads-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.beads-panel-header h3 {
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  color: #ffe08a;
+  margin: 2px 0 0 0;
+}
+
+.beads-controls-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.beads-controls-row select {
+  width: 100%;
+  font-size: 0.76rem;
+  padding: 5px 6px;
+}
+
+.beads-canvas-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  margin: 4px auto 10px auto;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 215, 100, 0.12) 0%, rgba(0, 0, 0, 0) 70%);
+}
+
+.beads-canvas-wrap canvas {
+  width: 260px;
+  height: 260px;
+  display: block;
+}
+
+.beads-center-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  text-align: center;
+  padding: 28px;
+}
+
+.beads-count-number {
+  font-family: var(--font-serif);
+  font-size: 1.65rem;
+  color: #ffe58f;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.85);
+}
+
+.beads-chant-floating {
+  font-size: 0.78rem;
+  color: #fcd34d;
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.beads-rounds-badge {
+  font-size: 0.72rem;
+  color: #d6c7b2;
+  margin-top: 4px;
+}
+
+/* Daily Quests & Check-in Streak Modal */
+.daily-streak-box {
+  background: rgba(255, 215, 100, 0.07);
+  border: 1px solid rgba(255, 215, 100, 0.32);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.streak-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.streak-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.streak-day-card {
+  background: rgba(18, 10, 6, 0.72);
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  border-radius: 10px;
+  padding: 7px 4px;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #d6c7b2;
+}
+
+.streak-day-card.claimed {
+  background: linear-gradient(145deg, rgba(180, 120, 20, 0.38), rgba(65, 32, 10, 0.85));
+  border-color: #fbbf24;
+  color: #fff3b0;
+}
+
+.streak-day-card.today {
+  border-color: #fde047;
+  box-shadow: 0 0 12px rgba(250, 204, 21, 0.35);
+}
+
+.daily-quests-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 310px;
+  overflow-y: auto;
+}
+
+.quest-item-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgba(20, 11, 7, 0.75);
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  border-radius: 12px;
+}
+
+.quest-item-meta {
+  flex: 1;
+}
+
+.quest-item-meta strong {
+  display: block;
+  color: #fff3c4;
+  font-size: 0.9rem;
+}
+
+.quest-item-meta small {
+  color: #cbb89d;
+  font-size: 0.78rem;
+}
+
+.quest-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 5px;
+}
+
+.quest-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b, #fde047);
+  border-radius: 99px;
+}
+
+/* Share Card Preview Modal */
+.share-card-preview-box {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(10, 6, 4, 0.85);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: 14px;
+  padding: 10px;
+  margin: 10px 0;
+}
+
+.share-card-preview-box canvas {
+  width: min(100%, 360px);
+  height: auto;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+}
+
+
 
