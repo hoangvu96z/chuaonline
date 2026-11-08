@@ -141,7 +141,7 @@ export function getTtsCacheKeyHash(rawText, profileId = 'SU_ONG_TRAM_AM') {
   const speakerKey = cfg.speakerKey || 'SM';
   const hash = crypto
     .createHash('sha1')
-    .update(`v3-south-${speakerKey}::${cleanText}`, 'utf8')
+    .update(`v4-south-${speakerKey}::${cleanText}`, 'utf8')
     .digest('hex');
   return { hash, cleanText, cfg };
 }
@@ -281,7 +281,9 @@ function encodeFloat32ToWavBuffer(samples, sampleRate = 24000) {
 async function synthesizeClauseSouthernOnnx(engine, clauseText, cfg) {
   const { config, enc, dp, flow, dec } = engine;
   const viLangId = config.language_id_map?.VI ?? 4;
-  const raw = g2p.textToPhonemes(clauseText, config.symbol_to_id, viLangId);
+  // Append trailing comma token so VITS text_encoder gives full context to the final syllable
+  const paddedText = `${clauseText.replace(/[,.!?;:]+$/, '').trim()} ,`;
+  const raw = g2p.textToPhonemes(paddedText, config.symbol_to_id, viLangId);
   const { phonemes, tones, languages } = g2p.addBlanks(raw, viLangId);
   const seqLen = phonemes.length;
 
@@ -314,28 +316,20 @@ async function synthesizeClauseSouthernOnnx(engine, clauseText, cfg) {
 
   const logw = dpOut.logw.data;
   const xMaskData = encOut.x_mask.data;
-  const lengthScale = cfg.lengthScale ?? 1.08;
+  const lengthScale = cfg.lengthScale ?? 1.12;
   const wCeil = [];
   let yLen = 0;
 
   for (let i = 0; i < seqLen; i++) {
-    const dur = Math.max(1, Math.ceil(Math.exp(logw[i]) * xMaskData[i] * lengthScale));
+    let dur = Math.max(1, Math.ceil(Math.exp(logw[i]) * xMaskData[i] * lengthScale));
+    // Pad the trailing boundary tokens so HiFi-GAN decoder never clips the final word
+    if (i >= seqLen - 3) {
+      dur += 6;
+    }
     wCeil.push(dur);
     yLen += dur;
   }
   yLen = Math.max(1, yLen);
-
-  const y_mask = new Float32Array(yLen).fill(1.0);
-  const attn = new Float32Array(seqLen * yLen);
-  let cur = 0;
-  for (let i = 0; i < seqLen; i++) {
-    for (let j = 0; j < wCeil[i]; j++) {
-      if (cur + j < yLen) {
-        attn[i * yLen + (cur + j)] = 1.0;
-      }
-    }
-    cur += wCeil[i];
-  }
 
   const hiddenChannels = 192;
   const m_p_enc = encOut.m_p.data;
@@ -343,21 +337,20 @@ async function synthesizeClauseSouthernOnnx(engine, clauseText, cfg) {
   const z_p = new Float32Array(hiddenChannels * yLen);
   const noiseScale = cfg.noiseScale ?? 0.35;
 
-  for (let c = 0; c < hiddenChannels; c++) {
-    for (let t = 0; t < yLen; t++) {
-      let mp = 0;
-      let lp = 0;
-      for (let s = 0; s < seqLen; s++) {
-        const a = attn[s * yLen + t];
-        if (a > 0) {
-          mp += m_p_enc[c * seqLen + s] * a;
-          lp += logs_p_enc[c * seqLen + s] * a;
-        }
+  let frameIdx = 0;
+  for (let t = 0; t < seqLen; t++) {
+    const dur = wCeil[t];
+    for (let d = 0; d < dur; d++) {
+      for (let c = 0; c < hiddenChannels; c++) {
+        const mp = m_p_enc[c * seqLen + t];
+        const lp = logs_p_enc[c * seqLen + t];
+        z_p[c * yLen + frameIdx] = mp + Math.exp(lp) * ((Math.random() * 2 - 1) * noiseScale);
       }
-      z_p[c * yLen + t] = mp + Math.exp(lp) * randn() * noiseScale;
+      frameIdx++;
     }
   }
 
+  const y_mask = new Float32Array(yLen).fill(1.0);
   const yMaskTensor = new ort.Tensor('float32', y_mask, [1, 1, yLen]);
   const flowOut = await flow.run({
     z_p: new ort.Tensor('float32', z_p, [1, hiddenChannels, yLen]),
@@ -379,9 +372,9 @@ async function synthesizeClauseSouthernOnnx(engine, clauseText, cfg) {
 async function synthesizeViaSouthernOnnxTts(cleanText, cfg) {
   const engine = await getSouthernOnnxEngine();
   const sampleRate = engine.config?.sample_rate || 24000;
-  const chunks = splitIntoTtsChunks(cleanText, 160);
+  const chunks = splitIntoTtsChunks(cleanText, 260);
   const pcmParts = [];
-  const pauseSamples = new Float32Array(Math.floor(sampleRate * 0.14)); // 140ms natural breath between clauses
+  const pauseSamples = new Float32Array(Math.floor(sampleRate * 0.08)); // 80ms breath between long clauses
 
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i].trim();

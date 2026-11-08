@@ -87,7 +87,7 @@ jobs:
 
             # Ensure Southern Vietnamese ONNX TTS models (SM/SF) are cached on VPS disk
             mkdir -p /var/www/chuaonline/backend/data/vtts-onnx /var/www/chuaonline/backend/data/tts-cache
-            rm -f /var/www/chuaonline/backend/data/tts-cache/*.mp3
+            rm -f /var/www/chuaonline/backend/data/tts-cache/*.mp3 /var/www/chuaonline/backend/data/tts-cache/*.wav
             for f in tts_config.json text_encoder.onnx duration_predictor.onnx flow.onnx decoder.onnx; do
               if [ ! -s "/var/www/chuaonline/backend/data/vtts-onnx/$f" ]; then
                 echo "Downloading Southern Vietnamese TTS ONNX model: $f..."
