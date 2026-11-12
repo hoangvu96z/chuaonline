@@ -11,14 +11,18 @@ export class ChurchSocketClient {
     this.lastMoveSentAt = 0;
     this.pendingMoveTimer = null;
     this.latestMovePayload = null;
+    this.userProfile = {};
   }
 
   connect(userProfile = {}) {
+    this.userProfile = { ...userProfile };
     const backendUrl =
       import.meta.env?.VITE_BACKEND_URL ||
       (window.location.port === '5173' || window.location.port === '4173'
         ? `${window.location.protocol}//${window.location.hostname}:3001`
-        : window.location.origin);
+        : window.location.hostname.includes('vunph.io.vn')
+          ? 'https://api.vunph.io.vn'
+          : window.location.origin);
 
     this.socket = io(backendUrl, {
       transports: ['websocket', 'polling'],
@@ -33,12 +37,12 @@ export class ChurchSocketClient {
         this.handlers.onConnect(this.socket.id);
       }
       this.socket.emit('join_church', {
-        recoveryCode: userProfile.recoveryCode,
-        christianName: userProfile.christianName,
-        outfitColor: userProfile.outfitColor,
-        avatarStyle: userProfile.avatarStyle,
-        dioceseCode: userProfile.dioceseCode,
-        ...userProfile
+        recoveryCode: this.userProfile.recoveryCode,
+        christianName: this.userProfile.christianName,
+        outfitColor: this.userProfile.outfitColor,
+        avatarStyle: this.userProfile.avatarStyle,
+        dioceseCode: this.userProfile.dioceseCode,
+        ...this.userProfile
       });
     });
 
@@ -218,6 +222,9 @@ export class ChurchSocketClient {
   }
 
   updateProfile(profile) {
+    if (profile && typeof profile === 'object') {
+      this.userProfile = { ...this.userProfile, ...profile };
+    }
     if (!this.socket || !this.connected) return;
     this.socket.emit('update_church_profile', profile);
   }
@@ -244,6 +251,9 @@ export class ChurchSocketClient {
   }
 
   syncAccount(user) {
+    if (user && typeof user === 'object') {
+      this.userProfile = { ...this.userProfile, ...user };
+    }
     if (!this.socket || !this.connected) return;
     this.socket.emit('auth_sync_church_account', { user });
   }
