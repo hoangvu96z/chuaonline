@@ -483,10 +483,11 @@ export class DatabaseManager {
   constructor() {
     this.pool = null;
     this.usingMemory = false;
+    this.disableDiskStore = false;
 
     // In-memory fallback stores (Chùa Online)
     this.memUsers = new Map(); // id -> user
-    this.memUsersByRecovery = new Map(); // recovery_code -> id
+    this.memUsersByRecovery = new Map(); // UPPER(recovery_code) -> id
     this.memNextUserId = 1;
     this.memWishes = [];
     this.memNextWishId = 1;
@@ -495,10 +496,11 @@ export class DatabaseManager {
     this.memSutras = [...DEFAULT_SUTRAS];
     this.memChatMessages = []; // Bounded up to 200 recent messages across rooms
     this.chatDiskPath = path.resolve(__dirname, '../data/persistent_chat_history.json');
+    this.storeDiskPath = path.resolve(__dirname, '../data/persistent_store.json');
 
     // In-memory fallback stores (Nhà Thờ Công Giáo Online)
     this.memChurchUsers = new Map(); // id -> user
-    this.memChurchUsersByRecovery = new Map(); // recovery_code -> id
+    this.memChurchUsersByRecovery = new Map(); // UPPER(recovery_code) -> id
     this.memNextChurchUserId = 1;
     this.memIntentions = [];
     this.memNextIntentionId = 1;
@@ -507,7 +509,108 @@ export class DatabaseManager {
     this.memPrayers = [...DEFAULT_PRAYERS];
 
     this._initMemoryDefaults();
+    this._loadDiskStore();
     this._loadDiskChatHistory();
+  }
+
+  _loadDiskStore() {
+    if (this.disableDiskStore) return;
+    try {
+      if (!fs.existsSync(this.storeDiskPath)) return;
+      const raw = fs.readFileSync(this.storeDiskPath, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return;
+
+      if (Array.isArray(parsed.users)) {
+        this.memUsers.clear();
+        this.memUsersByRecovery.clear();
+        let maxId = 0;
+        for (const u of parsed.users) {
+          if (!u || !u.id || !u.recovery_code) continue;
+          const uid = Number(u.id);
+          if (uid > maxId) maxId = uid;
+          this.memUsers.set(uid, u);
+          this.memUsersByRecovery.set(String(u.recovery_code).toUpperCase(), uid);
+        }
+        this.memNextUserId = Math.max(this.memNextUserId, maxId + 1);
+      }
+
+      if (Array.isArray(parsed.provinces)) {
+        for (const p of parsed.provinces) {
+          if (p && p.province_code && this.memProvinces.has(p.province_code)) {
+            const cur = this.memProvinces.get(p.province_code);
+            cur.total_merit = Number(p.total_merit || 0);
+          }
+        }
+      }
+
+      if (Array.isArray(parsed.wishes)) {
+        const now = Date.now();
+        this.memWishes = parsed.wishes
+          .filter((w) => w && (!w.expires_at || new Date(w.expires_at).getTime() > now))
+          .slice(0, 100);
+        const maxWishId = this.memWishes.reduce((m, w) => Math.max(m, Number(w.id || 0)), 0);
+        this.memNextWishId = Math.max(this.memNextWishId, maxWishId + 1);
+      }
+
+      if (Array.isArray(parsed.churchUsers)) {
+        this.memChurchUsers.clear();
+        this.memChurchUsersByRecovery.clear();
+        let maxCId = 0;
+        for (const u of parsed.churchUsers) {
+          if (!u || !u.id || !u.recovery_code) continue;
+          const uid = Number(u.id);
+          if (uid > maxCId) maxCId = uid;
+          this.memChurchUsers.set(uid, u);
+          this.memChurchUsersByRecovery.set(String(u.recovery_code).toUpperCase(), uid);
+        }
+        this.memNextChurchUserId = Math.max(this.memNextChurchUserId, maxCId + 1);
+      }
+
+      if (Array.isArray(parsed.dioceses)) {
+        for (const d of parsed.dioceses) {
+          if (d && d.diocese_code && this.memDioceses.has(d.diocese_code)) {
+            const cur = this.memDioceses.get(d.diocese_code);
+            cur.total_grace = Number(d.total_grace || 0);
+          }
+        }
+      }
+
+      if (Array.isArray(parsed.intentions)) {
+        const now = Date.now();
+        this.memIntentions = parsed.intentions
+          .filter((it) => it && (!it.expires_at || new Date(it.expires_at).getTime() > now))
+          .slice(0, 100);
+        const maxIntId = this.memIntentions.reduce((m, it) => Math.max(m, Number(it.id || 0)), 0);
+        this.memNextIntentionId = Math.max(this.memNextIntentionId, maxIntId + 1);
+      }
+    } catch (err) {
+      console.warn('[DB] _loadDiskStore warning:', err.message);
+    }
+  }
+
+  _saveDiskStore() {
+    if (this.disableDiskStore) return;
+    try {
+      const dir = path.dirname(this.storeDiskPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      const payload = {
+        updatedAt: Date.now(),
+        users: Array.from(this.memUsers.values()),
+        provinces: Array.from(this.memProvinces.values()),
+        wishes: this.memWishes.slice(0, 100),
+        churchUsers: Array.from(this.memChurchUsers.values()),
+        dioceses: Array.from(this.memDioceses.values()),
+        intentions: this.memIntentions.slice(0, 100)
+      };
+      const tmpPath = `${this.storeDiskPath}.tmp.${process.pid}`;
+      fs.writeFileSync(tmpPath, JSON.stringify(payload, null, 2), 'utf8');
+      fs.renameSync(tmpPath, this.storeDiskPath);
+    } catch (err) {
+      // Non-fatal in read-only environments
+    }
   }
 
   _loadDiskChatHistory() {
@@ -585,8 +688,22 @@ export class DatabaseManager {
     }
   }
 
-  forceMemoryMode() {
+  forceMemoryMode(isolateForTest = true) {
     this.usingMemory = true;
+    this.disableDiskStore = Boolean(isolateForTest);
+    if (isolateForTest) {
+      this.memUsers.clear();
+      this.memUsersByRecovery.clear();
+      this.memNextUserId = 1;
+      this.memWishes = [];
+      this.memNextWishId = 1;
+      this.memChurchUsers.clear();
+      this.memChurchUsersByRecovery.clear();
+      this.memNextChurchUserId = 1;
+      this.memIntentions = [];
+      this.memNextIntentionId = 1;
+      this._initMemoryDefaults();
+    }
   }
 
   isUsingMemory() {
@@ -886,6 +1003,7 @@ export class DatabaseManager {
           u.leaves_swept += Number(params[2] || 0);
           u.realm_level = Math.max(u.realm_level, Number(params[3] || 1));
         }
+        this._saveDiskStore();
       }
       return [{ affectedRows: u ? 1 : 0 }];
     }
@@ -893,7 +1011,10 @@ export class DatabaseManager {
       const delta = Number(params[0] || 0);
       const code = String(params[1] || 'SG');
       const p = this.memProvinces.get(code);
-      if (p) p.total_merit += delta;
+      if (p) {
+        p.total_merit += delta;
+        this._saveDiskStore();
+      }
       return [{ affectedRows: p ? 1 : 0 }];
     }
     if (normalized.startsWith('UPDATE NHATHO_USERS SET GRACE_POINTS')) {
@@ -907,6 +1028,7 @@ export class DatabaseManager {
           u.garden_tended += Number(params[2] || 0);
           u.virtue_tier = Math.max(u.virtue_tier, Number(params[3] || 1));
         }
+        this._saveDiskStore();
       }
       return [{ affectedRows: u ? 1 : 0 }];
     }
@@ -914,43 +1036,87 @@ export class DatabaseManager {
       const delta = Number(params[0] || 0);
       const code = String(params[1] || 'SG');
       const d = this.memDioceses.get(code);
-      if (d) d.total_grace += delta;
+      if (d) {
+        d.total_grace += delta;
+        this._saveDiskStore();
+      }
       return [{ affectedRows: d ? 1 : 0 }];
     }
     return [[]];
   }
 
-  async getOrCreateUser({ recoveryCode, dharmaName = 'Thiện Tâm', robeColor = '#5c6b73', provinceCode = 'SG' }) {
-    const cleanCode = String(recoveryCode || `GUEST-${Date.now()}-${Math.random()}`).slice(0, 64);
-    const cleanName = String(dharmaName || 'Thiện Tâm').slice(0, 50);
+  _formatTempleUser(u) {
+    return {
+      id: Number(u.id),
+      recoveryCode: u.recovery_code,
+      dharmaName: u.dharma_name,
+      robeColor: u.robe_color || '#5c6b73',
+      provinceCode: u.province_code || 'SG',
+      avatarStyle: u.avatar_style || 'AO_LAM',
+      companionType: u.companion_type || 'NONE',
+      lotusFootsteps: u.lotus_footsteps !== undefined ? Boolean(u.lotus_footsteps) : true,
+      headwearType: u.headwear_type || 'NONE',
+      meritPoints: Number(u.merit_points || 0),
+      sutrasCompleted: Number(u.sutras_completed || 0),
+      leavesSwept: Number(u.leaves_swept || 0),
+      realmLevel: Number(u.realm_level || 1),
+      isRegistered: Boolean(u.password_hash)
+    };
+  }
+
+  async getOrCreateUser({
+    recoveryCode,
+    dharmaName = 'Thiện Tâm',
+    robeColor = '#5c6b73',
+    provinceCode = 'SG',
+    avatarStyle = 'AO_LAM',
+    companionType = 'NONE',
+    lotusFootsteps = true,
+    headwearType = 'NONE',
+    meritPoints = 0,
+    sutrasCompleted = 0,
+    leavesSwept = 0,
+    realmLevel = 1
+  }) {
+    const cleanCode = String(recoveryCode || `GUEST-${Date.now()}-${Math.random()}`).trim().slice(0, 64);
+    const cleanCodeKey = cleanCode.toUpperCase();
+    const cleanName = String(dharmaName || 'Thiện Tâm').trim().slice(0, 50) || 'Thiện Tâm';
     const cleanColor = String(robeColor || '#5c6b73').slice(0, 16);
     const cleanProv = String(provinceCode || 'SG').slice(0, 10);
+    const cleanStyle = String(avatarStyle || 'AO_LAM').slice(0, 32);
+    const cleanCompanion = String(companionType || 'NONE').slice(0, 24);
+    const cleanLotus = lotusFootsteps !== undefined ? Boolean(lotusFootsteps) : true;
+    const cleanHeadwear = String(headwearType || 'NONE').slice(0, 24);
+    const initMerit = Math.max(0, Number(meritPoints || 0));
+    const initSutras = Math.max(0, Number(sutrasCompleted || 0));
+    const initLeaves = Math.max(0, Number(leavesSwept || 0));
+    const initRealm = Math.max(1, Number(realmLevel || 1));
 
     if (!this.usingMemory && this.pool) {
       try {
         const [rows] = await this.pool.query(
-          `SELECT * FROM users WHERE recovery_code = ? LIMIT 1`,
+          `SELECT * FROM users WHERE UPPER(recovery_code) = UPPER(?) LIMIT 1`,
           [cleanCode]
         );
         if (rows.length > 0) {
           const u = rows[0];
-          return {
-            id: Number(u.id),
-            recoveryCode: u.recovery_code,
-            dharmaName: u.dharma_name,
-            robeColor: u.robe_color,
-            provinceCode: u.province_code,
-            meritPoints: Number(u.merit_points || 0),
-            sutrasCompleted: Number(u.sutras_completed || 0),
-            leavesSwept: Number(u.leaves_swept || 0),
-            realmLevel: Number(u.realm_level || 1)
-          };
+          const mergedMerit = Math.max(Number(u.merit_points || 0), initMerit);
+          const mergedRealm = Math.max(Number(u.realm_level || 1), initRealm);
+          if (mergedMerit > Number(u.merit_points || 0) || mergedRealm > Number(u.realm_level || 1)) {
+            await this.pool.query(
+              `UPDATE users SET merit_points = ?, realm_level = ? WHERE id = ?`,
+              [mergedMerit, mergedRealm, u.id]
+            );
+            u.merit_points = mergedMerit;
+            u.realm_level = mergedRealm;
+          }
+          return this._formatTempleUser(u);
         }
 
         const [res] = await this.pool.query(
-          `INSERT INTO users (recovery_code, dharma_name, robe_color, province_code, merit_points, sutras_completed, realm_level)
-           VALUES (?, ?, ?, ?, 0, 0, 1)`,
-          [cleanCode, cleanName, cleanColor, cleanProv]
+          `INSERT INTO users (recovery_code, dharma_name, robe_color, province_code, merit_points, sutras_completed, leaves_swept, realm_level)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [cleanCode, cleanName, cleanColor, cleanProv, initMerit, initSutras, initLeaves, initRealm]
         );
         return {
           id: Number(res.insertId),
@@ -958,10 +1124,15 @@ export class DatabaseManager {
           dharmaName: cleanName,
           robeColor: cleanColor,
           provinceCode: cleanProv,
-          meritPoints: 0,
-          sutrasCompleted: 0,
-          leavesSwept: 0,
-          realmLevel: 1
+          avatarStyle: cleanStyle,
+          companionType: cleanCompanion,
+          lotusFootsteps: cleanLotus,
+          headwearType: cleanHeadwear,
+          meritPoints: initMerit,
+          sutrasCompleted: initSutras,
+          leavesSwept: initLeaves,
+          realmLevel: initRealm,
+          isRegistered: false
         };
       } catch (err) {
         console.warn('[DB] getOrCreateUser MySQL error, falling back to memory:', err.message);
@@ -970,20 +1141,22 @@ export class DatabaseManager {
     }
 
     // Memory mode
-    if (this.memUsersByRecovery.has(cleanCode)) {
-      const id = this.memUsersByRecovery.get(cleanCode);
+    if (this.memUsersByRecovery.has(cleanCodeKey)) {
+      const id = this.memUsersByRecovery.get(cleanCodeKey);
       const u = this.memUsers.get(id);
-      return {
-        id: u.id,
-        recoveryCode: u.recovery_code,
-        dharmaName: u.dharma_name,
-        robeColor: u.robe_color,
-        provinceCode: u.province_code,
-        meritPoints: u.merit_points,
-        sutrasCompleted: u.sutras_completed,
-        leavesSwept: u.leaves_swept,
-        realmLevel: u.realm_level
-      };
+      if (u) {
+        let changed = false;
+        if (initMerit > Number(u.merit_points || 0)) {
+          u.merit_points = initMerit;
+          changed = true;
+        }
+        if (initRealm > Number(u.realm_level || 1)) {
+          u.realm_level = initRealm;
+          changed = true;
+        }
+        if (changed) this._saveDiskStore();
+        return this._formatTempleUser(u);
+      }
     }
 
     const id = this.memNextUserId++;
@@ -991,30 +1164,39 @@ export class DatabaseManager {
       id,
       recovery_code: cleanCode,
       dharma_name: cleanName,
+      password_hash: null,
       robe_color: cleanColor,
       province_code: cleanProv,
-      merit_points: 0,
-      sutras_completed: 0,
-      leaves_swept: 0,
-      realm_level: 1
+      avatar_style: cleanStyle,
+      companion_type: cleanCompanion,
+      lotus_footsteps: cleanLotus,
+      headwear_type: cleanHeadwear,
+      merit_points: initMerit,
+      sutras_completed: initSutras,
+      leaves_swept: initLeaves,
+      realm_level: initRealm
     };
     this.memUsers.set(id, newUser);
-    this.memUsersByRecovery.set(cleanCode, id);
-    return {
-      id,
-      recoveryCode: cleanCode,
-      dharmaName: cleanName,
-      robeColor: cleanColor,
-      provinceCode: cleanProv,
-      meritPoints: 0,
-      sutrasCompleted: 0,
-      leavesSwept: 0,
-      realmLevel: 1
-    };
+    this.memUsersByRecovery.set(cleanCodeKey, id);
+    this._saveDiskStore();
+    return this._formatTempleUser(newUser);
   }
 
-  async updateUserProfile(userId, { dharmaName, robeColor, provinceCode }) {
-    const cleanName = String(dharmaName || 'Thiện Tâm').slice(0, 50);
+  async updateUserProfile(
+    userId,
+    {
+      dharmaName,
+      robeColor,
+      provinceCode,
+      avatarStyle,
+      companionType,
+      lotusFootsteps,
+      headwearType,
+      meritPoints,
+      realmLevel
+    }
+  ) {
+    const cleanName = String(dharmaName || 'Thiện Tâm').trim().slice(0, 50) || 'Thiện Tâm';
     const cleanColor = String(robeColor || '#5c6b73').slice(0, 16);
     const cleanProv = String(provinceCode || 'SG').slice(0, 10);
 
@@ -1034,27 +1216,58 @@ export class DatabaseManager {
       memU.dharma_name = cleanName;
       memU.robe_color = cleanColor;
       memU.province_code = cleanProv;
+      if (avatarStyle) memU.avatar_style = String(avatarStyle).slice(0, 32);
+      if (companionType) memU.companion_type = String(companionType).slice(0, 24);
+      if (lotusFootsteps !== undefined) memU.lotus_footsteps = Boolean(lotusFootsteps);
+      if (headwearType) memU.headwear_type = String(headwearType).slice(0, 24);
+      if (meritPoints !== undefined) {
+        memU.merit_points = Math.max(Number(memU.merit_points || 0), Number(meritPoints || 0));
+      }
+      if (realmLevel !== undefined) {
+        memU.realm_level = Math.max(Number(memU.realm_level || 1), Number(realmLevel || 1));
+      }
+      this._saveDiskStore();
     }
   }
 
   /**
-   * Đăng ký / Bảo hộ Tài Khoản Phật Tử bằng Pháp Danh + Mật Khẩu + Mã Khôi Phục
+   * Đăng ký / Bảo hộ Tài Khoản Phật Tử bằng Pháp Danh + Mật Khẩu (tùy chọn) + Mã Khôi Phục
    */
-  async registerAccount({ recoveryCode, dharmaName, password, robeColor = '#5c6b73', provinceCode = 'SG' }) {
+  async registerAccount({
+    recoveryCode,
+    dharmaName,
+    password = '',
+    robeColor = '#5c6b73',
+    provinceCode = 'SG',
+    avatarStyle = 'AO_LAM',
+    companionType = 'NONE',
+    lotusFootsteps = true,
+    headwearType = 'NONE',
+    meritPoints = 0,
+    sutrasCompleted = 0,
+    leavesSwept = 0,
+    realmLevel = 1
+  }) {
     const cleanCode = String(recoveryCode || `PHATTU-${Date.now()}`).trim().slice(0, 64);
     const cleanName = String(dharmaName || '').trim().slice(0, 50);
     const cleanPass = String(password || '').trim();
     const cleanColor = String(robeColor || '#5c6b73').slice(0, 16);
     const cleanProv = String(provinceCode || 'SG').slice(0, 10);
+    const cleanStyle = String(avatarStyle || 'AO_LAM').slice(0, 32);
+    const cleanCompanion = String(companionType || 'NONE').slice(0, 24);
+    const cleanLotus = lotusFootsteps !== undefined ? Boolean(lotusFootsteps) : true;
+    const cleanHeadwear = String(headwearType || 'NONE').slice(0, 24);
+    const incomingMerit = Math.max(0, Number(meritPoints || 0));
+    const incomingRealm = Math.max(1, Number(realmLevel || 1));
 
     if (!cleanName || cleanName.length < 2) {
       return { ok: false, error: 'Pháp danh cần tối thiểu 2 ký tự.' };
     }
-    if (!cleanPass || cleanPass.length < 4) {
+    if (cleanPass && cleanPass.length < 4) {
       return { ok: false, error: 'Mật khẩu bảo hộ cần tối thiểu 4 ký tự.' };
     }
 
-    const pwHash = hashPassword(cleanPass);
+    const pwHash = cleanPass ? hashPassword(cleanPass) : null;
 
     if (!this.usingMemory && this.pool) {
       try {
@@ -1062,7 +1275,10 @@ export class DatabaseManager {
           `SELECT * FROM users WHERE LOWER(dharma_name) = LOWER(?) AND password_hash IS NOT NULL LIMIT 1`,
           [cleanName]
         );
-        if (existingByName.length > 0 && existingByName[0].recovery_code !== cleanCode) {
+        if (
+          existingByName.length > 0 &&
+          String(existingByName[0].recovery_code).toUpperCase() !== cleanCode.toUpperCase()
+        ) {
           return { ok: false, error: 'Pháp danh này đã được đạo hữu khác đăng ký mật khẩu bảo hộ!' };
         }
 
@@ -1070,13 +1286,31 @@ export class DatabaseManager {
           recoveryCode: cleanCode,
           dharmaName: cleanName,
           robeColor: cleanColor,
-          provinceCode: cleanProv
+          provinceCode: cleanProv,
+          avatarStyle: cleanStyle,
+          companionType: cleanCompanion,
+          lotusFootsteps: cleanLotus,
+          headwearType: cleanHeadwear,
+          meritPoints: incomingMerit,
+          sutrasCompleted,
+          leavesSwept,
+          realmLevel: incomingRealm
         });
 
-        await this.pool.query(
-          `UPDATE users SET dharma_name = ?, password_hash = ?, robe_color = ?, province_code = ? WHERE id = ?`,
-          [cleanName, pwHash, cleanColor, cleanProv, user.id]
-        );
+        const mergedMerit = Math.max(Number(user.meritPoints || 0), incomingMerit);
+        const mergedRealm = Math.max(Number(user.realmLevel || 1), incomingRealm);
+
+        if (pwHash) {
+          await this.pool.query(
+            `UPDATE users SET dharma_name = ?, password_hash = ?, robe_color = ?, province_code = ?, merit_points = ?, realm_level = ? WHERE id = ?`,
+            [cleanName, pwHash, cleanColor, cleanProv, mergedMerit, mergedRealm, user.id]
+          );
+        } else {
+          await this.pool.query(
+            `UPDATE users SET dharma_name = ?, robe_color = ?, province_code = ?, merit_points = ?, realm_level = ? WHERE id = ?`,
+            [cleanName, cleanColor, cleanProv, mergedMerit, mergedRealm, user.id]
+          );
+        }
 
         return {
           ok: true,
@@ -1085,7 +1319,13 @@ export class DatabaseManager {
             dharmaName: cleanName,
             robeColor: cleanColor,
             provinceCode: cleanProv,
-            isRegistered: true
+            avatarStyle: cleanStyle,
+            companionType: cleanCompanion,
+            lotusFootsteps: cleanLotus,
+            headwearType: cleanHeadwear,
+            meritPoints: mergedMerit,
+            realmLevel: mergedRealm,
+            isRegistered: Boolean(pwHash || user.isRegistered)
           }
         };
       } catch (err) {
@@ -1099,7 +1339,7 @@ export class DatabaseManager {
       if (
         u.password_hash &&
         u.dharma_name.toLowerCase() === cleanName.toLowerCase() &&
-        u.recovery_code !== cleanCode
+        String(u.recovery_code).toUpperCase() !== cleanCode.toUpperCase()
       ) {
         return { ok: false, error: 'Pháp danh này đã được đạo hữu khác đăng ký mật khẩu bảo hộ!' };
       }
@@ -1109,14 +1349,33 @@ export class DatabaseManager {
       recoveryCode: cleanCode,
       dharmaName: cleanName,
       robeColor: cleanColor,
-      provinceCode: cleanProv
+      provinceCode: cleanProv,
+      avatarStyle: cleanStyle,
+      companionType: cleanCompanion,
+      lotusFootsteps: cleanLotus,
+      headwearType: cleanHeadwear,
+      meritPoints: incomingMerit,
+      sutrasCompleted,
+      leavesSwept,
+      realmLevel: incomingRealm
     });
     const memU = this.memUsers.get(Number(user.id));
     if (memU) {
       memU.dharma_name = cleanName;
-      memU.password_hash = pwHash;
+      if (pwHash) memU.password_hash = pwHash;
       memU.robe_color = cleanColor;
       memU.province_code = cleanProv;
+      memU.avatar_style = cleanStyle;
+      memU.companion_type = cleanCompanion;
+      memU.lotus_footsteps = cleanLotus;
+      memU.headwear_type = cleanHeadwear;
+      memU.merit_points = Math.max(Number(memU.merit_points || 0), incomingMerit);
+      memU.realm_level = Math.max(Number(memU.realm_level || 1), incomingRealm);
+      this._saveDiskStore();
+      return {
+        ok: true,
+        user: this._formatTempleUser(memU)
+      };
     }
 
     return {
@@ -1126,15 +1385,19 @@ export class DatabaseManager {
         dharmaName: cleanName,
         robeColor: cleanColor,
         provinceCode: cleanProv,
-        isRegistered: true
+        avatarStyle: cleanStyle,
+        companionType: cleanCompanion,
+        lotusFootsteps: cleanLotus,
+        headwearType: cleanHeadwear,
+        isRegistered: Boolean(pwHash || user.isRegistered)
       }
     };
   }
 
   /**
    * Đăng nhập / Khôi phục Tài Khoản Phật Tử bằng:
-   * 1. Pháp Danh + Mật Khẩu
-   * 2. Mã Pháp Danh Khôi Phục (VD: PHATTU-XXXX-XXXX)
+   * 1. Mã Pháp Danh Khôi Phục (VD: PHATTU-XXXX-XXXX) - không phân biệt hoa/thường
+   * 2. Pháp Danh + Mật Khẩu (hoặc Pháp Danh + Mã Khôi Phục ở ô mật khẩu)
    */
   async loginAccount({ identifier, password = '' }) {
     const cleanId = String(identifier || '').trim();
@@ -1142,63 +1405,45 @@ export class DatabaseManager {
     if (!cleanId) {
       return { ok: false, error: 'Vui lòng nhập Pháp Danh hoặc Mã Khôi Phục!' };
     }
+    const cleanIdUpper = cleanId.toUpperCase();
+    const cleanPassUpper = cleanPass.toUpperCase();
     const pwHash = cleanPass ? hashPassword(cleanPass) : null;
 
     if (!this.usingMemory && this.pool) {
       try {
-        // 1. Check by recovery_code first
+        // 1. Check by recovery_code first (case-insensitive)
         const [byCode] = await this.pool.query(
-          `SELECT * FROM users WHERE recovery_code = ? LIMIT 1`,
+          `SELECT * FROM users WHERE UPPER(recovery_code) = UPPER(?) LIMIT 1`,
           [cleanId]
         );
         if (byCode.length > 0) {
           const u = byCode[0];
-          if (u.password_hash && pwHash && u.password_hash !== pwHash) {
-            return { ok: false, error: 'Mật khẩu không chính xác!' };
-          }
           return {
             ok: true,
-            user: {
-              id: Number(u.id),
-              recoveryCode: u.recovery_code,
-              dharmaName: u.dharma_name,
-              robeColor: u.robe_color,
-              provinceCode: u.province_code,
-              meritPoints: Number(u.merit_points || 0),
-              sutrasCompleted: Number(u.sutras_completed || 0),
-              leavesSwept: Number(u.leaves_swept || 0),
-              realmLevel: Number(u.realm_level || 1),
-              isRegistered: Boolean(u.password_hash)
-            }
+            user: this._formatTempleUser(u)
           };
         }
 
-        // 2. Check by dharma_name + password
+        // 2. Check by dharma_name + password (or recovery_code in password field)
         const [byName] = await this.pool.query(
-          `SELECT * FROM users WHERE LOWER(dharma_name) = LOWER(?) ORDER BY merit_points DESC LIMIT 5`,
+          `SELECT * FROM users WHERE LOWER(dharma_name) = LOWER(?) ORDER BY merit_points DESC LIMIT 10`,
           [cleanId]
         );
         if (byName.length === 0) {
           return { ok: false, error: 'Không tìm thấy tài khoản với Pháp Danh hoặc Mã Khôi Phục này!' };
         }
-        const matched = byName.find((u) => !u.password_hash || (pwHash && u.password_hash === pwHash));
+        const matched = byName.find(
+          (u) =>
+            !u.password_hash ||
+            (pwHash && u.password_hash === pwHash) ||
+            (cleanPassUpper && String(u.recovery_code || '').toUpperCase() === cleanPassUpper)
+        );
         if (!matched) {
-          return { ok: false, error: 'Mật khẩu không chính xác!' };
+          return { ok: false, error: 'Mật khẩu không chính xác! (Hoặc dùng Mã Khôi Phục PHATTU-... để mở khóa)' };
         }
         return {
           ok: true,
-          user: {
-            id: Number(matched.id),
-            recoveryCode: matched.recovery_code,
-            dharmaName: matched.dharma_name,
-            robeColor: matched.robe_color,
-            provinceCode: matched.province_code,
-            meritPoints: Number(matched.merit_points || 0),
-            sutrasCompleted: Number(matched.sutras_completed || 0),
-            leavesSwept: Number(matched.leaves_swept || 0),
-            realmLevel: Number(matched.realm_level || 1),
-            isRegistered: Boolean(matched.password_hash)
-          }
+          user: this._formatTempleUser(matched)
         };
       } catch (err) {
         console.warn('[DB] loginAccount MySQL error, falling back to memory:', err.message);
@@ -1206,54 +1451,48 @@ export class DatabaseManager {
       }
     }
 
-    // Memory mode
-    if (this.memUsersByRecovery.has(cleanId)) {
-      const id = this.memUsersByRecovery.get(cleanId);
-      const u = this.memUsers.get(id);
-      if (u.password_hash && pwHash && u.password_hash !== pwHash) {
-        return { ok: false, error: 'Mật khẩu không chính xác!' };
+    // Memory mode: 1. Check by recovery_code (case-insensitive)
+    let matchedByCode = null;
+    if (this.memUsersByRecovery.has(cleanIdUpper)) {
+      const id = this.memUsersByRecovery.get(cleanIdUpper);
+      matchedByCode = this.memUsers.get(id);
+    } else {
+      for (const u of this.memUsers.values()) {
+        if (String(u.recovery_code || '').toUpperCase() === cleanIdUpper) {
+          matchedByCode = u;
+          this.memUsersByRecovery.set(cleanIdUpper, u.id);
+          break;
+        }
       }
+    }
+
+    if (matchedByCode) {
       return {
         ok: true,
-        user: {
-          id: u.id,
-          recoveryCode: u.recovery_code,
-          dharmaName: u.dharma_name,
-          robeColor: u.robe_color,
-          provinceCode: u.province_code,
-          meritPoints: u.merit_points,
-          sutrasCompleted: u.sutras_completed,
-          leavesSwept: u.leaves_swept,
-          realmLevel: u.realm_level,
-          isRegistered: Boolean(u.password_hash)
-        }
+        user: this._formatTempleUser(matchedByCode)
       };
     }
 
-    const candidates = Array.from(this.memUsers.values()).filter(
-      (u) => u.dharma_name.toLowerCase() === cleanId.toLowerCase()
-    );
+    // 2. Check by dharma_name
+    const candidates = Array.from(this.memUsers.values())
+      .filter((u) => String(u.dharma_name || '').toLowerCase() === cleanId.toLowerCase())
+      .sort((a, b) => Number(b.merit_points || 0) - Number(a.merit_points || 0));
+
     if (candidates.length === 0) {
       return { ok: false, error: 'Không tìm thấy tài khoản với Pháp Danh hoặc Mã Khôi Phục này!' };
     }
-    const matched = candidates.find((u) => !u.password_hash || (pwHash && u.password_hash === pwHash));
+    const matched = candidates.find(
+      (u) =>
+        !u.password_hash ||
+        (pwHash && u.password_hash === pwHash) ||
+        (cleanPassUpper && String(u.recovery_code || '').toUpperCase() === cleanPassUpper)
+    );
     if (!matched) {
-      return { ok: false, error: 'Mật khẩu không chính xác!' };
+      return { ok: false, error: 'Mật khẩu không chính xác! (Hoặc dùng Mã Khôi Phục PHATTU-... để mở khóa)' };
     }
     return {
       ok: true,
-      user: {
-        id: matched.id,
-        recoveryCode: matched.recovery_code,
-        dharmaName: matched.dharma_name,
-        robeColor: matched.robe_color,
-        provinceCode: matched.province_code,
-        meritPoints: matched.merit_points,
-        sutrasCompleted: matched.sutras_completed,
-        leavesSwept: matched.leaves_swept,
-        realmLevel: matched.realm_level,
-        isRegistered: Boolean(matched.password_hash)
-      }
+      user: this._formatTempleUser(matched)
     };
   }
 
@@ -1298,6 +1537,7 @@ export class DatabaseManager {
     };
     this.memWishes.unshift(wish);
     if (this.memWishes.length > 100) this.memWishes.pop();
+    this._saveDiskStore();
     return wish;
   }
 
@@ -1368,45 +1608,69 @@ export class DatabaseManager {
   // NHÀ THỜ CÔNG GIÁO ONLINE 3D - DATABASE METHODS
   // ====================================================================
 
+  _formatChurchUser(u) {
+    return {
+      id: Number(u.id),
+      recoveryCode: u.recovery_code,
+      christianName: u.christian_name,
+      outfitColor: u.outfit_color || '#f5f0e6',
+      avatarStyle: u.avatar_style || 'GIAO_DAN_AO_DAI',
+      dioceseCode: u.diocese_code || 'SG',
+      gracePoints: Number(u.grace_points || 0),
+      rosariesCompleted: Number(u.rosaries_completed || 0),
+      gardenTended: Number(u.garden_tended || 0),
+      virtueTier: Number(u.virtue_tier || 1),
+      isRegistered: Boolean(u.password_hash)
+    };
+  }
+
   async getOrCreateChurchUser({
     recoveryCode,
     christianName = 'Tín Hữu Ánh Sáng',
     outfitColor = '#f5f0e6',
     avatarStyle = 'GIAO_DAN_AO_DAI',
-    dioceseCode = 'SG'
+    dioceseCode = 'SG',
+    gracePoints = 0,
+    rosariesCompleted = 0,
+    gardenTended = 0,
+    virtueTier = 1
   }) {
-    const cleanCode = String(recoveryCode || `TINHUU-${Date.now()}-${Math.random()}`).slice(0, 64);
-    const cleanName = String(christianName || 'Tín Hữu Ánh Sáng').slice(0, 50);
+    const cleanCode = String(recoveryCode || `TINHUU-${Date.now()}-${Math.random()}`).trim().slice(0, 64);
+    const cleanCodeKey = cleanCode.toUpperCase();
+    const cleanName = String(christianName || 'Tín Hữu Ánh Sáng').trim().slice(0, 50) || 'Tín Hữu Ánh Sáng';
     const cleanColor = String(outfitColor || '#f5f0e6').slice(0, 16);
     const cleanStyle = String(avatarStyle || 'GIAO_DAN_AO_DAI').slice(0, 32);
     const cleanDiocese = String(dioceseCode || 'SG').slice(0, 10);
+    const initGrace = Math.max(0, Number(gracePoints || 0));
+    const initRosaries = Math.max(0, Number(rosariesCompleted || 0));
+    const initGarden = Math.max(0, Number(gardenTended || 0));
+    const initTier = Math.max(1, Number(virtueTier || 1));
 
     if (!this.usingMemory && this.pool) {
       try {
         const [rows] = await this.pool.query(
-          `SELECT * FROM nhatho_users WHERE recovery_code = ? LIMIT 1`,
+          `SELECT * FROM nhatho_users WHERE UPPER(recovery_code) = UPPER(?) LIMIT 1`,
           [cleanCode]
         );
         if (rows.length > 0) {
           const u = rows[0];
-          return {
-            id: Number(u.id),
-            recoveryCode: u.recovery_code,
-            christianName: u.christian_name,
-            outfitColor: u.outfit_color,
-            avatarStyle: u.avatar_style || 'GIAO_DAN_AO_DAI',
-            dioceseCode: u.diocese_code,
-            gracePoints: Number(u.grace_points || 0),
-            rosariesCompleted: Number(u.rosaries_completed || 0),
-            gardenTended: Number(u.garden_tended || 0),
-            virtueTier: Number(u.virtue_tier || 1)
-          };
+          const mergedGrace = Math.max(Number(u.grace_points || 0), initGrace);
+          const mergedTier = Math.max(Number(u.virtue_tier || 1), initTier);
+          if (mergedGrace > Number(u.grace_points || 0) || mergedTier > Number(u.virtue_tier || 1)) {
+            await this.pool.query(
+              `UPDATE nhatho_users SET grace_points = ?, virtue_tier = ? WHERE id = ?`,
+              [mergedGrace, mergedTier, u.id]
+            );
+            u.grace_points = mergedGrace;
+            u.virtue_tier = mergedTier;
+          }
+          return this._formatChurchUser(u);
         }
 
         const [res] = await this.pool.query(
           `INSERT INTO nhatho_users (recovery_code, christian_name, outfit_color, avatar_style, diocese_code, grace_points, rosaries_completed, garden_tended, virtue_tier)
-           VALUES (?, ?, ?, ?, ?, 0, 0, 0, 1)`,
-          [cleanCode, cleanName, cleanColor, cleanStyle, cleanDiocese]
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [cleanCode, cleanName, cleanColor, cleanStyle, cleanDiocese, initGrace, initRosaries, initGarden, initTier]
         );
         return {
           id: Number(res.insertId),
@@ -1415,10 +1679,11 @@ export class DatabaseManager {
           outfitColor: cleanColor,
           avatarStyle: cleanStyle,
           dioceseCode: cleanDiocese,
-          gracePoints: 0,
-          rosariesCompleted: 0,
-          gardenTended: 0,
-          virtueTier: 1
+          gracePoints: initGrace,
+          rosariesCompleted: initRosaries,
+          gardenTended: initGarden,
+          virtueTier: initTier,
+          isRegistered: false
         };
       } catch (err) {
         console.warn('[DB] getOrCreateChurchUser MySQL error, falling back to memory:', err.message);
@@ -1427,21 +1692,22 @@ export class DatabaseManager {
     }
 
     // Memory mode
-    if (this.memChurchUsersByRecovery.has(cleanCode)) {
-      const id = this.memChurchUsersByRecovery.get(cleanCode);
+    if (this.memChurchUsersByRecovery.has(cleanCodeKey)) {
+      const id = this.memChurchUsersByRecovery.get(cleanCodeKey);
       const u = this.memChurchUsers.get(id);
-      return {
-        id: u.id,
-        recoveryCode: u.recovery_code,
-        christianName: u.christian_name,
-        outfitColor: u.outfit_color,
-        avatarStyle: u.avatar_style,
-        dioceseCode: u.diocese_code,
-        gracePoints: u.grace_points,
-        rosariesCompleted: u.rosaries_completed,
-        gardenTended: u.garden_tended,
-        virtueTier: u.virtue_tier
-      };
+      if (u) {
+        let changed = false;
+        if (initGrace > Number(u.grace_points || 0)) {
+          u.grace_points = initGrace;
+          changed = true;
+        }
+        if (initTier > Number(u.virtue_tier || 1)) {
+          u.virtue_tier = initTier;
+          changed = true;
+        }
+        if (changed) this._saveDiskStore();
+        return this._formatChurchUser(u);
+      }
     }
 
     const id = this.memNextChurchUserId++;
@@ -1449,32 +1715,23 @@ export class DatabaseManager {
       id,
       recovery_code: cleanCode,
       christian_name: cleanName,
+      password_hash: null,
       outfit_color: cleanColor,
       avatar_style: cleanStyle,
       diocese_code: cleanDiocese,
-      grace_points: 0,
-      rosaries_completed: 0,
-      garden_tended: 0,
-      virtue_tier: 1
+      grace_points: initGrace,
+      rosaries_completed: initRosaries,
+      garden_tended: initGarden,
+      virtue_tier: initTier
     };
     this.memChurchUsers.set(id, newUser);
-    this.memChurchUsersByRecovery.set(cleanCode, id);
-    return {
-      id,
-      recoveryCode: cleanCode,
-      christianName: cleanName,
-      outfitColor: cleanColor,
-      avatarStyle: cleanStyle,
-      dioceseCode: cleanDiocese,
-      gracePoints: 0,
-      rosariesCompleted: 0,
-      gardenTended: 0,
-      virtueTier: 1
-    };
+    this.memChurchUsersByRecovery.set(cleanCodeKey, id);
+    this._saveDiskStore();
+    return this._formatChurchUser(newUser);
   }
 
-  async updateChurchUserProfile(userId, { christianName, outfitColor, avatarStyle, dioceseCode }) {
-    const cleanName = String(christianName || 'Tín Hữu Ánh Sáng').slice(0, 50);
+  async updateChurchUserProfile(userId, { christianName, outfitColor, avatarStyle, dioceseCode, gracePoints, virtueTier }) {
+    const cleanName = String(christianName || 'Tín Hữu Ánh Sáng').trim().slice(0, 50) || 'Tín Hữu Ánh Sáng';
     const cleanColor = String(outfitColor || '#f5f0e6').slice(0, 16);
     const cleanStyle = String(avatarStyle || 'GIAO_DAN_AO_DAI').slice(0, 32);
     const cleanDiocese = String(dioceseCode || 'SG').slice(0, 10);
@@ -1496,16 +1753,25 @@ export class DatabaseManager {
       memU.outfit_color = cleanColor;
       memU.avatar_style = cleanStyle;
       memU.diocese_code = cleanDiocese;
+      if (gracePoints !== undefined) {
+        memU.grace_points = Math.max(Number(memU.grace_points || 0), Number(gracePoints || 0));
+      }
+      if (virtueTier !== undefined) {
+        memU.virtue_tier = Math.max(Number(memU.virtue_tier || 1), Number(virtueTier || 1));
+      }
+      this._saveDiskStore();
     }
   }
 
   async registerChurchAccount({
     recoveryCode,
     christianName,
-    password,
+    password = '',
     outfitColor = '#f5f0e6',
     avatarStyle = 'GIAO_DAN_AO_DAI',
-    dioceseCode = 'SG'
+    dioceseCode = 'SG',
+    gracePoints = 0,
+    virtueTier = 1
   }) {
     const cleanCode = String(recoveryCode || `TINHUU-${Date.now()}`).trim().slice(0, 64);
     const cleanName = String(christianName || '').trim().slice(0, 50);
@@ -1513,15 +1779,17 @@ export class DatabaseManager {
     const cleanColor = String(outfitColor || '#f5f0e6').slice(0, 16);
     const cleanStyle = String(avatarStyle || 'GIAO_DAN_AO_DAI').slice(0, 32);
     const cleanDiocese = String(dioceseCode || 'SG').slice(0, 10);
+    const incomingGrace = Math.max(0, Number(gracePoints || 0));
+    const incomingTier = Math.max(1, Number(virtueTier || 1));
 
     if (!cleanName || cleanName.length < 2) {
       return { ok: false, error: 'Tên Thánh & Họ Tên cần tối thiểu 2 ký tự.' };
     }
-    if (!cleanPass || cleanPass.length < 4) {
+    if (cleanPass && cleanPass.length < 4) {
       return { ok: false, error: 'Mật khẩu bảo hộ cần tối thiểu 4 ký tự.' };
     }
 
-    const pwHash = hashPassword(cleanPass);
+    const pwHash = cleanPass ? hashPassword(cleanPass) : null;
 
     if (!this.usingMemory && this.pool) {
       try {
@@ -1529,7 +1797,10 @@ export class DatabaseManager {
           `SELECT * FROM nhatho_users WHERE LOWER(christian_name) = LOWER(?) AND password_hash IS NOT NULL LIMIT 1`,
           [cleanName]
         );
-        if (existingByName.length > 0 && existingByName[0].recovery_code !== cleanCode) {
+        if (
+          existingByName.length > 0 &&
+          String(existingByName[0].recovery_code).toUpperCase() !== cleanCode.toUpperCase()
+        ) {
           return {
             ok: false,
             error: 'Tên Thánh & Họ Tên này đã được tín hữu khác đăng ký mật khẩu bảo hộ!'
@@ -1541,13 +1812,25 @@ export class DatabaseManager {
           christianName: cleanName,
           outfitColor: cleanColor,
           avatarStyle: cleanStyle,
-          dioceseCode: cleanDiocese
+          dioceseCode: cleanDiocese,
+          gracePoints: incomingGrace,
+          virtueTier: incomingTier
         });
 
-        await this.pool.query(
-          `UPDATE nhatho_users SET christian_name = ?, password_hash = ?, outfit_color = ?, avatar_style = ?, diocese_code = ? WHERE id = ?`,
-          [cleanName, pwHash, cleanColor, cleanStyle, cleanDiocese, user.id]
-        );
+        const mergedGrace = Math.max(Number(user.gracePoints || 0), incomingGrace);
+        const mergedTier = Math.max(Number(user.virtueTier || 1), incomingTier);
+
+        if (pwHash) {
+          await this.pool.query(
+            `UPDATE nhatho_users SET christian_name = ?, password_hash = ?, outfit_color = ?, avatar_style = ?, diocese_code = ?, grace_points = ?, virtue_tier = ? WHERE id = ?`,
+            [cleanName, pwHash, cleanColor, cleanStyle, cleanDiocese, mergedGrace, mergedTier, user.id]
+          );
+        } else {
+          await this.pool.query(
+            `UPDATE nhatho_users SET christian_name = ?, outfit_color = ?, avatar_style = ?, diocese_code = ?, grace_points = ?, virtue_tier = ? WHERE id = ?`,
+            [cleanName, cleanColor, cleanStyle, cleanDiocese, mergedGrace, mergedTier, user.id]
+          );
+        }
 
         return {
           ok: true,
@@ -1557,7 +1840,9 @@ export class DatabaseManager {
             outfitColor: cleanColor,
             avatarStyle: cleanStyle,
             dioceseCode: cleanDiocese,
-            isRegistered: true
+            gracePoints: mergedGrace,
+            virtueTier: mergedTier,
+            isRegistered: Boolean(pwHash || user.isRegistered)
           }
         };
       } catch (err) {
@@ -1571,7 +1856,7 @@ export class DatabaseManager {
       if (
         u.password_hash &&
         u.christian_name.toLowerCase() === cleanName.toLowerCase() &&
-        u.recovery_code !== cleanCode
+        String(u.recovery_code).toUpperCase() !== cleanCode.toUpperCase()
       ) {
         return {
           ok: false,
@@ -1585,15 +1870,24 @@ export class DatabaseManager {
       christianName: cleanName,
       outfitColor: cleanColor,
       avatarStyle: cleanStyle,
-      dioceseCode: cleanDiocese
+      dioceseCode: cleanDiocese,
+      gracePoints: incomingGrace,
+      virtueTier: incomingTier
     });
     const memU = this.memChurchUsers.get(Number(user.id));
     if (memU) {
       memU.christian_name = cleanName;
-      memU.password_hash = pwHash;
+      if (pwHash) memU.password_hash = pwHash;
       memU.outfit_color = cleanColor;
       memU.avatar_style = cleanStyle;
       memU.diocese_code = cleanDiocese;
+      memU.grace_points = Math.max(Number(memU.grace_points || 0), incomingGrace);
+      memU.virtue_tier = Math.max(Number(memU.virtue_tier || 1), incomingTier);
+      this._saveDiskStore();
+      return {
+        ok: true,
+        user: this._formatChurchUser(memU)
+      };
     }
 
     return {
@@ -1604,7 +1898,7 @@ export class DatabaseManager {
         outfitColor: cleanColor,
         avatarStyle: cleanStyle,
         dioceseCode: cleanDiocese,
-        isRegistered: true
+        isRegistered: Boolean(pwHash || user.isRegistered)
       }
     };
   }
@@ -1615,63 +1909,42 @@ export class DatabaseManager {
     if (!cleanId) {
       return { ok: false, error: 'Vui lòng nhập Tên Thánh hoặc Mã Khôi Phục!' };
     }
+    const cleanIdUpper = cleanId.toUpperCase();
+    const cleanPassUpper = cleanPass.toUpperCase();
     const pwHash = cleanPass ? hashPassword(cleanPass) : null;
 
     if (!this.usingMemory && this.pool) {
       try {
         const [byCode] = await this.pool.query(
-          `SELECT * FROM nhatho_users WHERE recovery_code = ? LIMIT 1`,
+          `SELECT * FROM nhatho_users WHERE UPPER(recovery_code) = UPPER(?) LIMIT 1`,
           [cleanId]
         );
         if (byCode.length > 0) {
-          const u = byCode[0];
-          if (u.password_hash && pwHash && u.password_hash !== pwHash) {
-            return { ok: false, error: 'Mật khẩu không chính xác!' };
-          }
           return {
             ok: true,
-            user: {
-              id: Number(u.id),
-              recoveryCode: u.recovery_code,
-              christianName: u.christian_name,
-              outfitColor: u.outfit_color,
-              avatarStyle: u.avatar_style || 'GIAO_DAN_AO_DAI',
-              dioceseCode: u.diocese_code,
-              gracePoints: Number(u.grace_points || 0),
-              rosariesCompleted: Number(u.rosaries_completed || 0),
-              gardenTended: Number(u.garden_tended || 0),
-              virtueTier: Number(u.virtue_tier || 1),
-              isRegistered: Boolean(u.password_hash)
-            }
+            user: this._formatChurchUser(byCode[0])
           };
         }
 
         const [byName] = await this.pool.query(
-          `SELECT * FROM nhatho_users WHERE LOWER(christian_name) = LOWER(?) ORDER BY grace_points DESC LIMIT 5`,
+          `SELECT * FROM nhatho_users WHERE LOWER(christian_name) = LOWER(?) ORDER BY grace_points DESC LIMIT 10`,
           [cleanId]
         );
         if (byName.length === 0) {
           return { ok: false, error: 'Không tìm thấy tài khoản với Tên Thánh hoặc Mã Khôi Phục này!' };
         }
-        const matched = byName.find((u) => !u.password_hash || (pwHash && u.password_hash === pwHash));
+        const matched = byName.find(
+          (u) =>
+            !u.password_hash ||
+            (pwHash && u.password_hash === pwHash) ||
+            (cleanPassUpper && String(u.recovery_code || '').toUpperCase() === cleanPassUpper)
+        );
         if (!matched) {
-          return { ok: false, error: 'Mật khẩu không chính xác!' };
+          return { ok: false, error: 'Mật khẩu không chính xác! (Hoặc dùng Mã Khôi Phục TINHUU-... để mở khóa)' };
         }
         return {
           ok: true,
-          user: {
-            id: Number(matched.id),
-            recoveryCode: matched.recovery_code,
-            christianName: matched.christian_name,
-            outfitColor: matched.outfit_color,
-            avatarStyle: matched.avatar_style || 'GIAO_DAN_AO_DAI',
-            dioceseCode: matched.diocese_code,
-            gracePoints: Number(matched.grace_points || 0),
-            rosariesCompleted: Number(matched.rosaries_completed || 0),
-            gardenTended: Number(matched.garden_tended || 0),
-            virtueTier: Number(matched.virtue_tier || 1),
-            isRegistered: Boolean(matched.password_hash)
-          }
+          user: this._formatChurchUser(matched)
         };
       } catch (err) {
         console.warn('[DB] loginChurchAccount MySQL error, falling back to memory:', err.message);
@@ -1680,55 +1953,46 @@ export class DatabaseManager {
     }
 
     // Memory mode
-    if (this.memChurchUsersByRecovery.has(cleanId)) {
-      const id = this.memChurchUsersByRecovery.get(cleanId);
-      const u = this.memChurchUsers.get(id);
-      if (u.password_hash && pwHash && u.password_hash !== pwHash) {
-        return { ok: false, error: 'Mật khẩu không chính xác!' };
+    let matchedByCode = null;
+    if (this.memChurchUsersByRecovery.has(cleanIdUpper)) {
+      const id = this.memChurchUsersByRecovery.get(cleanIdUpper);
+      matchedByCode = this.memChurchUsers.get(id);
+    } else {
+      for (const u of this.memChurchUsers.values()) {
+        if (String(u.recovery_code || '').toUpperCase() === cleanIdUpper) {
+          matchedByCode = u;
+          this.memChurchUsersByRecovery.set(cleanIdUpper, u.id);
+          break;
+        }
       }
+    }
+
+    if (matchedByCode) {
       return {
         ok: true,
-        user: {
-          id: u.id,
-          recoveryCode: u.recovery_code,
-          christianName: u.christian_name,
-          outfitColor: u.outfit_color,
-          avatarStyle: u.avatar_style || 'GIAO_DAN_AO_DAI',
-          dioceseCode: u.diocese_code,
-          gracePoints: u.grace_points,
-          rosariesCompleted: u.rosaries_completed,
-          gardenTended: u.garden_tended,
-          virtueTier: u.virtue_tier,
-          isRegistered: Boolean(u.password_hash)
-        }
+        user: this._formatChurchUser(matchedByCode)
       };
     }
 
-    const candidates = Array.from(this.memChurchUsers.values()).filter(
-      (u) => u.christian_name.toLowerCase() === cleanId.toLowerCase()
-    );
+    const candidates = Array.from(this.memChurchUsers.values())
+      .filter((u) => String(u.christian_name || '').toLowerCase() === cleanId.toLowerCase())
+      .sort((a, b) => Number(b.grace_points || 0) - Number(a.grace_points || 0));
+
     if (candidates.length === 0) {
       return { ok: false, error: 'Không tìm thấy tài khoản với Tên Thánh hoặc Mã Khôi Phục này!' };
     }
-    const matched = candidates.find((u) => !u.password_hash || (pwHash && u.password_hash === pwHash));
+    const matched = candidates.find(
+      (u) =>
+        !u.password_hash ||
+        (pwHash && u.password_hash === pwHash) ||
+        (cleanPassUpper && String(u.recovery_code || '').toUpperCase() === cleanPassUpper)
+    );
     if (!matched) {
-      return { ok: false, error: 'Mật khẩu không chính xác!' };
+      return { ok: false, error: 'Mật khẩu không chính xác! (Hoặc dùng Mã Khôi Phục TINHUU-... để mở khóa)' };
     }
     return {
       ok: true,
-      user: {
-        id: matched.id,
-        recoveryCode: matched.recovery_code,
-        christianName: matched.christian_name,
-        outfitColor: matched.outfit_color,
-        avatarStyle: matched.avatar_style || 'GIAO_DAN_AO_DAI',
-        dioceseCode: matched.diocese_code,
-        gracePoints: matched.grace_points,
-        rosariesCompleted: matched.rosaries_completed,
-        gardenTended: matched.garden_tended,
-        virtueTier: matched.virtue_tier,
-        isRegistered: Boolean(matched.password_hash)
-      }
+      user: this._formatChurchUser(matched)
     };
   }
 
@@ -1779,6 +2043,7 @@ export class DatabaseManager {
     };
     this.memIntentions.unshift(intention);
     if (this.memIntentions.length > 100) this.memIntentions.pop();
+    this._saveDiskStore();
     return intention;
   }
 

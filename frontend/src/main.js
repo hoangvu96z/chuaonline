@@ -530,7 +530,9 @@ class ChuaOnlineApp {
       avatarStyle: this.profile.avatarStyle || 'CU_SI_AO_LAM',
       companionType: this.profile.companionType || 'MEO_CHUA',
       lotusFootsteps: this.profile.lotusFootsteps !== false,
-      headwearType: this.profile.headwearType || 'AUTO'
+      headwearType: this.profile.headwearType || 'AUTO',
+      meritPoints: this.profile.meritPoints || 0,
+      realmLevel: this.profile.realmLevel || 1
     });
   }
 
@@ -2673,7 +2675,9 @@ class ChuaOnlineApp {
       import.meta.env?.VITE_BACKEND_URL ||
       (window.location.port === '5173' || window.location.port === '4173'
         ? `${window.location.protocol}//${window.location.hostname}:3001`
-        : window.location.origin)
+        : window.location.hostname.includes('vunph.io.vn')
+          ? 'https://api.vunph.io.vn'
+          : window.location.origin)
     );
   }
 
@@ -2897,32 +2901,53 @@ class ChuaOnlineApp {
       this.profile.headwearType = selectedHeadwear;
       this.profile.lotusFootsteps = selectedLotusFootsteps;
 
-      if (rawPassword) {
-        try {
-          const res = await fetch(`${this._getBackendBaseUrl()}/api/auth/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              recoveryCode: this.profile.recoveryCode,
-              dharmaName: newName,
-              password: rawPassword,
-              robeColor: selectedColor,
-              provinceCode: newProv
-            })
-          });
-          const data = await res.json();
-          if (!res.ok || !data.ok) {
-            this.showToast(`⚠️ ${data.error || 'Không thể đăng ký bảo hộ tài khoản!'}`);
-            return;
-          }
-          this._applyAuthenticatedUser(data.user);
-          if (passInput) passInput.value = '';
-          document.getElementById('dialog-profile')?.close();
-          this.showToast(`🛡️ Đã đăng ký & bảo hộ tài khoản Pháp Danh "${this.profile.dharmaName}" thành công!`);
+      try {
+        const res = await fetch(`${this._getBackendBaseUrl()}/api/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recoveryCode: this.profile.recoveryCode,
+            dharmaName: newName,
+            password: rawPassword,
+            robeColor: selectedColor,
+            provinceCode: newProv,
+            avatarStyle: selectedStyle,
+            companionType: selectedCompanion,
+            headwearType: selectedHeadwear,
+            lotusFootsteps: selectedLotusFootsteps,
+            meritPoints: this.profile.meritPoints || 0,
+            realmLevel: this.profile.realmLevel || 1
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          this.showToast(`⚠️ ${data.error || 'Không thể đăng ký bảo hộ tài khoản!'}`);
           return;
-        } catch (err) {
-          console.warn('[Auth] Register fallback local:', err);
         }
+        this._applyAuthenticatedUser(data.user);
+        this.socketClient.updateProfile({
+          dharmaName: this.profile.dharmaName,
+          provinceCode: this.profile.provinceCode,
+          robeColor: this.profile.robeColor,
+          avatarStyle: this.profile.avatarStyle,
+          companionType: this.profile.companionType,
+          headwearType: this.profile.headwearType,
+          lotusFootsteps: this.profile.lotusFootsteps
+        });
+        if (passInput) passInput.value = '';
+        document.getElementById('dialog-profile')?.close();
+        if (rawPassword) {
+          this.showToast(
+            `🛡️ Đã đăng ký & bảo hộ tài khoản Pháp Danh "${this.profile.dharmaName}" thành công!`
+          );
+        } else {
+          this.showToast(
+            `🙏 Đã lưu & đồng bộ hồ sơ "${this.profile.dharmaName}" (Mã khôi phục: ${this.profile.recoveryCode})`
+          );
+        }
+        return;
+      } catch (err) {
+        console.warn('[Auth] Register fallback local:', err);
       }
 
       this.profile.dharmaName = newName;
@@ -2991,7 +3016,7 @@ class ChuaOnlineApp {
         switchAuthTab('profile');
         document.getElementById('dialog-profile')?.close();
         this.showToast(
-          `🎉 Đăng nhập thành công Pháp Danh "${this.profile.dharmaName}" — Đã đồng bộ ${this.profile.meritPoints} Công Đức!`
+          `🎉 Khôi phục thành công Pháp Danh "${this.profile.dharmaName}" — Đã đồng bộ ${this.profile.meritPoints} Công Đức!`
         );
       } catch (err) {
         if (loginErrEl) {
@@ -3009,18 +3034,34 @@ class ChuaOnlineApp {
     this.profile.dharmaName = user.dharmaName || this.profile.dharmaName;
     this.profile.provinceCode = user.provinceCode || this.profile.provinceCode;
     this.profile.robeColor = user.robeColor || this.profile.robeColor;
-    this.profile.meritPoints = Number(user.meritPoints ?? this.profile.meritPoints);
-    this.profile.realmLevel = Number(user.realmLevel ?? getRealmInfo(this.profile.meritPoints).level);
+    if (user.avatarStyle) this.profile.avatarStyle = user.avatarStyle;
+    if (user.companionType) this.profile.companionType = user.companionType;
+    if (user.headwearType) this.profile.headwearType = user.headwearType;
+    if (user.lotusFootsteps !== undefined) this.profile.lotusFootsteps = Boolean(user.lotusFootsteps);
+    this.profile.meritPoints = Number(user.meritPoints ?? this.profile.meritPoints ?? 0);
+    this.profile.realmLevel = Number(
+      user.realmLevel ?? getRealmInfo(this.profile.meritPoints).level
+    );
     this.profile.isRegistered = Boolean(user.isRegistered);
     saveLocalProfile(this.profile);
 
     const nameInput = document.getElementById('input-dharma-name');
     const codeEl = document.getElementById('profile-recovery-code');
+    const selectProv = document.getElementById('select-province');
+    const selectHeadwearEl = document.getElementById('select-headwear');
+    const chkLotusFootstepsEl = document.getElementById('chk-lotus-footsteps');
     const statusBanner = document.getElementById('auth-status-banner');
     if (nameInput) nameInput.value = this.profile.dharmaName;
     if (codeEl) codeEl.textContent = this.profile.recoveryCode;
+    if (selectProv && this.profile.provinceCode) selectProv.value = this.profile.provinceCode;
+    if (selectHeadwearEl && this.profile.headwearType) {
+      selectHeadwearEl.value = this.profile.headwearType;
+    }
+    if (chkLotusFootstepsEl) {
+      chkLotusFootstepsEl.checked = this.profile.lotusFootsteps !== false;
+    }
     if (statusBanner) {
-      statusBanner.innerHTML = `🛡️ Tài khoản <strong>${this.profile.dharmaName}</strong> (${this.profile.meritPoints} Công Đức) đã đồng bộ thành công!`;
+      statusBanner.innerHTML = `🛡️ Tài khoản <strong>${this.profile.dharmaName}</strong> (${this.profile.meritPoints} Công Đức — Mã: <code>${this.profile.recoveryCode}</code>) đã đồng bộ thành công!`;
     }
 
     this._updateUserCardUI();
@@ -3029,6 +3070,10 @@ class ChuaOnlineApp {
       dharmaName: this.profile.dharmaName,
       provinceCode: this.profile.provinceCode,
       robeColor: this.profile.robeColor,
+      avatarStyle: this.profile.avatarStyle || 'CU_SI_AO_LAM',
+      companionType: this.profile.companionType || 'MEO_CHUA',
+      headwearType: this.profile.headwearType || 'AUTO',
+      lotusFootsteps: this.profile.lotusFootsteps !== false,
       meritPoints: this.profile.meritPoints,
       realmLevel: this.profile.realmLevel
     });

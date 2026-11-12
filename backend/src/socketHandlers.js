@@ -54,7 +54,15 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
           recoveryCode: payload.recoveryCode,
           dharmaName: payload.dharmaName,
           robeColor: payload.robeColor,
-          provinceCode: payload.provinceCode
+          provinceCode: payload.provinceCode,
+          avatarStyle: payload.avatarStyle,
+          companionType: payload.companionType,
+          lotusFootsteps: payload.lotusFootsteps,
+          headwearType: payload.headwearType,
+          meritPoints: payload.meritPoints,
+          sutrasCompleted: payload.sutrasCompleted,
+          leavesSwept: payload.leavesSwept,
+          realmLevel: payload.realmLevel
         });
         if (payload.avatarStyle) {
           currentUser.avatarStyle = String(payload.avatarStyle).slice(0, 32);
@@ -422,7 +430,13 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
       await db.updateUserProfile(currentUser.id, {
         dharmaName: currentUser.dharmaName,
         robeColor: currentUser.robeColor,
-        provinceCode: currentUser.provinceCode
+        provinceCode: currentUser.provinceCode,
+        avatarStyle: currentUser.avatarStyle,
+        companionType: currentUser.companionType,
+        lotusFootsteps: currentUser.lotusFootsteps,
+        headwearType: currentUser.headwearType,
+        meritPoints: currentUser.meritPoints,
+        realmLevel: currentUser.realmLevel
       });
       roomManager.syncUserStatsToPlayer(socket.id, currentUser);
     });
@@ -449,14 +463,47 @@ export function registerSocketHandlers(io, { db, roomManager, meritBatcher, sutr
     });
 
     // 15. Sync Account after Login / Register
-    socket.on('auth_sync_account', (payload = {}) => {
+    socket.on('auth_sync_account', async (payload = {}) => {
       if (!payload || !payload.user) return;
-      currentUser = {
-        ...currentUser,
-        ...payload.user
-      };
-      roomManager.syncUserStatsToPlayer(socket.id, currentUser);
-      socket.emit('account_synced', { user: currentUser });
+      try {
+        const incoming = payload.user;
+        if (incoming.recoveryCode) {
+          const canonical = await db.getOrCreateUser({
+            recoveryCode: incoming.recoveryCode,
+            dharmaName: incoming.dharmaName || currentUser?.dharmaName,
+            robeColor: incoming.robeColor || currentUser?.robeColor,
+            provinceCode: incoming.provinceCode || currentUser?.provinceCode,
+            avatarStyle: incoming.avatarStyle || currentUser?.avatarStyle,
+            companionType: incoming.companionType || currentUser?.companionType,
+            lotusFootsteps:
+              incoming.lotusFootsteps !== undefined
+                ? incoming.lotusFootsteps
+                : currentUser?.lotusFootsteps,
+            headwearType: incoming.headwearType || currentUser?.headwearType,
+            meritPoints: incoming.meritPoints,
+            sutrasCompleted: incoming.sutrasCompleted,
+            leavesSwept: incoming.leavesSwept,
+            realmLevel: incoming.realmLevel
+          });
+          currentUser = {
+            ...currentUser,
+            ...canonical,
+            ...incoming,
+            id: canonical.id,
+            meritPoints: Math.max(Number(canonical.meritPoints || 0), Number(incoming.meritPoints || 0)),
+            realmLevel: Math.max(Number(canonical.realmLevel || 1), Number(incoming.realmLevel || 1))
+          };
+        } else {
+          currentUser = {
+            ...currentUser,
+            ...incoming
+          };
+        }
+        roomManager.syncUserStatsToPlayer(socket.id, currentUser);
+        socket.emit('account_synced', { user: currentUser });
+      } catch (err) {
+        console.warn('[Socket] auth_sync_account warning:', err.message);
+      }
     });
 
     // 16. Real-Time Multi-User Chat with Sensitive Word Filtering & 3D Speech Bubbles

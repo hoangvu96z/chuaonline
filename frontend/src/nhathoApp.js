@@ -192,7 +192,9 @@ export class NhaThoOnlineApp {
       import.meta.env?.VITE_BACKEND_URL ||
       (window.location.port === '5173' || window.location.port === '4173'
         ? `${window.location.protocol}//${window.location.hostname}:3001`
-        : window.location.origin)
+        : window.location.hostname.includes('vunph.io.vn')
+          ? 'https://api.vunph.io.vn'
+          : window.location.origin)
     );
   }
 
@@ -2055,31 +2057,47 @@ export class NhaThoOnlineApp {
       const passInput = document.getElementById('input-register-password');
       const password = String(passInput?.value || '').trim();
 
-      if (password.length >= 4) {
-        try {
-          const res = await fetch(`${this._getBackendBaseUrl()}/api/nhatho/auth/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              recoveryCode: this.profile.recoveryCode,
-              christianName: newName,
-              password,
-              dioceseCode: newDiocese,
-              outfitColor: selectedColor,
-              avatarStyle: selectedStyle
-            })
-          });
-          const data = await res.json();
-          if (res.ok && data.ok && data.user) {
-            this._applyAuthenticatedUser(data.user);
-            if (passInput) passInput.value = '';
-            document.getElementById('dialog-profile')?.close();
-            this.showToast(`🛡️ Đã đăng ký & bảo hộ tài khoản Tên Thánh "${this.profile.christianName}"!`);
-            return;
-          }
-        } catch (_) {
-          // fallback local save below
+      try {
+        const res = await fetch(`${this._getBackendBaseUrl()}/api/nhatho/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recoveryCode: this.profile.recoveryCode,
+            christianName: newName,
+            password,
+            dioceseCode: newDiocese,
+            outfitColor: selectedColor,
+            avatarStyle: selectedStyle,
+            gracePoints: this.profile.gracePoints || 0,
+            virtueTier: this.profile.virtueTier || 1
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          this.showToast(`⚠️ ${data.error || 'Không thể lưu bảo hộ tài khoản!'}`);
+          return;
         }
+        if (data.user) {
+          this._applyAuthenticatedUser(data.user);
+          this.socketClient.updateProfile({
+            christianName: this.profile.christianName,
+            dioceseCode: this.profile.dioceseCode,
+            outfitColor: this.profile.outfitColor,
+            avatarStyle: this.profile.avatarStyle
+          });
+          if (passInput) passInput.value = '';
+          document.getElementById('dialog-profile')?.close();
+          if (password) {
+            this.showToast(`🛡️ Đã đăng ký & bảo hộ tài khoản Tên Thánh "${this.profile.christianName}"!`);
+          } else {
+            this.showToast(
+              `🕊️ Đã lưu & đồng bộ hồ sơ "${this.profile.christianName}" (Mã khôi phục: ${this.profile.recoveryCode})`
+            );
+          }
+          return;
+        }
+      } catch (_) {
+        // fallback local save below
       }
 
       this.profile.christianName = newName;
@@ -2139,7 +2157,7 @@ export class NhaThoOnlineApp {
         switchTab('profile');
         document.getElementById('dialog-profile')?.close();
         this.showToast(
-          `🎉 Đã đồng bộ tài khoản "${this.profile.christianName}" (${this.profile.gracePoints} Hoa Thiêng)!`
+          `🎉 Đã khôi phục & đồng bộ tài khoản "${this.profile.christianName}" (${this.profile.gracePoints} Hoa Thiêng)!`
         );
       } catch (_) {
         if (loginErrEl) {
@@ -2163,12 +2181,24 @@ export class NhaThoOnlineApp {
     this.profile.avatarStyle =
       user.avatarStyle || user.avatar_style || this.profile.avatarStyle || 'GIAO_DAN_AO_TRANG';
     this.profile.gracePoints = Number(
-      user.gracePoints ?? user.grace_points ?? user.meritPoints ?? this.profile.gracePoints
+      user.gracePoints ?? user.grace_points ?? user.meritPoints ?? this.profile.gracePoints ?? 0
     );
     this.profile.virtueTier = Number(
       user.virtueTier ?? user.virtue_tier ?? getVirtueInfo(this.profile.gracePoints).tier
     );
+    this.profile.isRegistered = Boolean(user.isRegistered);
     saveChurchLocalProfile(this.profile);
+
+    const nameInput = document.getElementById('input-dharma-name');
+    const codeEl = document.getElementById('profile-recovery-code');
+    const selectProv = document.getElementById('select-province');
+    const statusBanner = document.getElementById('auth-status-banner');
+    if (nameInput) nameInput.value = this.profile.christianName;
+    if (codeEl) codeEl.textContent = this.profile.recoveryCode;
+    if (selectProv && this.profile.dioceseCode) selectProv.value = this.profile.dioceseCode;
+    if (statusBanner) {
+      statusBanner.innerHTML = `🛡️ Tài khoản <strong>${this.profile.christianName}</strong> (${this.profile.gracePoints} Hoa Thiêng — Mã: <code>${this.profile.recoveryCode}</code>) đã đồng bộ thành công!`;
+    }
 
     this._updateUserCardUI();
     this.avatarManager.upsertPlayer({

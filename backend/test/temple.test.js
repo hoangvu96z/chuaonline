@@ -971,6 +971,70 @@ describe('Suite 4: Full End-to-End Socket.io & REST API Integration', () => {
     assert.strictEqual(loginJson.ok, true);
     assert.strictEqual(loginJson.user.recoveryCode, 'PHATTU-TEST-AUTH99');
     assert.strictEqual(loginJson.user.provinceCode, 'DN');
+
+    // Recovery by Recovery Code alone (case-insensitive, with or without password) must succeed
+    const recoverByCodeRes = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        identifier: 'phattu-test-auth99',
+        password: ''
+      })
+    });
+    assert.strictEqual(recoverByCodeRes.status, 200);
+    const recoverByCodeJson = await recoverByCodeRes.json();
+    assert.strictEqual(recoverByCodeJson.ok, true);
+    assert.strictEqual(recoverByCodeJson.user.dharmaName, 'Thích Minh Đăng');
+
+    // Recovery by Dharma Name in field 1 + Recovery Code in field 2 (password field) must also succeed
+    const recoverByNameAndCodeRes = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        identifier: 'Thích Minh Đăng',
+        password: 'phattu-test-auth99'
+      })
+    });
+    assert.strictEqual(recoverByNameAndCodeRes.status, 200);
+    const recoverByNameAndCodeJson = await recoverByNameAndCodeRes.json();
+    assert.strictEqual(recoverByNameAndCodeJson.ok, true);
+    assert.strictEqual(recoverByNameAndCodeJson.user.recoveryCode, 'PHATTU-TEST-AUTH99');
+
+    // Saving profile without password via /api/auth/register must still persist user, meritPoints & customization for recovery
+    const noPassRegRes = await fetch(`${baseUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recoveryCode: 'PHATTU-NOPASS-108',
+        dharmaName: 'Diệu Liên Hoa',
+        password: '',
+        robeColor: '#c9a227',
+        provinceCode: 'SG',
+        avatarStyle: 'BACH_Y_HIEN_GIA',
+        companionType: 'HAC_TRANG',
+        headwearType: 'NON_LA',
+        lotusFootsteps: true,
+        meritPoints: 520,
+        realmLevel: 3
+      })
+    });
+    assert.strictEqual(noPassRegRes.status, 200);
+    const recoverNoPassRes = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        identifier: 'PHATTU-NOPASS-108',
+        password: ''
+      })
+    });
+    assert.strictEqual(recoverNoPassRes.status, 200);
+    const recoverNoPassJson = await recoverNoPassRes.json();
+    assert.strictEqual(recoverNoPassJson.ok, true);
+    assert.strictEqual(recoverNoPassJson.user.dharmaName, 'Diệu Liên Hoa');
+    assert.strictEqual(recoverNoPassJson.user.meritPoints, 520);
+    assert.strictEqual(recoverNoPassJson.user.realmLevel, 3);
+    assert.strictEqual(recoverNoPassJson.user.avatarStyle, 'BACH_Y_HIEN_GIA');
+    assert.strictEqual(recoverNoPassJson.user.companionType, 'HAC_TRANG');
   });
 
   it('4.11 should filter sensitive words in send_chat and broadcast chat_message to room', async () => {

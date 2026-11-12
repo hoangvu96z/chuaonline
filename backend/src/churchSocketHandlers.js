@@ -65,7 +65,11 @@ export function registerChurchSocketHandlers(
           christianName: payload.christianName,
           outfitColor: payload.outfitColor,
           avatarStyle: payload.avatarStyle,
-          dioceseCode: payload.dioceseCode
+          dioceseCode: payload.dioceseCode,
+          gracePoints: payload.gracePoints,
+          rosariesCompleted: payload.rosariesCompleted,
+          gardenTended: payload.gardenTended,
+          virtueTier: payload.virtueTier
         });
 
         const joinResult = churchRoomManager.joinRoom(
@@ -416,14 +420,44 @@ export function registerChurchSocketHandlers(
     });
 
     // 16. Sync Church Account after Login / Register
-    socket.on('auth_sync_church_account', (payload = {}) => {
+    socket.on('auth_sync_church_account', async (payload = {}) => {
       if (!payload || !payload.user) return;
-      currentChurchUser = {
-        ...currentChurchUser,
-        ...payload.user
-      };
-      churchRoomManager.syncUserStatsToPlayer(socket.id, currentChurchUser);
-      socket.emit('church_account_synced', { user: currentChurchUser });
+      try {
+        const incoming = payload.user;
+        if (incoming.recoveryCode) {
+          const canonical = await db.getOrCreateChurchUser({
+            recoveryCode: incoming.recoveryCode,
+            christianName: incoming.christianName || currentChurchUser?.christianName,
+            outfitColor: incoming.outfitColor || currentChurchUser?.outfitColor,
+            avatarStyle: incoming.avatarStyle || currentChurchUser?.avatarStyle,
+            dioceseCode: incoming.dioceseCode || currentChurchUser?.dioceseCode,
+            gracePoints: incoming.gracePoints,
+            rosariesCompleted: incoming.rosariesCompleted,
+            gardenTended: incoming.gardenTended,
+            virtueTier: incoming.virtueTier
+          });
+          currentChurchUser = {
+            ...currentChurchUser,
+            ...canonical,
+            ...incoming,
+            id: canonical.id,
+            gracePoints: Math.max(
+              Number(canonical.gracePoints || 0),
+              Number(incoming.gracePoints || 0)
+            ),
+            virtueTier: Math.max(Number(canonical.virtueTier || 1), Number(incoming.virtueTier || 1))
+          };
+        } else {
+          currentChurchUser = {
+            ...currentChurchUser,
+            ...incoming
+          };
+        }
+        churchRoomManager.syncUserStatsToPlayer(socket.id, currentChurchUser);
+        socket.emit('church_account_synced', { user: currentChurchUser });
+      } catch (err) {
+        console.warn('[Socket] auth_sync_church_account warning:', err.message);
+      }
     });
 
     // 17. Real-Time Multi-User Catholic Chat with Sensitive Word Filtering
